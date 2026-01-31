@@ -37,12 +37,16 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   int bpm = 90; // Beats per minute
   Timer? timer;
 
-  final AudioPlayer player = AudioPlayer();
+  // Audio players
+  final AudioPlayer clickPlayer = AudioPlayer();
+  final AudioPlayer soundPlayer = AudioPlayer();
+
+  bool enableClick = true;// Enable click sound
+  bool enableSound = true;// Enable musical sound
 
   // Musical scale sounds
   final List<String> scale = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Ti']; // Example scale
-  final List<int> pattern = [0, 1, 2, 3, 2, 1, 0]; // Example pattern
-  int scaleIndex = 0;
+  final List<int> pattern = [0, 1, 2, 3, 4, 5, 6]; // Example pattern
   int patternIndex = 0;
   String currentSound = 'Do';
 
@@ -68,35 +72,46 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   
   // Play click sound
   Future<void> playClick() async {
-    await player.stop();
-    await player.play(AssetSource('sounds/click.wav'));
+    await clickPlayer.stop();
+    await clickPlayer.play(AssetSource('sounds/click.wav'));
+  }
+
+  Future<void> playSound(String sound) async {
+    await soundPlayer.stop();
+    await soundPlayer.play(AssetSource('sounds/$sound.wav'));
   }
 
   // Start the metronome
   void start(){
     if (timer != null) return; // Prevent multiple timers
-
+    // Calculate interval based on BPM
     timer = Timer.periodic(Duration(milliseconds: (60000 / bpm).round()), (Timer t) {
+      final String soundToPlay = scale[pattern[patternIndex]];
+
       setState(() {
         beat++;
         // Cycle through sounds
-        currentSound = scale[pattern[patternIndex]];
+        currentSound = soundToPlay;
         patternIndex = (patternIndex + 1) % pattern.length;
       });
 
-      playClick();// Play the click sound
+      if (enableClick) playClick();// Play click sound
+      if (enableSound) playSound(soundToPlay); // Play musical sound
     });
   }
 
   // Stop the metronome
-  void stop(){
+  Future<void> stop() async {
     timer?.cancel();
     timer = null;
+
+    await clickPlayer.stop();// Stop click sound
+    await soundPlayer.stop();// Stop musical sound
   }
 
   // Reset the metronome
-  void reset(){
-    stop();
+  Future<void> reset() async {
+    await stop();
     setState(() {
       beat = 0;
       patternIndex = 0;
@@ -115,21 +130,47 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+
             Text(// Display the current beat
               'Beat: $beat',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 20),
+
             Text(// Display the current BPM
               'BPM: $bpm',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
+
             Text(// Display the current sound
               'Sound: $currentSound',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
+
+            SwitchListTile(// Toggle for click sound
+              title: const Text('Enable Click Sound'),
+              value: enableClick,
+              onChanged: (bool value) async{
+                setState(() => enableClick = value);
+                if (!value) {
+                  await clickPlayer.stop();
+                }
+              },
+            ),
+            SwitchListTile(// Toggle for musical sound
+              title: const Text('Enable Musical Sound'),
+              value: enableSound,
+              onChanged: (bool value) async{
+                setState(() => enableSound = value);
+                if (!value) {
+                  await soundPlayer.stop();
+                }
+              },
+            ),
+            const SizedBox(height: 20),
+            
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -159,13 +200,13 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
           ),
           const SizedBox(width: 10),
           FloatingActionButton(// Stop button
-            onPressed: stop,
+            onPressed: () => stop(),
             tooltip: 'Stop',
             child: const Icon(Icons.stop),
           ),
           const SizedBox(width: 10),
           FloatingActionButton(// Reset button
-            onPressed: reset,
+            onPressed: () => reset(),
             tooltip: 'Reset',
             child: const Icon(Icons.refresh),
           ),
@@ -178,7 +219,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   @override
   void dispose() {
     timer?.cancel();
-    player.dispose();
+    clickPlayer.dispose();
+    soundPlayer.dispose();
     super.dispose();
   }
 }
