@@ -1,39 +1,33 @@
-# Miscellaneous
-*.class
-*.lock
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.buildlog/
-.history
-.svn/
-
-# As packages are no longer pinned, we use a lockfile for testing locally.
-# When unpinning packages, Using lockfiles ensures that failures in PRs are
-# actually due to those PRs, not due to a package being updated.
-!/pubspec.lock
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# Visual Studio Code related
-.classpath
-.project
-.settings/
-.vscode/*
-.ccls-cache
-
-# Flutter
+# Flutter / Dart
 .dart_tool/
 .packages
-/build/
+.pub-cache/
+build/
+coverage/
+assets
+
+# Generated files
 generated_*
+*.g.dart
+
+# Flutter plugin files
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# iOS (keep Runner, ignore generated)
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/*.xcconfig
 ios/Podfile
-macos/Podfile
-macos/Flutter
+
+# Other platforms (ignore if unused)
 android/
+windows/
+linux/
+macos/
+
+# IDE
+.idea/
+.vscode/*
+*.iml

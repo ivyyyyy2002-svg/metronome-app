@@ -37,6 +37,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   int bpm = 90; // Beats per minute
   Timer? timer;
 
+  final AudioPlayer player = AudioPlayer();
+
   // Musical scale sounds
   final List<String> scale = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Ti']; // Example scale
   final List<int> pattern = [0, 1, 2, 3, 2, 1, 0]; // Example pattern
@@ -50,6 +52,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     super.initState();
   }
 
+  // Change BPM
   void changeBPM(int delta) {
     setState(() {
       bpm += delta;
@@ -61,6 +64,12 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
       stop();
       start();
     }
+  }
+  
+  // Play click sound
+  Future<void> playClick() async {
+    await player.stop();
+    await player.play(AssetSource('sounds/click.wav'));
   }
 
   // Start the metronome
@@ -74,6 +83,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
         currentSound = scale[pattern[patternIndex]];
         patternIndex = (patternIndex + 1) % pattern.length;
       });
+
+      playClick();// Play the click sound
     });
   }
 
@@ -167,6 +178,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   @override
   void dispose() {
     timer?.cancel();
+    player.dispose();
     super.dispose();
   }
 }
