@@ -33,8 +33,15 @@ class MetronomeDemo extends StatefulWidget {
 // The state for the MetronomeDemo widget
 class _MetronomeDemoState extends State<MetronomeDemo> {
   int beat = 0;
-  int bpm = 120; // Beats per minute
+  int bpm = 90; // Beats per minute
   Timer? timer;
+
+  // Musical scale sounds
+  final List<String> scale = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Ti']; // Example scale
+  final List<int> pattern = [0, 1, 2, 3, 2, 1, 0]; // Example pattern
+  int scaleIndex = 0;
+  int patternIndex = 0;
+  String currentSound = 'Do';
 
   // Initialize the timer in initState
   @override
@@ -62,6 +69,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     timer = Timer.periodic(Duration(milliseconds: (60000 / bpm).round()), (Timer t) {
       setState(() {
         beat++;
+        // Cycle through sounds
+        currentSound = scale[pattern[patternIndex]];
+        patternIndex = (patternIndex + 1) % pattern.length;
       });
     });
   }
@@ -70,6 +80,16 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   void stop(){
     timer?.cancel();
     timer = null;
+  }
+
+  // Reset the metronome
+  void reset(){
+    stop();
+    setState(() {
+      beat = 0;
+      patternIndex = 0;
+      currentSound = scale[pattern[0]];
+    });
   }
 
   // UI
@@ -83,13 +103,18 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
+            Text(// Display the current beat
               'Beat: $beat',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 20),
-            Text(
+            Text(// Display the current BPM
               'BPM: $bpm',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 20),
+            Text(// Display the current sound
+              'Sound: $currentSound',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
@@ -115,16 +140,22 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton(
+          FloatingActionButton(// Start button
             onPressed: start,
             tooltip: 'Start',
             child: const Icon(Icons.play_arrow),
           ),
           const SizedBox(width: 10),
-          FloatingActionButton(
+          FloatingActionButton(// Stop button
             onPressed: stop,
             tooltip: 'Stop',
             child: const Icon(Icons.stop),
+          ),
+          const SizedBox(width: 10),
+          FloatingActionButton(// Reset button
+            onPressed: reset,
+            tooltip: 'Reset',
+            child: const Icon(Icons.refresh),
           ),
         ],
       ),
