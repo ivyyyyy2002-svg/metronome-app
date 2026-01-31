@@ -36,3 +36,4 @@ generated_*
 ios/Podfile
 macos/Podfile
 macos/Flutter
+android/
