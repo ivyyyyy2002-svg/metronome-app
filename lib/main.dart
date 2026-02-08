@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+
 
 void main() {
   runApp(const MyApp());
@@ -34,7 +37,7 @@ class MetronomeDemo extends StatefulWidget {
 // The state for the MetronomeDemo widget
 class _MetronomeDemoState extends State<MetronomeDemo> {
   int beat = 0;
-  int bpm = 90; // Beats per minute
+  int bpm = 60; // Beats per minute
   Timer? timer;
 
   // Audio players
@@ -44,16 +47,87 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   bool enableClick = true;// Enable click sound
   bool enableSound = true;// Enable musical sound
 
-  // Musical scale sounds
-  final List<String> scale = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Ti']; // Example scale
-  final List<int> pattern = [0, 1, 2, 3, 4, 5, 6]; // Example pattern
+  // Musical scale and patterns
+  List<String> scale = []; // Example scale
+  List<int> ascending = []; // Example pattern
+  List<int> descending = []; // Example pattern
+
+  List<int> playPattern = []; // Current pattern to play
+  int playIndex = 0; // Index in the current pattern
+
+  int stepsUp = 0; // Steps up in the pattern
+  int stepsDown = 0; // Steps down in the pattern
+  bool useDescending = false; // Whether to use descending pattern
+
   int patternIndex = 0;
-  String currentSound = 'Do';
+  String currentSound = '';
+  bool configLoaded = false;
+
+  // Build the play pattern based on the current settings
+  void buildPlayPattern() {
+  playPattern = [];
+  if (ascending.isEmpty) return;
+
+  // Up: fill exactly stepsUp (cycle through ascending)
+  for (int i = 0; i < stepsUp; i++) {
+    playPattern.add(ascending[i % ascending.length]);
+  }
+
+  // Down: fill exactly stepsDown (cycle through descending)
+  if (useDescending && descending.isNotEmpty) {
+    for (int i = 0; i < stepsDown; i++) {
+      playPattern.add(descending[i % descending.length]);
+    }
+  }
+
+  playIndex = 0;
+}
+
+
+  // Load configuration from JSON file
+  Future<void> loadConfig() async {
+  try {
+    final jsonStr = await rootBundle.loadString('assets/config/scale_config.json');
+    final data = jsonDecode(jsonStr);
+
+    final loadedScale = List<String>.from(data['scale']);
+    final loadedAsc = List<int>.from(data['ascending']);
+    final loadedDesc = List<int>.from(data['descending']);
+    
+    final loadedStepsUp = (data['stepsUp'] ?? loadedAsc.length) as int;
+    final loadedStepsDown = (data['stepsDown'] ?? loadedDesc.length) as int;
+    final loadedUseDescending = (data['useDescending'] ?? true) as bool;
+
+
+    setState(() {
+      scale = loadedScale;
+      ascending = loadedAsc;
+      descending = loadedDesc;
+      stepsUp = loadedStepsUp;
+      stepsDown = loadedStepsDown;
+      useDescending = loadedUseDescending;
+
+      patternIndex = 0;
+      currentSound = (scale.isNotEmpty && ascending.isNotEmpty) ? scale[ascending[0]] : '';
+      configLoaded = true;
+
+      buildPlayPattern();
+    });
+  } catch (e) {
+    // Handle error (e.g., file not found, JSON parsing error)
+    debugPrint('Failed to load config: $e');
+    setState(() {
+      configLoaded = false;
+      currentSound = 'Config load failed';
+    });
+  }
+}
 
   // Initialize the timer in initState
   @override
   void initState() {
     super.initState();
+    loadConfig();
   }
 
   // Change BPM
@@ -76,6 +150,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     await clickPlayer.play(AssetSource('sounds/click.wav'));
   }
 
+  // Play musical sound
   Future<void> playSound(String sound) async {
     await soundPlayer.stop();
     await soundPlayer.play(AssetSource('sounds/$sound.wav'));
@@ -84,19 +159,24 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   // Start the metronome
   void start(){
     if (timer != null) return; // Prevent multiple timers
+    if (!configLoaded) return; // Wait for config to load
+    if (scale.isEmpty || ascending.isEmpty) return; // Ensure patterns are loaded
     // Calculate interval based on BPM
     timer = Timer.periodic(Duration(milliseconds: (60000 / bpm).round()), (Timer t) {
-      final String soundToPlay = scale[pattern[patternIndex]];
+      final idx = playPattern[playIndex];
+      final soundToPlay = scale[idx];
 
       setState(() {
         beat++;
         // Cycle through sounds
         currentSound = soundToPlay;
-        patternIndex = (patternIndex + 1) % pattern.length;
+        playIndex = (playIndex + 1) % playPattern.length;
       });
 
       if (enableClick) playClick();// Play click sound
       if (enableSound) playSound(soundToPlay); // Play musical sound
+
+      if (playPattern.isEmpty) return;
     });
   }
 
@@ -115,7 +195,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     setState(() {
       beat = 0;
       patternIndex = 0;
-      currentSound = scale[pattern[0]];
+      currentSound = (scale.isNotEmpty && ascending.isNotEmpty) ? scale[ascending[0]] : '';
     });
   }
 
@@ -171,17 +251,40 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
             ),
             const SizedBox(height: 20),
             
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
-                ElevatedButton(
-                  onPressed: () => changeBPM(-5),
-                  child: const Text('-5 BPM'),
+                // First row: ±1 BPM
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => changeBPM(-1),
+                      child: const Text('-1 BPM'),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () => changeBPM(1),
+                      child: const Text('+1 BPM'),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () => changeBPM(5),
-                  child: const Text('+5 BPM'),
+
+                const SizedBox(height: 10), 
+
+                // Second row: ±10 BPM
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => changeBPM(-10),
+                      child: const Text('-10 BPM'),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () => changeBPM(10),
+                      child: const Text('+10 BPM'),
+                    ),
+                  ],
                 ),
               ],
             ),
