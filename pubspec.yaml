@@ -14,8 +14,6 @@ dependencies:
   audio_session: ^0.2.2   
   audioplayers: ^6.5.1     
   
-  flutter_midi: ^1.1.0
-  
   # UI
   cupertino_icons: ^1.0.8
 
@@ -27,6 +25,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/sounds/
     - assets/config/
+    - assets/sounds/click.wav
+    - assets/notes/piano/
+    - assets/notes/flute/
+    - assets/notes/sine/
     - assets/sf2/

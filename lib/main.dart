@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_midi/flutter_midi.dart';
-
-
+import 'package:just_audio/just_audio.dart';
+import 'package:audio_session/audio_session.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,8 +18,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Metronome Demo',
       theme: ThemeData(
-        // Use the seed color to generate a color scheme.
-        
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       home: const MetronomeDemo(),
@@ -42,108 +38,230 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   int bpm = 60; // Beats per minute
   Timer? timer;
 
-  // Audio players
+  // just_audio players
   final AudioPlayer clickPlayer = AudioPlayer();
-  final AudioPlayer soundPlayer = AudioPlayer();
+  final AudioPlayer notePlayer = AudioPlayer();
 
-  bool enableClick = true;// Enable click sound
-  bool enableSound = true;// Enable musical sound
-
-  // MIDI setup
-  final FlutterMidi midi = FlutterMidi();
-  bool midiReady = false;
-  int baseMidi = 60; // C4 = 60
-
+  bool enableClick = true; // Enable click sound
+  bool enableSound = true; // Enable musical sound
 
   // Musical scale and patterns
-  List<String> scale = []; // Example scale
-  List<int> ascending = []; // Example pattern
-  List<int> descending = []; // Example pattern
+  List<String> scale = [];
+  List<int> ascending = [];
+  List<int> descending = [];
 
-  List<int> playPattern = []; // Current pattern to play
-  int playIndex = 0; // Index in the current pattern
+  List<int> playPattern = [];
+  int playIndex = 0;
 
-  int stepsUp = 0; // Steps up in the pattern
-  int stepsDown = 0; // Steps down in the pattern
-  bool useDescending = false; // Whether to use descending pattern
+  int stepsUp = 0;
+  int stepsDown = 0;
+  bool useDescending = false;
 
-  int patternIndex = 0;
   String currentSound = '';
   bool configLoaded = false;
 
-  // Build the play pattern based on the current settings
-  void buildPlayPattern() {
-  playPattern = [];
-  if (ascending.isEmpty) return;
+  // preload flags
+  bool clickReady = false;
 
-  // Up: fill exactly stepsUp (cycle through ascending)
-  for (int i = 0; i < stepsUp; i++) {
-    playPattern.add(ascending[i % ascending.length]);
-  }
+  // Available instruments
+  final List<String> instruments = ['piano', 'flute', 'sine'];
+  String selectedInstrument = 'piano';
 
-  // Down: fill exactly stepsDown (cycle through descending)
-  if (useDescending && descending.isNotEmpty) {
-    for (int i = 0; i < stepsDown; i++) {
-      playPattern.add(descending[i % descending.length]);
-    }
-  }
-  playIndex = 0;
-}
+  // --- cache to avoid rebuilding/setting source every beat ---
+  String? _lastNotePath;
+  final Map<String, AudioSource> _noteSourceCache = {};
+  bool _noteReady = false;
 
-  // Load configuration from JSON file
-  Future<void> loadConfig() async {
-  try {
-    final jsonStr = await rootBundle.loadString('assets/config/scale_config.json');
-    final data = jsonDecode(jsonStr);
-
-    final loadedScale = List<String>.from(data['scale']);
-    final loadedAsc = List<int>.from(data['ascending']);
-    final loadedDesc = List<int>.from(data['descending']);
-    
-    final loadedStepsUp = (data['stepsUp'] ?? loadedAsc.length) as int;
-    final loadedStepsDown = (data['stepsDown'] ?? loadedDesc.length) as int;
-    final loadedUseDescending = (data['useDescending'] ?? true) as bool;
-
-    setState(() {
-      scale = loadedScale;
-      ascending = loadedAsc;
-      descending = loadedDesc;
-      stepsUp = loadedStepsUp;
-      stepsDown = loadedStepsDown;
-      useDescending = loadedUseDescending;
-
-      patternIndex = 0;
-      currentSound = (scale.isNotEmpty && ascending.isNotEmpty) ? scale[ascending[0]] : '';
-      configLoaded = true;
-
-      buildPlayPattern();
-    });
-  } catch (e) {
-    // Handle error (e.g., file not found, JSON parsing error)
-    debugPrint('Failed to load config: $e');
-    setState(() {
-      configLoaded = false;
-      currentSound = 'Config load failed';
-    });
-  }
-}
-
-  // Initialize the timer in initState
   @override
   void initState() {
     super.initState();
+    _initAudio(); // session + preload
     loadConfig();
-    loadSoundFont();
   }
 
-  // Load the sound font for MIDI playback
-  Future<void> loadSoundFont() async {
-  final sf2 = await rootBundle.load('assets/sf2/Piano.sf2');
-  await midi.prepare(sf2: sf2, name: 'Piano.sf2');
-  setState(() => midiReady = true);
-}
+  // ---------- Audio Session ----------
+  Future<void> _initAudio() async {
+    // Make iOS allow 2 players (click + note) without one stealing the session
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playback,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
+      avAudioSessionMode: AVAudioSessionMode.defaultMode,
+      androidAudioAttributes: AndroidAudioAttributes(
+        contentType: AndroidAudioContentType.music,
+        usage: AndroidAudioUsage.media,
+      ),
+      androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+      androidWillPauseWhenDucked: false,
+    ));
 
-  // Change BPM
+    await preloadClick();
+  }
+
+  // ---------- Config ----------
+  Future<void> loadConfig() async {
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/config/scale_config.json');
+      final data = jsonDecode(jsonStr);
+
+      final loadedScale = List<String>.from(data['scale']);
+      final loadedAsc = List<int>.from(data['ascending']);
+      final loadedDesc = List<int>.from(data['descending']);
+
+      // safer: if steps missing or <=0, fall back to pattern length
+      final rawStepsUp = data['stepsUp'];
+      final rawStepsDown = data['stepsDown'];
+
+      final loadedStepsUp =
+          (rawStepsUp is int && rawStepsUp > 0) ? rawStepsUp : loadedAsc.length;
+      final loadedStepsDown = (rawStepsDown is int && rawStepsDown > 0)
+          ? rawStepsDown
+          : loadedDesc.length;
+
+      final loadedUseDescending = (data['useDescending'] ?? true) as bool;
+
+      setState(() {
+        scale = loadedScale;
+        ascending = loadedAsc;
+        descending = loadedDesc;
+
+        stepsUp = loadedStepsUp;
+        stepsDown = loadedStepsDown;
+        useDescending = loadedUseDescending;
+
+        configLoaded = true;
+        buildPlayPattern();
+
+        currentSound = (scale.isNotEmpty && playPattern.isNotEmpty)
+            ? scale[playPattern[0]]
+            : '';
+      });
+
+      // Warm up first note to reduce first-hit latency
+      if (configLoaded && playPattern.isNotEmpty) {
+        final idx = playPattern[0];
+        if (idx >= 0 && idx < scale.length) {
+          await _prepareNoteIfNeeded(scale[idx]);
+        }
+      }
+
+      // Debug once (helps verify pattern is not stuck)
+      debugPrint(
+          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending');
+      debugPrint('playPattern=$playPattern');
+    } catch (e, st) {
+      debugPrint('Failed to load config: $e');
+      debugPrintStack(stackTrace: st);
+      setState(() {
+        configLoaded = false;
+        currentSound = 'Config load failed';
+      });
+    }
+  }
+
+  void buildPlayPattern() {
+    playPattern = [];
+    if (ascending.isEmpty) return;
+
+    // Up
+    for (int i = 0; i < stepsUp; i++) {
+      playPattern.add(ascending[i % ascending.length]);
+    }
+
+    // Down
+    if (useDescending && descending.isNotEmpty) {
+      for (int i = 0; i < stepsDown; i++) {
+        playPattern.add(descending[i % descending.length]);
+      }
+    }
+
+    playIndex = 0;
+  }
+
+  // ---------- Audio (just_audio) ----------
+  Future<void> preloadClick() async {
+    try {
+      await clickPlayer.setAsset('assets/sounds/click.wav');
+      clickReady = true;
+      if (mounted) setState(() {});
+    } catch (e, st) {
+      debugPrint('Click preload failed: $e');
+      debugPrintStack(stackTrace: st);
+      clickReady = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> playClick() async {
+    if (!clickReady) {
+      await preloadClick();
+      if (!clickReady) return;
+    }
+    try {
+      // more reliable for short sounds than just seek+play
+      await clickPlayer.stop();
+      await clickPlayer.seek(Duration.zero);
+      await clickPlayer.play();
+    } catch (e, st) {
+      debugPrint('Failed to play click: $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  // Prepare and cache AudioSource for a note, only set when path changes.
+  Future<void> _prepareNoteIfNeeded(String note) async {
+    final path = 'assets/notes/$selectedInstrument/$note.mp3';
+
+    // If already prepared for this exact path, do nothing.
+    if (_lastNotePath == path && _noteReady) return;
+
+    try {
+      final source = _noteSourceCache.putIfAbsent(
+        path,
+        () => AudioSource.asset(path),
+      );
+
+      await notePlayer.setAudioSource(source);
+      _lastNotePath = path;
+      _noteReady = true;
+    } catch (e, st) {
+      _noteReady = false;
+      debugPrint('Prepare note failed: $note ($path) -> $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  Future<void> playNoteByName(String note) async {
+    try {
+      await _prepareNoteIfNeeded(note);
+      if (!_noteReady) return;
+
+      // For short samples, stop+seek+play is often most stable.
+      await notePlayer.stop();
+      await notePlayer.seek(Duration.zero);
+      await notePlayer.play();
+    } catch (e, st) {
+      final path = 'assets/notes/$selectedInstrument/$note.mp3';
+      debugPrint('Failed to play note $note ($path): $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  Future<void> _onInstrumentChanged(String newInstrument) async {
+    setState(() => selectedInstrument = newInstrument);
+
+    _lastNotePath = null;
+    _noteReady = false;
+    _noteSourceCache.clear();
+
+    // Warm up current sound again
+    if (currentSound.isNotEmpty) {
+      await _prepareNoteIfNeeded(currentSound);
+    }
+  }
+
+  // ---------- Control ----------
   void changeBPM(int delta) {
     setState(() {
       bpm += delta;
@@ -156,89 +274,68 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
       start();
     }
   }
-  
-  // Play click sound
-  Future<void> playClick() async {
-    await clickPlayer.stop();
-    await clickPlayer.play(AssetSource('sounds/click.wav'));
-  }
 
-  // Play musical sound
-  Future<void> playSound(String sound) async {
-    await soundPlayer.stop();
-    await soundPlayer.play(AssetSource('sounds/$sound.wav'));
-  }
-
-  int noteToSemitone(String note) {
-  const offsets = {
-    'Do': 0,
-    'Re': 2,
-    'Mi': 4,
-    'Fa': 5,
-    'Sol': 7,
-    'La': 9,
-    'Ti': 11,
-  };
-  return offsets[note] ?? 0;
-}
-
-// Play MIDI note by name
-Future<void> playMidiByNoteName(String note) async {
-  if (!midiReady) return;
-  final midiNote = baseMidi + noteToSemitone(note);
-  midi.playMidiNote(midi: midiNote);
-}
-
-
-  // Start the metronome
   void start() {
-  if (timer != null) return;
-  if (!configLoaded) return;
-  if (scale.isEmpty || ascending.isEmpty) return;
-  if (playPattern.isEmpty) return;
+    if (timer != null) return;
+    if (!configLoaded) return;
+    if (scale.isEmpty || playPattern.isEmpty) return;
 
-  timer = Timer.periodic(
-    Duration(milliseconds: (60000 / bpm).round()),
-    (Timer t) {
-      if (playPattern.isEmpty) return;
+    timer = Timer.periodic(
+      Duration(milliseconds: (60000 / bpm).round()),
+      (Timer t) {
+        if (playPattern.isEmpty) return;
 
-      final idx = playPattern[playIndex];
-      final soundToPlay = scale[idx];
+        final idx = playPattern[playIndex];
+        if (idx < 0 || idx >= scale.length) return;
 
-      setState(() {
-        beat++;
-        currentSound = soundToPlay;
-        playIndex = (playIndex + 1) % playPattern.length;
-      });
+        final soundToPlay = scale[idx];
 
-      if (enableClick) playClick();
-      if (enableSound) playMidiByNoteName(soundToPlay);
-    },
-  );
-}
+        setState(() {
+          beat++;
+          currentSound = soundToPlay;
+          playIndex = (playIndex + 1) % playPattern.length;
+        });
 
-  // Stop the metronome
+        if (enableClick) {
+          playClick();
+        }
+        if (enableSound) {
+          playNoteByName(soundToPlay);
+        }
+      },
+    );
+  }
+
   Future<void> stop() async {
     timer?.cancel();
     timer = null;
 
-    await clickPlayer.stop();// Stop click sound
-    await soundPlayer.stop();// Stop musical sound
+    try {
+      await clickPlayer.pause();
+      await notePlayer.pause();
+    } catch (_) {}
   }
 
-  // Reset the metronome
   Future<void> reset() async {
     await stop();
     setState(() {
       beat = 0;
-      patternIndex = 0;
-      currentSound = (scale.isNotEmpty && ascending.isNotEmpty) ? scale[ascending[0]] : '';
+      playIndex = 0;
+      currentSound = (scale.isNotEmpty && playPattern.isNotEmpty)
+          ? scale[playPattern[0]]
+          : '';
     });
+
+    if (currentSound.isNotEmpty) {
+      await _prepareNoteIfNeeded(currentSound);
+    }
   }
 
-  // UI
+  // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
+    final audioStatus = clickReady ? 'Audio: Ready' : 'Audio: Loading/Failed';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Metronome Demo'),
@@ -247,55 +344,62 @@ Future<void> playMidiByNoteName(String note) async {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-
-            Text(// Display MIDI status
-              midiReady ? 'MIDI: Ready' : 'MIDI: Loading/Failed',
-            ),
+            Text(audioStatus),
             const SizedBox(height: 20),
-
-            Text(// Display the current beat
+            Text(
               'Beat: $beat',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 20),
-
-            Text(// Display the current BPM
+            Text(
               'BPM: $bpm',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
-
-            Text(// Display the current sound
+            Text(
               'Sound: $currentSound',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
-
-            SwitchListTile(// Toggle for click sound
+            SwitchListTile(
               title: const Text('Enable Click Sound'),
               value: enableClick,
-              onChanged: (bool value) async{
+              onChanged: (bool value) async {
                 setState(() => enableClick = value);
                 if (!value) {
-                  await clickPlayer.stop();
+                  try {
+                    await clickPlayer.pause();
+                  } catch (_) {}
                 }
               },
             ),
-            SwitchListTile(// Toggle for musical sound
+            SwitchListTile(
               title: const Text('Enable Musical Sound'),
               value: enableSound,
-              onChanged: (bool value) async{
+              onChanged: (bool value) async {
                 setState(() => enableSound = value);
                 if (!value) {
-                  await soundPlayer.stop();
+                  try {
+                    await notePlayer.pause();
+                  } catch (_) {}
                 }
               },
             ),
             const SizedBox(height: 20),
-            
+
+            DropdownButton<String>(
+              value: selectedInstrument,
+              items: instruments
+                  .map((ins) => DropdownMenuItem(value: ins, child: Text(ins)))
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                _onInstrumentChanged(v);
+              },
+            ),
+
             Column(
               children: [
-                // First row: ±1 BPM
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -310,10 +414,7 @@ Future<void> playMidiByNoteName(String note) async {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 10), 
-
-                // Second row: ±10 BPM
+                const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -333,24 +434,22 @@ Future<void> playMidiByNoteName(String note) async {
           ],
         ),
       ),
-
-      // Floating action buttons to control the metronome
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton(// Start button
+          FloatingActionButton(
             onPressed: start,
             tooltip: 'Start',
             child: const Icon(Icons.play_arrow),
           ),
           const SizedBox(width: 10),
-          FloatingActionButton(// Stop button
+          FloatingActionButton(
             onPressed: () => stop(),
             tooltip: 'Stop',
             child: const Icon(Icons.stop),
           ),
           const SizedBox(width: 10),
-          FloatingActionButton(// Reset button
+          FloatingActionButton(
             onPressed: () => reset(),
             tooltip: 'Reset',
             child: const Icon(Icons.refresh),
@@ -360,12 +459,11 @@ Future<void> playMidiByNoteName(String note) async {
     );
   }
 
-  // Clean up the timer when the widget is disposed
   @override
   void dispose() {
     timer?.cancel();
     clickPlayer.dispose();
-    soundPlayer.dispose();
+    notePlayer.dispose();
     super.dispose();
   }
 }
