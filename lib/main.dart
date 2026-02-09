@@ -211,7 +211,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
 
   // Prepare and cache AudioSource for a note, only set when path changes.
   Future<void> _prepareNoteIfNeeded(String note) async {
-    final path = 'assets/notes/$selectedInstrument/$note.mp3';
+    // final path = 'assets/notes/$selectedInstrument/$note.mp3';
+    final path = 'assets/notes/piano_m4a/$note.m4a';
+
 
     // If already prepared for this exact path, do nothing.
     if (_lastNotePath == path && _noteReady) return;
@@ -242,7 +244,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
       await notePlayer.seek(Duration.zero);
       await notePlayer.play();
     } catch (e, st) {
-      final path = 'assets/notes/$selectedInstrument/$note.mp3';
+      // final path = 'assets/notes/$selectedInstrument/$note.mp3';
+      final path = 'assets/notes/piano_m4a/$note.m4a';
       debugPrint('Failed to play note $note ($path): $e');
       debugPrintStack(stackTrace: st);
     }
