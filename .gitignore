@@ -14,18 +14,12 @@ generated_*
 .flutter-plugins
 .flutter-plugins-dependencies
 
-# iOS (keep Runner, ignore generated)
-ios/Pods/
-ios/.symlinks/
-ios/Flutter/ephemeral/
-ios/Flutter/*.xcconfig
-ios/Podfile
-
-# Other platforms (ignore if unused)
+# platforms (ignore if unused)
 android/
 windows/
 linux/
 macos/
+ios/
 
 # IDE
 .idea/

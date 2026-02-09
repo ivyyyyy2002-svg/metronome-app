@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_midi/flutter_midi.dart';
+
 
 
 void main() {
@@ -47,6 +49,12 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   bool enableClick = true;// Enable click sound
   bool enableSound = true;// Enable musical sound
 
+  // MIDI setup
+  final FlutterMidi midi = FlutterMidi();
+  bool midiReady = false;
+  int baseMidi = 60; // C4 = 60
+
+
   // Musical scale and patterns
   List<String> scale = []; // Example scale
   List<int> ascending = []; // Example pattern
@@ -79,10 +87,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
       playPattern.add(descending[i % descending.length]);
     }
   }
-
   playIndex = 0;
 }
-
 
   // Load configuration from JSON file
   Future<void> loadConfig() async {
@@ -97,7 +103,6 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     final loadedStepsUp = (data['stepsUp'] ?? loadedAsc.length) as int;
     final loadedStepsDown = (data['stepsDown'] ?? loadedDesc.length) as int;
     final loadedUseDescending = (data['useDescending'] ?? true) as bool;
-
 
     setState(() {
       scale = loadedScale;
@@ -128,7 +133,15 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   void initState() {
     super.initState();
     loadConfig();
+    loadSoundFont();
   }
+
+  // Load the sound font for MIDI playback
+  Future<void> loadSoundFont() async {
+  final sf2 = await rootBundle.load('assets/sf2/Piano.sf2');
+  await midi.prepare(sf2: sf2, name: 'Piano.sf2');
+  setState(() => midiReady = true);
+}
 
   // Change BPM
   void changeBPM(int delta) {
@@ -156,29 +169,53 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     await soundPlayer.play(AssetSource('sounds/$sound.wav'));
   }
 
+  int noteToSemitone(String note) {
+  const offsets = {
+    'Do': 0,
+    'Re': 2,
+    'Mi': 4,
+    'Fa': 5,
+    'Sol': 7,
+    'La': 9,
+    'Ti': 11,
+  };
+  return offsets[note] ?? 0;
+}
+
+// Play MIDI note by name
+Future<void> playMidiByNoteName(String note) async {
+  if (!midiReady) return;
+  final midiNote = baseMidi + noteToSemitone(note);
+  midi.playMidiNote(midi: midiNote);
+}
+
+
   // Start the metronome
-  void start(){
-    if (timer != null) return; // Prevent multiple timers
-    if (!configLoaded) return; // Wait for config to load
-    if (scale.isEmpty || ascending.isEmpty) return; // Ensure patterns are loaded
-    // Calculate interval based on BPM
-    timer = Timer.periodic(Duration(milliseconds: (60000 / bpm).round()), (Timer t) {
+  void start() {
+  if (timer != null) return;
+  if (!configLoaded) return;
+  if (scale.isEmpty || ascending.isEmpty) return;
+  if (playPattern.isEmpty) return;
+
+  timer = Timer.periodic(
+    Duration(milliseconds: (60000 / bpm).round()),
+    (Timer t) {
+      if (playPattern.isEmpty) return;
+
       final idx = playPattern[playIndex];
       final soundToPlay = scale[idx];
 
       setState(() {
         beat++;
-        // Cycle through sounds
         currentSound = soundToPlay;
         playIndex = (playIndex + 1) % playPattern.length;
       });
 
-      if (enableClick) playClick();// Play click sound
-      if (enableSound) playSound(soundToPlay); // Play musical sound
-
-      if (playPattern.isEmpty) return;
-    });
-  }
+      if (enableClick) playClick();
+      if (enableSound) playMidiByNoteName(soundToPlay);
+    },
+  );
+}
 
   // Stop the metronome
   Future<void> stop() async {
@@ -210,6 +247,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+
+            Text(// Display MIDI status
+              midiReady ? 'MIDI: Ready' : 'MIDI: Loading/Failed',
+            ),
+            const SizedBox(height: 20),
 
             Text(// Display the current beat
               'Beat: $beat',
