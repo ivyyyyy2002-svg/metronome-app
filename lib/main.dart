@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
+import 'dart:math' as math;
 
 void main() {
   runApp(const MyApp());
@@ -26,14 +27,19 @@ class MyApp extends StatelessWidget {
 }
 
 // The MetronomeDemo widget
-class MetronomeDemo extends StatefulWidget {
+class MetronomeDemo extends StatefulWidget  {
   const MetronomeDemo({super.key});
   @override
   State<MetronomeDemo> createState() => _MetronomeDemoState();
 }
 
 // The state for the MetronomeDemo widget
-class _MetronomeDemoState extends State<MetronomeDemo> {
+class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProviderStateMixin {
+  // Animation for pendulum swing
+  late final AnimationController swingController;
+  late Animation<double> swingAnim;
+  
+  // Metronome state
   int beat = 0;
   int bpm = 60; // Beats per minute
   Timer? timer;
@@ -81,6 +87,16 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   @override
   void initState() {
     super.initState();
+    // Initialize the swing animation controller and animation
+    swingController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: (60000 / bpm).round()),
+    );
+
+    swingAnim = Tween<double>(begin: -1, end: 1).animate(
+      CurvedAnimation(parent: swingController, curve: Curves.easeInOut),
+    );
+
     _initAudio(); // session + preload
     loadConfig();
   }
@@ -273,6 +289,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
 
   // ---------- Control ----------
   void changeBPM(int delta) {
+    // Apply delta and clamp BPM within 30-240
     setState(() {
       bpm += delta;
       if (bpm < 30) bpm = 30;
@@ -285,11 +302,32 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     }
   }
 
+  // Apply new BPM value, update animation and timer if running
+  void _applyBpm(int newBpm) {
+  setState(() {
+    bpm = newBpm.clamp(30, 240);
+  });
+
+  // Update swing animation duration
+  swingController.duration = Duration(milliseconds: (60000 / bpm).round());
+
+  // If timer is running, restart it with new BPM
+  if (timer != null) {
+    stop();
+    start();
+  }
+}
+
   void start() {
     if (timer != null) return;
     if (!configLoaded) return;
     if (scale.isEmpty || playPattern.isEmpty) return;
 
+    // Start the swing animation
+    swingController.duration = Duration(milliseconds: (60000 / bpm).round());
+    swingController.repeat(reverse: true);
+
+    // Start the metronome timer
     timer = Timer.periodic(
       Duration(milliseconds: (60000 / bpm).round()),
       (Timer t) {
@@ -326,17 +364,25 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   }
 
   Future<void> stop() async {
-    timer?.cancel();
-    timer = null;
+    final oldTimer = timer;
+
+    setState(() {
+      timer = null; 
+    });
+
+    oldTimer?.cancel();
+    swingController.stop();
 
     try {
       await clickPlayer.pause();
       await notePlayer.pause();
     } catch (_) {}
-  }
+}
+
 
   Future<void> reset() async {
     await stop();
+    swingController.reset();
     setState(() {
       beat = 0;
       playIndex = 0;
@@ -354,127 +400,182 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
-    final audioStatus = clickReady ? 'Audio: Ready' : 'Audio: Loading/Failed';
+    final isRunning = timer != null;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Metronome Demo'),
+        title: const Text('Metronome'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(audioStatus),
-            const SizedBox(height: 20),
-            Text(
-              'Beat: $beat',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'BPM: $bpm',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Sound: $currentSound',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 20),
-            SwitchListTile(
-              title: const Text('Enable Click Sound'),
-              value: enableClick,
-              onChanged: (bool value) async {
-                setState(() => enableClick = value);
-                if (!value) {
-                  try {
-                    await clickPlayer.pause();
-                  } catch (_) {}
-                }
-              },
-            ),
-            SwitchListTile(
-              title: const Text('Enable Musical Sound'),
-              value: enableSound,
-              onChanged: (bool value) async {
-                setState(() => enableSound = value);
-                if (!value) {
-                  try {
-                    await notePlayer.pause();
-                  } catch (_) {}
-                }
-              },
-            ),
-            const SizedBox(height: 20),
-
-            DropdownButton<String>(
-              value: selectedInstrument,
-              items: instruments
-                  .map((ins) => DropdownMenuItem(value: ins, child: Text(ins)))
-                  .toList(),
-              onChanged: (v) {
-                if (v == null) return;
-                _onInstrumentChanged(v);
-              },
-            ),
-
-            Column(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Swing animation
+                MetronomeSwing(
+                  anim: swingAnim,
+                  isRunning: isRunning,
+                  amplitudeDeg: 18,
+                ),
+                const SizedBox(height: 12),
+
+                // BPM big number
+                Text(
+                  '$bpm',
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                Text(
+                  'BPM',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Current sound display
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.music_note),
+                      const SizedBox(width: 8),
+                      Text(
+                        currentSound.isEmpty ? '-' : currentSound,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // Slider for BPM (30-240)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Column(
+                    children: [
+                      Slider(
+                        value: bpm.toDouble(),
+                        min: 30,
+                        max: 240,
+                        divisions: 210,
+                        label: '$bpm',
+                        onChanged: (v) {
+                          setState(() => bpm = v.round());
+                        },
+                        onChangeEnd: (v) {
+                          _applyBpm(v.round());
+                        },
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text('30'),
+                          Text('240'),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Toggles
+                SwitchListTile(
+                  title: const Text('Click'),
+                  value: enableClick,
+                  onChanged: (v) async {
+                    setState(() => enableClick = v);
+                    if (!v) {
+                      try {
+                        await clickPlayer.pause();
+                      } catch (_) {}
+                    }
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Sound'),
+                  value: enableSound,
+                  onChanged: (v) async {
+                    setState(() => enableSound = v);
+                    if (!v) {
+                      try {
+                        await notePlayer.pause();
+                      } catch (_) {}
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 6),
+
+                // Instrument
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton(
-                      onPressed: () => changeBPM(-1),
-                      child: const Text('-1 BPM'),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () => changeBPM(1),
-                      child: const Text('+1 BPM'),
+                    const Text('Instrument: '),
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: selectedInstrument,
+                      items: instruments
+                          .map((ins) =>
+                              DropdownMenuItem(value: ins, child: Text(ins)))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        _onInstrumentChanged(v);
+                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+
+                const SizedBox(height: 12),
+
+                // Octave range display (optional)
+                Text(
+                  'Octave range: C$minOctave ~ C$maxOctave (base: $baseOctave)',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+
+                const SizedBox(height: 18),
+
+                // Controls 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton(
-                      onPressed: () => changeBPM(-10),
-                      child: const Text('-10 BPM'),
+                    FilledButton.icon(
+                      onPressed: isRunning ? null : start,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Start'),
                     ),
                     const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () => changeBPM(10),
-                      child: const Text('+10 BPM'),
+                    OutlinedButton.icon(
+                      onPressed: isRunning ? () => stop() : null,
+                      icon: const Icon(Icons.stop),
+                      label: const Text('Stop'),
+                    ),
+                    const SizedBox(width: 10),
+                    TextButton.icon(
+                      onPressed: reset,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reset'),
                     ),
                   ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: start,
-            tooltip: 'Start',
-            child: const Icon(Icons.play_arrow),
-          ),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            onPressed: () => stop(),
-            tooltip: 'Stop',
-            child: const Icon(Icons.stop),
-          ),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            onPressed: () => reset(),
-            tooltip: 'Reset',
-            child: const Icon(Icons.refresh),
-          ),
-        ],
       ),
     );
   }
@@ -484,6 +585,94 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     timer?.cancel();
     clickPlayer.dispose();
     notePlayer.dispose();
+    swingController.dispose();
     super.dispose();
+  }
+}
+
+// A simple widget to visualize the metronome swing based on the current beat
+class MetronomeSwing extends StatelessWidget {
+  final Animation<double> anim; // -1 ~ 1
+  final double amplitudeDeg; // amplitude in degrees for max swing
+  final bool isRunning;
+
+  const MetronomeSwing({
+    super.key,
+    required this.anim,
+    this.amplitudeDeg = 18,
+    required this.isRunning,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 220,
+      width: 220,
+      child: AnimatedBuilder(
+        animation: anim,
+        builder: (context, _) {
+          final angle = (amplitudeDeg * math.pi / 180.0) * anim.value;
+
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                bottom: 18,
+                child: Container(
+                  width: 180,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  ),
+                ),
+              ),
+
+              // Pendulum
+              Transform.rotate(
+                angle: angle,
+                alignment: const Alignment(0, -1), // rotate around top center
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // center pivot point
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isRunning
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).disabledColor,
+                      ),
+                    ),
+                    // rod
+                    Container(
+                      width: 6,
+                      height: 150,
+                      margin: const EdgeInsets.only(top: 6),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    // weight
+                    Container(
+                      width: 46,
+                      height: 34,
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
