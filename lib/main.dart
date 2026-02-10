@@ -52,6 +52,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
 
   List<int> playPattern = [];
   int playIndex = 0;
+  int stepCounter = 0;
 
   int stepsUp = 0;
   int stepsDown = 0;
@@ -66,6 +67,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   // Available instruments
   final List<String> instruments = ['piano', 'flute', 'sine'];
   String selectedInstrument = 'piano';
+
+  // base octave
+  int baseOctave = 4;
+  int minOctave = 3;
+  int maxOctave = 5;
 
   // --- cache to avoid rebuilding/setting source every beat ---
   String? _lastNotePath;
@@ -108,6 +114,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
       final loadedScale = List<String>.from(data['scale']);
       final loadedAsc = List<int>.from(data['ascending']);
       final loadedDesc = List<int>.from(data['descending']);
+      final loadedBaseOctave =
+          (data['baseoctave'] is int) ? data['baseoctave'] as int : 4;
 
       // safer: if steps missing or <=0, fall back to pattern length
       final rawStepsUp = data['stepsUp'];
@@ -121,6 +129,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
 
       final loadedUseDescending = (data['useDescending'] ?? true) as bool;
 
+      // Debug print loaded values before applying
       setState(() {
         scale = loadedScale;
         ascending = loadedAsc;
@@ -129,6 +138,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
         stepsUp = loadedStepsUp;
         stepsDown = loadedStepsDown;
         useDescending = loadedUseDescending;
+        baseOctave = loadedBaseOctave;
 
         configLoaded = true;
         buildPlayPattern();
@@ -142,13 +152,13 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
       if (configLoaded && playPattern.isNotEmpty) {
         final idx = playPattern[0];
         if (idx >= 0 && idx < scale.length) {
-          await _prepareNoteIfNeeded(scale[idx]);
+          await _prepareNoteIfNeeded('${scale[idx]}$baseOctave');
         }
       }
 
       // Debug once (helps verify pattern is not stuck)
       debugPrint(
-          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending');
+          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending baseOctave=$baseOctave');
       debugPrint('playPattern=$playPattern');
     } catch (e, st) {
       debugPrint('Failed to load config: $e');
@@ -210,43 +220,40 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
   }
 
   // Prepare and cache AudioSource for a note, only set when path changes.
-  Future<void> _prepareNoteIfNeeded(String note) async {
-    // final path = 'assets/notes/$selectedInstrument/$note.mp3';
-    final path = 'assets/notes/piano_m4a/$note.m4a';
+  Future<void> _prepareNoteIfNeeded(String fullNoteName) async {
+  final path = 'assets/notes/$selectedInstrument/$fullNoteName.wav';
 
+  if (_lastNotePath == path && _noteReady) return;
 
-    // If already prepared for this exact path, do nothing.
-    if (_lastNotePath == path && _noteReady) return;
+  try {
+    final source = _noteSourceCache.putIfAbsent(
+      path,
+      () => AudioSource.asset(path),
+    );
 
-    try {
-      final source = _noteSourceCache.putIfAbsent(
-        path,
-        () => AudioSource.asset(path),
-      );
-
-      await notePlayer.setAudioSource(source);
-      _lastNotePath = path;
-      _noteReady = true;
-    } catch (e, st) {
-      _noteReady = false;
-      debugPrint('Prepare note failed: $note ($path) -> $e');
-      debugPrintStack(stackTrace: st);
-    }
+    await notePlayer.setAudioSource(source);
+    _lastNotePath = path;
+    _noteReady = true;
+  } catch (e, st) {
+    _noteReady = false;
+    debugPrint('Prepare note failed: $fullNoteName ($path) -> $e');
+    debugPrintStack(stackTrace: st);
   }
+}
 
-  Future<void> playNoteByName(String note) async {
+  // Play note by name and octave, e.g. "C5". Prepares source if needed.
+  Future<void> playNoteByName(String note, int octave) async {
     try {
-      await _prepareNoteIfNeeded(note);
+      await _prepareNoteIfNeeded('$note$octave');
       if (!_noteReady) return;
-
-      // For short samples, stop+seek+play is often most stable.
+      
+      // For short notes, stop+seek+play is more reliable than just play.
       await notePlayer.stop();
       await notePlayer.seek(Duration.zero);
       await notePlayer.play();
     } catch (e, st) {
-      // final path = 'assets/notes/$selectedInstrument/$note.mp3';
-      final path = 'assets/notes/piano_m4a/$note.m4a';
-      debugPrint('Failed to play note $note ($path): $e');
+      final path = 'assets/notes/$selectedInstrument/$note$octave.wav';
+      debugPrint('Failed to play note $note$octave ($path): $e');
       debugPrintStack(stackTrace: st);
     }
   }
@@ -289,21 +296,30 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
         if (playPattern.isEmpty) return;
 
         final idx = playPattern[playIndex];
-        if (idx < 0 || idx >= scale.length) return;
-
         final soundToPlay = scale[idx];
+
+        // Calculate octave based on how many times we've looped through the pattern
+        final int octaveOffset = stepCounter ~/ scale.length; // 0,1,2...
+        int octaveToPlay = baseOctave + octaveOffset; 
+
+        if (octaveToPlay > maxOctave) {
+          octaveToPlay = maxOctave;
+        } else if (octaveToPlay < minOctave) {
+          octaveToPlay = minOctave;
+        } 
 
         setState(() {
           beat++;
-          currentSound = soundToPlay;
+          currentSound = '$soundToPlay$octaveToPlay';
           playIndex = (playIndex + 1) % playPattern.length;
+          stepCounter++;
         });
 
         if (enableClick) {
           playClick();
         }
         if (enableSound) {
-          playNoteByName(soundToPlay);
+          playNoteByName(soundToPlay, octaveToPlay);
         }
       },
     );
@@ -324,6 +340,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> {
     setState(() {
       beat = 0;
       playIndex = 0;
+      stepCounter = 0;
       currentSound = (scale.isNotEmpty && playPattern.isNotEmpty)
           ? scale[playPattern[0]]
           : '';
