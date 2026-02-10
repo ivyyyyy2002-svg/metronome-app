@@ -38,7 +38,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   // Animation for pendulum swing
   late final AnimationController swingController;
   late Animation<double> swingAnim;
-  
+
   // Metronome state
   int beat = 0;
   int bpm = 60; // Beats per minute
@@ -46,7 +46,13 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
   // just_audio players
   final AudioPlayer clickPlayer = AudioPlayer();
-  final AudioPlayer notePlayer = AudioPlayer();
+
+  // Note player pool to allow overlapping notes without cutting off
+  static const int notePoolSize = 4;
+  late final List<AudioPlayer> notePlayers;
+  int notePoolIndex = 0;
+  double noteGate = 0.7; // how long the note plays before cutting off
+  final List<int> playerTokens = List.filled(notePoolSize, 0); // for tracking which player is playing which note
 
   bool enableClick = true; // Enable click sound
   bool enableSound = true; // Enable musical sound
@@ -84,6 +90,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   final Map<String, AudioSource> _noteSourceCache = {};
   bool _noteReady = false;
 
+  // --- timing state for stable ticks (avoid Timer.periodic jitter) ---
+  int _tickGen = 0;
+  int _intervalMs = 1000;
+
+  // ---------- Initialization ----------
   @override
   void initState() {
     super.initState();
@@ -96,6 +107,15 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     swingAnim = Tween<double>(begin: -1, end: 1).animate(
       CurvedAnimation(parent: swingController, curve: Curves.easeInOut),
     );
+
+    // Initialize the note players pool
+    notePlayers = List.generate(notePoolSize, (_) => AudioPlayer());
+    for (int i = 0; i < notePoolSize; i++) {
+      notePlayers[i].playerStateStream.listen((state) {
+        // (kept) listener exists, but we don't reset tokens here;
+        // tokens are used to cancel scheduled gates safely.
+      });
+    }
 
     _initAudio(); // session + preload
     loadConfig();
@@ -160,7 +180,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
         buildPlayPattern();
 
         currentSound = (scale.isNotEmpty && playPattern.isNotEmpty)
-            ? scale[playPattern[0]]
+            ? '${scale[playPattern[0]]}$baseOctave'
             : '';
       });
 
@@ -168,7 +188,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       if (configLoaded && playPattern.isNotEmpty) {
         final idx = playPattern[0];
         if (idx >= 0 && idx < scale.length) {
-          await _prepareNoteIfNeeded('${scale[idx]}$baseOctave');
+          final player = notePlayers[notePoolIndex];
+          notePoolIndex = (notePoolIndex + 1) % notePoolSize;
+          await _prepareNoteIfNeeded(player, '${scale[idx]}$baseOctave');
         }
       }
 
@@ -236,37 +258,73 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   }
 
   // Prepare and cache AudioSource for a note, only set when path changes.
-  Future<void> _prepareNoteIfNeeded(String fullNoteName) async {
-  final path = 'assets/notes/$selectedInstrument/$fullNoteName.wav';
+  Future<void> _prepareNoteIfNeeded(
+    AudioPlayer player,
+    String fullNoteName, {
+    bool preload = false,
+  }) async {
+    final path = 'assets/notes/$selectedInstrument/$fullNoteName.wav';
 
-  if (_lastNotePath == path && _noteReady) return;
-
-  try {
-    final source = _noteSourceCache.putIfAbsent(
-      path,
-      () => AudioSource.asset(path),
-    );
-
-    await notePlayer.setAudioSource(source);
-    _lastNotePath = path;
-    _noteReady = true;
-  } catch (e, st) {
-    _noteReady = false;
-    debugPrint('Prepare note failed: $fullNoteName ($path) -> $e');
-    debugPrintStack(stackTrace: st);
-  }
-}
-
-  // Play note by name and octave, e.g. "C5". Prepares source if needed.
-  Future<void> playNoteByName(String note, int octave) async {
     try {
-      await _prepareNoteIfNeeded('$note$octave');
+      final source = _noteSourceCache.putIfAbsent(
+        path,
+        () => AudioSource.asset(path),
+      );
+
+      // Only set when this player is not already using this source
+      if (player.audioSource != source) {
+        await player.setAudioSource(source, preload: preload);
+      }
+
+      _noteReady = true;
+      _lastNotePath = path;
+    } catch (e, st) {
+      _noteReady = false;
+      debugPrint('Prepare note failed: $fullNoteName ($path) -> $e');
+      debugPrintStack(stackTrace: st);
+    }
+  }
+
+  Future<void> _fadeOutAndPause(AudioPlayer player, {int releaseMs = 25}) async {
+    try {
+      const int steps = 5;
+      final double startVol = player.volume;
+      for (int i = 1; i <= steps; i++) {
+        await Future.delayed(Duration(milliseconds: (releaseMs / steps).round()));
+        player.setVolume(startVol * (1.0 - i / steps));
+      }
+      await player.pause();
+      await player.seek(Duration.zero);
+      player.setVolume(1.0);
+    } catch (_) {}
+  }
+
+  // Play note by name and octave
+  Future<void> playNoteByName(String note, int octave) async {
+    final int playerIndex  = notePoolIndex;
+    notePoolIndex = (notePoolIndex + 1) % notePoolSize;
+    final AudioPlayer player = notePlayers[playerIndex];
+
+    // Increment token for this player
+    final int token = ++playerTokens[playerIndex];
+
+    try {
+      // No stop: allows overlapping notes
+      await _prepareNoteIfNeeded(player, '$note$octave', preload: true);
       if (!_noteReady) return;
-      
-      // For short notes, stop+seek+play is more reliable than just play.
-      await notePlayer.stop();
-      await notePlayer.seek(Duration.zero);
-      await notePlayer.play();
+
+      await player.seek(Duration.zero);
+      await player.play();
+
+      // Schedule stop after gate duration
+      final int beatMs = (60000 / bpm).round();
+      final int gateMs = math.max(30, (beatMs * noteGate).round());
+
+      Timer(Duration(milliseconds: gateMs), () {
+        // Only stop if this player is still playing the same note (token matches)
+        if (playerTokens[playerIndex] != token) return;
+        _fadeOutAndPause(player);
+      });
     } catch (e, st) {
       final path = 'assets/notes/$selectedInstrument/$note$octave.wav';
       debugPrint('Failed to play note $note$octave ($path): $e');
@@ -283,7 +341,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
     // Warm up current sound again
     if (currentSound.isNotEmpty) {
-      await _prepareNoteIfNeeded(currentSound);
+      final player = notePlayers[notePoolIndex];
+      notePoolIndex = (notePoolIndex + 1) % notePoolSize;
+      await _prepareNoteIfNeeded(player, currentSound, preload: false);
     }
   }
 
@@ -304,82 +364,114 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
   // Apply new BPM value, update animation and timer if running
   void _applyBpm(int newBpm) {
-  setState(() {
-    bpm = newBpm.clamp(30, 240);
-  });
+    setState(() {
+      bpm = newBpm.clamp(30, 240);
+    });
 
-  // Update swing animation duration
-  swingController.duration = Duration(milliseconds: (60000 / bpm).round());
+    // Update swing animation duration
+    swingController.duration = Duration(milliseconds: (60000 / bpm).round());
 
-  // If timer is running, restart it with new BPM
-  if (timer != null) {
-    stop();
-    start();
+    // If timer is running, restart it with new BPM
+    if (timer != null) {
+      stop();
+      start();
+    }
   }
-}
 
+  void _onTick() {
+    if (playPattern.isEmpty) return;
+
+    final idx = playPattern[playIndex];
+    final soundToPlay = scale[idx];
+
+    // Calculate octave based on how many times we've looped through the pattern
+    final int octaveOffset = stepCounter ~/ scale.length; // 0,1,2...
+    int octaveToPlay = baseOctave + octaveOffset;
+
+    if (octaveToPlay > maxOctave) {
+      octaveToPlay = maxOctave;
+    } else if (octaveToPlay < minOctave) {
+      octaveToPlay = minOctave;
+    }
+
+    setState(() {
+      beat++;
+      currentSound = '$soundToPlay$octaveToPlay';
+      playIndex = (playIndex + 1) % playPattern.length;
+      stepCounter++;
+    });
+
+    if (enableClick) {
+      playClick();
+    }
+    if (enableSound) {
+      playNoteByName(soundToPlay, octaveToPlay);
+    }
+  }
+
+  // Start the metronome
   void start() {
     if (timer != null) return;
     if (!configLoaded) return;
     if (scale.isEmpty || playPattern.isEmpty) return;
 
+    _intervalMs = (60000 / bpm).round();
+    final int gen = ++_tickGen;
+
     // Start the swing animation
-    swingController.duration = Duration(milliseconds: (60000 / bpm).round());
+    swingController.duration = Duration(milliseconds: _intervalMs);
     swingController.repeat(reverse: true);
 
-    // Start the metronome timer
-    timer = Timer.periodic(
-      Duration(milliseconds: (60000 / bpm).round()),
-      (Timer t) {
-        if (playPattern.isEmpty) return;
+    // Stable tick scheduling (avoids Timer.periodic drift/jitter)
+    final sw = Stopwatch()..start();
+    int tickCount = 0;
 
-        final idx = playPattern[playIndex];
-        final soundToPlay = scale[idx];
+    void scheduleNext() {
+      if (_tickGen != gen) return;
 
-        // Calculate octave based on how many times we've looped through the pattern
-        final int octaveOffset = stepCounter ~/ scale.length; // 0,1,2...
-        int octaveToPlay = baseOctave + octaveOffset; 
+      final int targetMs = tickCount * _intervalMs;
+      final int nowMs = sw.elapsedMilliseconds;
+      final int delayMs = math.max(0, targetMs - nowMs);
 
-        if (octaveToPlay > maxOctave) {
-          octaveToPlay = maxOctave;
-        } else if (octaveToPlay < minOctave) {
-          octaveToPlay = minOctave;
-        } 
+      timer = Timer(Duration(milliseconds: delayMs), () {
+        if (_tickGen != gen) return;
+        _onTick();
+        tickCount++;
+        scheduleNext();
+      });
+    }
 
-        setState(() {
-          beat++;
-          currentSound = '$soundToPlay$octaveToPlay';
-          playIndex = (playIndex + 1) % playPattern.length;
-          stepCounter++;
-        });
-
-        if (enableClick) {
-          playClick();
-        }
-        if (enableSound) {
-          playNoteByName(soundToPlay, octaveToPlay);
-        }
-      },
-    );
+    scheduleNext();
   }
 
+  // Stop the metronome
   Future<void> stop() async {
     final oldTimer = timer;
 
     setState(() {
-      timer = null; 
+      timer = null;
     });
 
+    _tickGen++; // cancel any scheduled chain
     oldTimer?.cancel();
     swingController.stop();
 
     try {
       await clickPlayer.pause();
-      await notePlayer.pause();
     } catch (_) {}
-}
 
+    // Invalidate scheduled gate timers and stop notes
+    for (int i = 0; i < notePlayers.length; i++) {
+      playerTokens[i]++;
+      try {
+        await notePlayers[i].pause();
+        await notePlayers[i].seek(Duration.zero);
+        notePlayers[i].setVolume(1.0);
+      } catch (_) {}
+    }
+  }
 
+  // Reset to initial state
   Future<void> reset() async {
     await stop();
     swingController.reset();
@@ -388,12 +480,14 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       playIndex = 0;
       stepCounter = 0;
       currentSound = (scale.isNotEmpty && playPattern.isNotEmpty)
-          ? scale[playPattern[0]]
+          ? '${scale[playPattern[0]]}$baseOctave'
           : '';
     });
 
     if (currentSound.isNotEmpty) {
-      await _prepareNoteIfNeeded(currentSound);
+      final player = notePlayers[notePoolIndex];
+      notePoolIndex = (notePoolIndex + 1) % notePoolSize;
+      await _prepareNoteIfNeeded(player, currentSound, preload: false);
     }
   }
 
@@ -511,7 +605,6 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
                     setState(() => enableSound = v);
                     if (!v) {
                       try {
-                        await notePlayer.pause();
                       } catch (_) {}
                     }
                   },
@@ -549,7 +642,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
                 const SizedBox(height: 18),
 
-                // Controls 
+                // Controls
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -584,7 +677,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   void dispose() {
     timer?.cancel();
     clickPlayer.dispose();
-    notePlayer.dispose();
+    for (final p in notePlayers) {
+      p.dispose();
+    }
     swingController.dispose();
     super.dispose();
   }
