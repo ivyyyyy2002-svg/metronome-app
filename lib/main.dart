@@ -6,6 +6,12 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:math' as math;
 
+enum ClickAccent {
+  strong,
+  secondary,
+  weak,
+}
+
 void main() {
   runApp(const MyApp());
 }
@@ -35,6 +41,9 @@ class MetronomeDemo extends StatefulWidget  {
 
 // The state for the MetronomeDemo widget
 class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProviderStateMixin {
+  static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
+  static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
+
   // Animation for pendulum swing
   late final AnimationController swingController;
   late Animation<double> swingAnim;
@@ -45,7 +54,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   Timer? timer;
 
   // just_audio players
-  final AudioPlayer clickPlayer = AudioPlayer();
+  final AudioPlayer clickStrongPlayer = AudioPlayer();
+  final AudioPlayer clickWeakPlayer = AudioPlayer();
+  String clickStrongAsset = _defaultStrongClickAsset;
+  String clickWeakAsset = _defaultWeakClickAsset;
 
   // Note player pool to allow overlapping notes without cutting off
   static const int notePoolSize = 12;
@@ -75,6 +87,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
   // preload flags
   bool clickReady = false;
+  Future<void>? _clickPreloadFuture;
 
   // Available instruments
   final List<String> instruments = ['piano', 'flute', 'sine'];
@@ -100,6 +113,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   bool _usePerNotePlayers = false;
 
   int uiUpdateEvery = 4;
+
+  // Time signature (meter): beats per bar / beat unit
+  int timeSignatureBeats = 4;
+  int timeSignatureNote = 4;
 
   // --- UI-only notifier to refresh the current note every tick without rebuilding the whole widget tree ---
   final ValueNotifier<String> currentSoundVN = ValueNotifier<String>('');
@@ -127,7 +144,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       });
     }
 
-    _initAudio(); // session + preload
+    _initAudio(); // session setup
     loadConfig();
   }
 
@@ -146,8 +163,6 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
       androidWillPauseWhenDucked: false,
     ));
-
-    await preloadClick();
   }
 
   // ---------- Config ----------
@@ -174,6 +189,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
           : loadedDesc.length;
 
       final loadedUseDescending = (data['useDescending'] ?? true) as bool;
+      final loadedTimeSignature =
+          _parseTimeSignature(data['timeSignature'], fallbackBeats: 4, fallbackNote: 4);
+      final loadedClickAssets = _parseClickAssets(data['clickAssets']);
 
       // Debug print loaded values before applying
       setState(() {
@@ -185,6 +203,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
         stepsDown = loadedStepsDown;
         useDescending = loadedUseDescending;
         baseOctave = loadedBaseOctave;
+        timeSignatureBeats = loadedTimeSignature.$1;
+        timeSignatureNote = loadedTimeSignature.$2;
+        clickStrongAsset = loadedClickAssets.$1;
+        clickWeakAsset = loadedClickAssets.$2;
+        uiUpdateEvery = 1;
 
         configLoaded = true;
         buildPlayPattern();
@@ -201,6 +224,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
       // Keep the UI notifier in sync immediately
       currentSoundVN.value = currentSound;
+      await preloadClick();
 
       // Warm up first note to reduce first-hit latency
       if (configLoaded && playPattern.isNotEmpty) {
@@ -229,7 +253,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
       // Debug once (helps verify pattern is not stuck)
       debugPrint(
-          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending baseOctave=$baseOctave');
+          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending baseOctave=$baseOctave timeSignature=$timeSignatureBeats/$timeSignatureNote clickAssets=[$clickStrongAsset,$clickWeakAsset]');
       debugPrint('playPattern=$playPattern');
     } catch (e, st) {
       debugPrint('Failed to load config: $e');
@@ -242,6 +266,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     }
   }
 
+  // Build the play pattern based on ascending/descending arrays and steps
   void buildPlayPattern() {
     playPattern = [];
     if (ascending.isEmpty) return;
@@ -261,29 +286,125 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     playIndex = 0;
   }
 
+  // Parse time signature from config, with validation and fallbacks
+  (int, int) _parseTimeSignature(
+    dynamic raw, {
+    required int fallbackBeats,
+    required int fallbackNote,
+  }) {
+    if (raw is Map<String, dynamic>) {
+      final beats = raw['beats'];
+      final note = raw['note'];
+      final b = (beats is int && beats > 0) ? beats : fallbackBeats;
+      final n = (note is int && note > 0) ? note : fallbackNote;
+      return (b, n);
+    }
+    return (fallbackBeats, fallbackNote);
+  }
+
+  // Parse click asset paths from config, with validation and fallbacks
+  (String, String) _parseClickAssets(dynamic raw) {
+    if (raw is Map<String, dynamic>) {
+      final strong = raw['strong'];
+      final weak = raw['weak'];
+      return (
+        strong is String && strong.isNotEmpty ? strong : _defaultStrongClickAsset,
+        weak is String && weak.isNotEmpty ? weak : _defaultWeakClickAsset,
+      );
+    }
+    return (
+      _defaultStrongClickAsset,
+      _defaultWeakClickAsset,
+    );
+  }
+
   // ---------- Audio (just_audio) ----------
   Future<void> preloadClick() async {
+    if (_clickPreloadFuture != null) {
+      await _clickPreloadFuture;
+      return;
+    }
+    final completer = Completer<void>();
+    _clickPreloadFuture = completer.future;
     try {
-      await clickPlayer.setAsset('assets/sounds/click.wav');
+      await _loadClickWithFallback(clickStrongPlayer, clickStrongAsset);
+      await _loadClickWithFallback(clickWeakPlayer, clickWeakAsset);
+      clickStrongPlayer.setVolume(1.0);
+      clickWeakPlayer.setVolume(0.65);
       clickReady = true;
-      if (mounted) setState(() {});
     } catch (e, st) {
       debugPrint('Click preload failed: $e');
       debugPrintStack(stackTrace: st);
       clickReady = false;
+    } finally {
+      completer.complete();
+      _clickPreloadFuture = null;
       if (mounted) setState(() {});
     }
   }
 
-  Future<void> playClick() async {
+  Future<void> _loadClickWithFallback(AudioPlayer player, String preferredAsset) async {
+    try {
+      await player.setAsset(preferredAsset);
+      return;
+    } catch (_) {
+      try {
+        await player.setAsset(_defaultWeakClickAsset);
+        return;
+      } catch (_) {
+        await player.setAsset(_defaultStrongClickAsset);
+      }
+    }
+  }
+
+  // Determine the accent type for a given beat position in the bar
+  ClickAccent _accentForBeatPosition(int beatInBar) {
+    final signature = '$timeSignatureBeats/$timeSignatureNote';
+    switch (signature) {
+      case '2/4':
+        return beatInBar == 1 ? ClickAccent.strong : ClickAccent.weak;
+      case '3/4':
+        return beatInBar == 1 ? ClickAccent.strong : ClickAccent.weak;
+      case '4/4':
+        if (beatInBar == 1) return ClickAccent.strong;
+        if (beatInBar == 3) return ClickAccent.secondary;
+        return ClickAccent.weak;
+      case '6/8':
+        if (beatInBar == 1) return ClickAccent.strong;
+        if (beatInBar == 4) return ClickAccent.secondary;
+        return ClickAccent.weak;
+      default:
+        return beatInBar == 1 ? ClickAccent.strong : ClickAccent.weak;
+    }
+  }
+
+  Future<void> _pauseClickPlayers() async {
+    for (final p in [clickStrongPlayer, clickWeakPlayer]) {
+      try {
+        await p.pause();
+        await p.seek(Duration.zero);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> playClickForBeat(int beatInBar) async {
     if (!clickReady) {
       await preloadClick();
       if (!clickReady) return;
     }
+
+    final accent = _accentForBeatPosition(beatInBar);
+    final (AudioPlayer player, double volume) = switch (accent) {
+      ClickAccent.strong => (clickStrongPlayer, 1.0),
+      ClickAccent.secondary => (clickStrongPlayer, 0.82),
+      ClickAccent.weak => (clickWeakPlayer, 0.65),
+    };
+
     try {
       // more reliable for short sounds than just seek+play
-      await clickPlayer.seek(Duration.zero);
-      await clickPlayer.play();
+      player.setVolume(volume);
+      await player.seek(Duration.zero);
+      await player.play();
     } catch (e, st) {
       debugPrint('Failed to play click: $e');
       debugPrintStack(stackTrace: st);
@@ -561,6 +682,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
     beat++;
     playIndex = (playIndex + 1) % playPattern.length;
+    final beatInBar = ((beat - 1) % timeSignatureBeats) + 1;
 
     // Only advance stepCounter when octave is computed.
     // If octave is embedded in the token list, stepCounter is not needed for octave math.
@@ -576,7 +698,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     }
 
     if (enableClick) {
-      playClick();
+      playClickForBeat(beatInBar);
     }
     if (enableSound) {
       playNoteByName(noteToPlay, octaveToPlay);
@@ -630,9 +752,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     oldTimer?.cancel();
     swingController.stop();
 
-    try {
-      await clickPlayer.pause();
-    } catch (_) {}
+    await _pauseClickPlayers();
 
     // Invalidate scheduled gate timers and stop notes
     for (int i = 0; i < notePlayers.length; i++) {
@@ -688,6 +808,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     final isRunning = timer != null;
+    final int beatsForDisplay = timeSignatureBeats;
+    final int beatInBar = (beat == 0) ? 1 : ((beat - 1) % beatsForDisplay) + 1;
+    final int beatNumerator = beatInBar;
+    final int beatDenominator = timeSignatureNote;
 
     return Scaffold(
       appBar: AppBar(
@@ -708,49 +832,66 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
                 ),
                 const SizedBox(height: 12),
 
-                // BPM big number
-                Text(
-                  '$bpm',
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                Text(
-                  'BPM',
-                  style: Theme.of(context).textTheme.titleMedium,
+                // Beat display (center, modern)
+                Column(
+                  children: [
+                    Text(
+                      '$beatNumerator/$beatDenominator',
+                      style:
+                          Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(beatsForDisplay, (i) {
+                        final accent = _accentForBeatPosition(i + 1);
+                        final isActive = (i + 1) == beatInBar;
+                        final Color activeColor = switch (accent) {
+                          ClickAccent.strong => Theme.of(context).colorScheme.primary,
+                          ClickAccent.secondary => Theme.of(context).colorScheme.secondary,
+                          ClickAccent.weak => Theme.of(context).colorScheme.tertiary,
+                        };
+                        final Color idleColor = switch (accent) {
+                          ClickAccent.strong => Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                          ClickAccent.secondary => Theme.of(context).colorScheme.secondary.withValues(alpha: 0.28),
+                          ClickAccent.weak => Theme.of(context).colorScheme.outlineVariant,
+                        };
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 140),
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
+                          width: isActive ? 12 : 8,
+                          height: isActive ? 12 : 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isActive ? activeColor : idleColor,
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$bpm',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'BPM',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
 
-                const SizedBox(height: 12),
-
-                // Current sound display
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.music_note),
-                      const SizedBox(width: 8),
-                      ValueListenableBuilder<String>(
-                        valueListenable: currentSoundVN,
-                        builder: (context, v, _) {
-                          return Text(
-                            v.isEmpty ? '-' : v,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
 
                 // Slider for BPM (30-240)
                 Padding(
@@ -783,32 +924,72 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
                 const SizedBox(height: 10),
 
-                // Toggles
-                SwitchListTile(
-                  title: const Text('Click'),
-                  value: enableClick,
-                  onChanged: (v) async {
-                    setState(() => enableClick = v);
-                    if (!v) {
-                      try {
-                        await clickPlayer.pause();
-                      } catch (_) {}
-                    }
-                  },
-                ),
-                SwitchListTile(
-                  title: const Text('Sound'),
-                  value: enableSound,
-                  onChanged: (v) async {
-                    setState(() => enableSound = v);
-                    if (!v) {
-                      try {
-                      } catch (_) {}
-                    }
-                  },
+                // Compact toggles
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    FilterChip(
+                      label: const Text('Click'),
+                      avatar: const Icon(Icons.volume_up, size: 18),
+                      selected: enableClick,
+                      onSelected: (v) async {
+                        setState(() => enableClick = v);
+                        if (!v) {
+                          await _pauseClickPlayers();
+                        }
+                      },
+                    ),
+                    FilterChip(
+                      label: const Text('Sound'),
+                      avatar: const Icon(Icons.music_note, size: 18),
+                      selected: enableSound,
+                      onSelected: (v) async {
+                        setState(() => enableSound = v);
+                        if (!v) {
+                          try {
+                          } catch (_) {}
+                        }
+                      },
+                    ),
+                  ],
                 ),
 
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
+
+                // Time signature selector
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Time Signature: '),
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: '$timeSignatureBeats/$timeSignatureNote',
+                      items: const [
+                        DropdownMenuItem(value: '2/4', child: Text('2/4')),
+                        DropdownMenuItem(value: '3/4', child: Text('3/4')),
+                        DropdownMenuItem(value: '4/4', child: Text('4/4')),
+                        DropdownMenuItem(value: '6/8', child: Text('6/8')),
+                      ],
+                      onChanged: (v) {
+                        if (v == null) return;
+                        final parts = v.split('/');
+                        if (parts.length != 2) return;
+                        final parsedBeats = int.tryParse(parts[0]);
+                        final parsedNote = int.tryParse(parts[1]);
+                        if (parsedBeats == null || parsedNote == null) return;
+                        setState(() {
+                          timeSignatureBeats = parsedBeats;
+                          timeSignatureNote = parsedNote;
+                          beat = 0;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
 
                 // Instrument
                 Row(
@@ -828,14 +1009,6 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
                       },
                     ),
                   ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Octave range display (optional)
-                Text(
-                  'Octave range: C$minOctave ~ C$maxOctave (base: $baseOctave)',
-                  style: Theme.of(context).textTheme.bodySmall,
                 ),
 
                 const SizedBox(height: 18),
@@ -874,7 +1047,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   @override
   void dispose() {
     timer?.cancel();
-    clickPlayer.dispose();
+    clickStrongPlayer.dispose();
+    clickWeakPlayer.dispose();
     for (final p in notePlayers) {
       p.dispose();
     }

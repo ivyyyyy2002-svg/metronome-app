@@ -26,7 +26,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/config/
-    - assets/sounds/click.wav
+    - assets/sounds/
     - assets/notes/piano/
     - assets/notes/flute/
     - assets/notes/sine/
