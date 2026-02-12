@@ -12,6 +12,12 @@ enum ClickAccent {
   weak,
 }
 
+enum BeatUnit {
+  quarter,
+  eighth,
+  dottedQuarter,
+}
+
 void main() {
   runApp(const MyApp());
 }
@@ -117,6 +123,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   // Time signature (meter): beats per bar / beat unit
   int timeSignatureBeats = 4;
   int timeSignatureNote = 4;
+  BeatUnit beatUnit = BeatUnit.quarter;
 
   // --- UI-only notifier to refresh the current note every tick without rebuilding the whole widget tree ---
   final ValueNotifier<String> currentSoundVN = ValueNotifier<String>('');
@@ -192,6 +199,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       final loadedTimeSignature =
           _parseTimeSignature(data['timeSignature'], fallbackBeats: 4, fallbackNote: 4);
       final loadedClickAssets = _parseClickAssets(data['clickAssets']);
+      final loadedBeatUnit = _parseBeatUnit(
+        data['beatUnit'],
+        fallbackBeats: loadedTimeSignature.$1,
+        fallbackNote: loadedTimeSignature.$2,
+      );
 
       // Debug print loaded values before applying
       setState(() {
@@ -205,6 +217,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
         baseOctave = loadedBaseOctave;
         timeSignatureBeats = loadedTimeSignature.$1;
         timeSignatureNote = loadedTimeSignature.$2;
+        beatUnit = loadedBeatUnit;
         clickStrongAsset = loadedClickAssets.$1;
         clickWeakAsset = loadedClickAssets.$2;
         uiUpdateEvery = 1;
@@ -253,7 +266,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
       // Debug once (helps verify pattern is not stuck)
       debugPrint(
-          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending baseOctave=$baseOctave timeSignature=$timeSignatureBeats/$timeSignatureNote clickAssets=[$clickStrongAsset,$clickWeakAsset]');
+          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending baseOctave=$baseOctave timeSignature=$timeSignatureBeats/$timeSignatureNote beatUnit=${_beatUnitToConfigValue(beatUnit)} clickAssets=[$clickStrongAsset,$clickWeakAsset]');
       debugPrint('playPattern=$playPattern');
     } catch (e, st) {
       debugPrint('Failed to load config: $e');
@@ -316,6 +329,85 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       _defaultStrongClickAsset,
       _defaultWeakClickAsset,
     );
+  }
+
+  BeatUnit _parseBeatUnit(
+    dynamic raw, {
+    required int fallbackBeats,
+    required int fallbackNote,
+  }) {
+    final rawText = (raw is String) ? raw.trim().toLowerCase() : '';
+    switch (rawText) {
+      case 'quarter':
+      case '1/4':
+        return BeatUnit.quarter;
+      case 'eighth':
+      case '1/8':
+        return BeatUnit.eighth;
+      case 'dotted_quarter':
+      case 'dotted-quarter':
+      case 'dotted quarter':
+      case '3/8':
+        return BeatUnit.dottedQuarter;
+      default:
+        return _defaultBeatUnitForSignature(fallbackBeats, fallbackNote);
+    }
+  }
+
+  BeatUnit _defaultBeatUnitForSignature(int beats, int note) {
+    if (beats == 6 && note == 8) {
+      return BeatUnit.dottedQuarter;
+    }
+    return BeatUnit.quarter;
+  }
+
+  String _beatUnitLabel(BeatUnit unit) {
+    switch (unit) {
+      case BeatUnit.quarter:
+        return 'Quarter';
+      case BeatUnit.eighth:
+        return 'Eighth';
+      case BeatUnit.dottedQuarter:
+        return 'Dotted Quarter';
+    }
+  }
+
+  String _beatUnitToConfigValue(BeatUnit unit) {
+    switch (unit) {
+      case BeatUnit.quarter:
+        return 'quarter';
+      case BeatUnit.eighth:
+        return 'eighth';
+      case BeatUnit.dottedQuarter:
+        return 'dotted_quarter';
+    }
+  }
+
+  double _beatUnitWholeNoteLength(BeatUnit unit) {
+    switch (unit) {
+      case BeatUnit.quarter:
+        return 1.0 / 4.0;
+      case BeatUnit.eighth:
+        return 1.0 / 8.0;
+      case BeatUnit.dottedQuarter:
+        return 3.0 / 8.0;
+    }
+  }
+
+  int _computeTickIntervalMs() {
+    final double displayedBeatLength = 1.0 / timeSignatureNote;
+    final double beatUnitLength = _beatUnitWholeNoteLength(beatUnit);
+    final double intervalMs =
+        (60000.0 / bpm) * (displayedBeatLength / beatUnitLength);
+    return intervalMs.round().clamp(40, 4000);
+  }
+
+  void _restartIfRunning() {
+    if (timer != null) {
+      stop().then((_) {
+        if (mounted) start();
+      });
+    }
   }
 
   // ---------- Audio (just_audio) ----------
@@ -549,7 +641,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
         await player.play();
 
         // Schedule stop after gate duration
-        final int beatMs = (60000 / bpm).round();
+        final int beatMs = _intervalMs;
         final int gateMs = math.max(80, math.min(220, (beatMs * noteGate).round()));
 
         Timer(Duration(milliseconds: gateMs), () {
@@ -580,7 +672,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       await player.play();
 
       // Schedule stop after gate duration
-      final int beatMs = (60000 / bpm).round();
+      final int beatMs = _intervalMs;
       final int gateMs = math.max(80, math.min(220, (beatMs * noteGate).round()));
 
       Timer(Duration(milliseconds: gateMs), () {
@@ -628,10 +720,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       if (bpm > 240) bpm = 240;
     });
 
-    if (timer != null) {
-      stop();
-      start();
-    }
+    _restartIfRunning();
   }
 
   // Apply new BPM value, update animation and timer if running
@@ -641,13 +730,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     });
 
     // Update swing animation duration
-    swingController.duration = Duration(milliseconds: (60000 / bpm).round());
+    swingController.duration = Duration(milliseconds: _computeTickIntervalMs());
 
     // If timer is running, restart it with new BPM
-    if (timer != null) {
-      stop();
-      start();
-    }
+    _restartIfRunning();
   }
 
   void _onTick() {
@@ -711,7 +797,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     if (!configLoaded) return;
     if (scale.isEmpty || playPattern.isEmpty) return;
 
-    _intervalMs = (60000 / bpm).round();
+    _intervalMs = _computeTickIntervalMs();
     final int gen = ++_tickGen;
 
     // Start the swing animation
@@ -984,6 +1070,37 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
                           timeSignatureNote = parsedNote;
                           beat = 0;
                         });
+                        _restartIfRunning();
+                      },
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Beat unit selector
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Beat Unit: '),
+                    const SizedBox(width: 8),
+                    DropdownButton<BeatUnit>(
+                      value: beatUnit,
+                      items: BeatUnit.values
+                          .map(
+                            (u) => DropdownMenuItem<BeatUnit>(
+                              value: u,
+                              child: Text(_beatUnitLabel(u)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setState(() {
+                          beatUnit = v;
+                          beat = 0;
+                        });
+                        _restartIfRunning();
                       },
                     ),
                   ],
