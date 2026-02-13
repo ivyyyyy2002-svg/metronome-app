@@ -13,9 +13,13 @@ enum ClickAccent {
 }
 
 enum BeatUnit {
+  half,
   quarter,
   eighth,
+  sixteenth,
+  dottedHalf,
   dottedQuarter,
+  dottedEighth,
 }
 
 void main() {
@@ -49,6 +53,31 @@ class MetronomeDemo extends StatefulWidget  {
 class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProviderStateMixin {
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
+  static const List<String> _timeSignatureOptions = [
+    '1/4',
+    '2/4',
+    '3/4',
+    '4/4',
+    '5/4',
+    '6/4',
+    '7/4',
+    '2/2',
+    '3/2',
+    '4/2',
+    '2/8',
+    '3/8',
+    '4/8',
+    '5/8',
+    '6/8',
+    '7/8',
+    '9/8',
+    '12/8',
+    '3/16',
+    '5/16',
+    '7/16',
+    '9/16',
+    '12/16',
+  ];
 
   // Animation for pendulum swing
   late final AnimationController swingController;
@@ -338,59 +367,102 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   }) {
     final rawText = (raw is String) ? raw.trim().toLowerCase() : '';
     switch (rawText) {
+      case 'half':
+      case '1/2':
+        return BeatUnit.half;
       case 'quarter':
       case '1/4':
         return BeatUnit.quarter;
       case 'eighth':
       case '1/8':
         return BeatUnit.eighth;
+      case 'sixteenth':
+      case '1/16':
+        return BeatUnit.sixteenth;
+      case 'dotted_half':
+      case 'dotted-half':
+      case 'dotted half':
+      case '3/4':
+        return BeatUnit.dottedHalf;
       case 'dotted_quarter':
       case 'dotted-quarter':
       case 'dotted quarter':
       case '3/8':
         return BeatUnit.dottedQuarter;
+      case 'dotted_eighth':
+      case 'dotted-eighth':
+      case 'dotted eighth':
+      case '3/16':
+        return BeatUnit.dottedEighth;
       default:
         return _defaultBeatUnitForSignature(fallbackBeats, fallbackNote);
     }
   }
 
   BeatUnit _defaultBeatUnitForSignature(int beats, int note) {
-    if (beats == 6 && note == 8) {
+    if (note == 8 && beats >= 6 && beats % 3 == 0) {
       return BeatUnit.dottedQuarter;
+    }
+    if (note == 16 && beats >= 6 && beats % 3 == 0) {
+      return BeatUnit.dottedEighth;
     }
     return BeatUnit.quarter;
   }
 
   String _beatUnitLabel(BeatUnit unit) {
     switch (unit) {
+      case BeatUnit.half:
+        return '1/2';
       case BeatUnit.quarter:
-        return 'Quarter';
+        return '1/4';
       case BeatUnit.eighth:
-        return 'Eighth';
+        return '1/8';
+      case BeatUnit.sixteenth:
+        return '1/16';
+      case BeatUnit.dottedHalf:
+        return '1/2.';
       case BeatUnit.dottedQuarter:
-        return 'Dotted Quarter';
+        return '1/4.';
+      case BeatUnit.dottedEighth:
+        return '1/8.';
     }
   }
 
   String _beatUnitToConfigValue(BeatUnit unit) {
     switch (unit) {
+      case BeatUnit.half:
+        return 'half';
       case BeatUnit.quarter:
         return 'quarter';
       case BeatUnit.eighth:
         return 'eighth';
+      case BeatUnit.sixteenth:
+        return 'sixteenth';
+      case BeatUnit.dottedHalf:
+        return 'dotted_half';
       case BeatUnit.dottedQuarter:
         return 'dotted_quarter';
+      case BeatUnit.dottedEighth:
+        return 'dotted_eighth';
     }
   }
 
   double _beatUnitWholeNoteLength(BeatUnit unit) {
     switch (unit) {
+      case BeatUnit.half:
+        return 1.0 / 2.0;
       case BeatUnit.quarter:
         return 1.0 / 4.0;
       case BeatUnit.eighth:
         return 1.0 / 8.0;
+      case BeatUnit.sixteenth:
+        return 1.0 / 16.0;
+      case BeatUnit.dottedHalf:
+        return 3.0 / 4.0;
       case BeatUnit.dottedQuarter:
         return 3.0 / 8.0;
+      case BeatUnit.dottedEighth:
+        return 3.0 / 16.0;
     }
   }
 
@@ -451,23 +523,36 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
   // Determine the accent type for a given beat position in the bar
   ClickAccent _accentForBeatPosition(int beatInBar) {
-    final signature = '$timeSignatureBeats/$timeSignatureNote';
-    switch (signature) {
-      case '2/4':
-        return beatInBar == 1 ? ClickAccent.strong : ClickAccent.weak;
-      case '3/4':
-        return beatInBar == 1 ? ClickAccent.strong : ClickAccent.weak;
-      case '4/4':
-        if (beatInBar == 1) return ClickAccent.strong;
-        if (beatInBar == 3) return ClickAccent.secondary;
-        return ClickAccent.weak;
-      case '6/8':
-        if (beatInBar == 1) return ClickAccent.strong;
-        if (beatInBar == 4) return ClickAccent.secondary;
-        return ClickAccent.weak;
-      default:
-        return beatInBar == 1 ? ClickAccent.strong : ClickAccent.weak;
+    if (beatInBar == 1) return ClickAccent.strong;
+
+    // Compound meters: 6/8, 9/8, 12/8 and 6/16, 9/16, 12/16
+    if ((timeSignatureNote == 8 || timeSignatureNote == 16) &&
+        timeSignatureBeats >= 6 &&
+        timeSignatureBeats % 3 == 0) {
+      return ((beatInBar - 1) % 3 == 0)
+          ? ClickAccent.secondary
+          : ClickAccent.weak;
     }
+
+    if (timeSignatureBeats == 4) {
+      return beatInBar == 3 ? ClickAccent.secondary : ClickAccent.weak;
+    }
+
+    if (timeSignatureBeats == 5) {
+      return beatInBar == 4 ? ClickAccent.secondary : ClickAccent.weak;
+    }
+
+    if (timeSignatureBeats == 7) {
+      return beatInBar == 5 ? ClickAccent.secondary : ClickAccent.weak;
+    }
+
+    if (timeSignatureBeats >= 6 && timeSignatureBeats.isEven) {
+      return beatInBar == (timeSignatureBeats ~/ 2) + 1
+          ? ClickAccent.secondary
+          : ClickAccent.weak;
+    }
+
+    return ClickAccent.weak;
   }
 
   Future<void> _pauseClickPlayers() async {
@@ -929,32 +1014,48 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
                               ),
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(beatsForDisplay, (i) {
-                        final accent = _accentForBeatPosition(i + 1);
-                        final isActive = (i + 1) == beatInBar;
-                        final Color activeColor = switch (accent) {
-                          ClickAccent.strong => Theme.of(context).colorScheme.primary,
-                          ClickAccent.secondary => Theme.of(context).colorScheme.secondary,
-                          ClickAccent.weak => Theme.of(context).colorScheme.tertiary,
-                        };
-                        final Color idleColor = switch (accent) {
-                          ClickAccent.strong => Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
-                          ClickAccent.secondary => Theme.of(context).colorScheme.secondary.withValues(alpha: 0.28),
-                          ClickAccent.weak => Theme.of(context).colorScheme.outlineVariant,
-                        };
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 140),
-                          margin: const EdgeInsets.symmetric(horizontal: 5),
-                          width: isActive ? 12 : 8,
-                          height: isActive ? 12 : 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isActive ? activeColor : idleColor,
-                          ),
-                        );
-                      }),
+                    SizedBox(
+                      height: 16,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        // Generate beat indicators based on time signature, with accent colors and active beat scaling
+                        children: List.generate(beatsForDisplay, (i) {
+                          final accent = _accentForBeatPosition(i + 1);
+                          final isActive = (i + 1) == beatInBar;
+                          final Color activeColor = switch (accent) {
+                            ClickAccent.strong => Theme.of(context).colorScheme.primary,
+                            ClickAccent.secondary => Theme.of(context).colorScheme.secondary,
+                            ClickAccent.weak => Theme.of(context).colorScheme.tertiary,
+                          };
+                          final Color idleColor = switch (accent) {
+                            ClickAccent.strong => Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                            ClickAccent.secondary => Theme.of(context).colorScheme.secondary.withValues(alpha: 0.28),
+                            ClickAccent.weak => Theme.of(context).colorScheme.outlineVariant,
+                          };
+                          return SizedBox(
+                            width: 18,
+                            height: 16,
+                            child: Center(
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween<double>(end: isActive ? 1.0 : 0.66),
+                                duration: const Duration(milliseconds: 140),
+                                curve: Curves.easeOut,
+                                builder: (context, scale, child) {
+                                  return Transform.scale(scale: scale, child: child);
+                                },
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isActive ? activeColor : idleColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -1029,7 +1130,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
                     ),
                     FilterChip(
                       label: const Text('Sound'),
-                      avatar: const Icon(Icons.music_note, size: 18),
+                      avatar: const Icon(Icons.graphic_eq_rounded, size: 18),
                       selected: enableSound,
                       onSelected: (v) async {
                         setState(() => enableSound = v);
@@ -1044,64 +1145,90 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
                 const SizedBox(height: 8),
 
-                // Time signature selector
+                // Compact meter + beat-unit controls (single row)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Time Signature: '),
-                    const SizedBox(width: 8),
-                    DropdownButton<String>(
-                      value: '$timeSignatureBeats/$timeSignatureNote',
-                      items: const [
-                        DropdownMenuItem(value: '2/4', child: Text('2/4')),
-                        DropdownMenuItem(value: '3/4', child: Text('3/4')),
-                        DropdownMenuItem(value: '4/4', child: Text('4/4')),
-                        DropdownMenuItem(value: '6/8', child: Text('6/8')),
-                      ],
-                      onChanged: (v) {
-                        if (v == null) return;
-                        final parts = v.split('/');
-                        if (parts.length != 2) return;
-                        final parsedBeats = int.tryParse(parts[0]);
-                        final parsedNote = int.tryParse(parts[1]);
-                        if (parsedBeats == null || parsedNote == null) return;
-                        setState(() {
-                          timeSignatureBeats = parsedBeats;
-                          timeSignatureNote = parsedNote;
-                          beat = 0;
-                        });
-                        _restartIfRunning();
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Beat unit selector
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Beat Unit: '),
-                    const SizedBox(width: 8),
-                    DropdownButton<BeatUnit>(
-                      value: beatUnit,
-                      items: BeatUnit.values
-                          .map(
-                            (u) => DropdownMenuItem<BeatUnit>(
-                              value: u,
-                              child: Text(_beatUnitLabel(u)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.bar_chart_rounded, size: 18),
+                          const SizedBox(width: 6),
+                          DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: '$timeSignatureBeats/$timeSignatureNote',
+                              isDense: true,
+                              menuMaxHeight: 320,
+                              items: _timeSignatureOptions
+                                  .map(
+                                    (ts) => DropdownMenuItem<String>(
+                                      value: ts,
+                                      child: Text(ts),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v == null) return;
+                                final parts = v.split('/');
+                                if (parts.length != 2) return;
+                                final parsedBeats = int.tryParse(parts[0]);
+                                final parsedNote = int.tryParse(parts[1]);
+                                if (parsedBeats == null || parsedNote == null) return;
+                                setState(() {
+                                  timeSignatureBeats = parsedBeats;
+                                  timeSignatureNote = parsedNote;
+                                  beat = 0;
+                                });
+                                _restartIfRunning();
+                              },
                             ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setState(() {
-                          beatUnit = v;
-                          beat = 0;
-                        });
-                        _restartIfRunning();
-                      },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.timer_rounded, size: 18),
+                          const SizedBox(width: 6),
+                          DropdownButtonHideUnderline(
+                            child: DropdownButton<BeatUnit>(
+                              value: beatUnit,
+                              isDense: true,
+                              menuMaxHeight: 320,
+                              items: BeatUnit.values
+                                  .map(
+                                    (u) => DropdownMenuItem<BeatUnit>(
+                                      value: u,
+                                      child: Text(_beatUnitLabel(u)),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v == null) return;
+                                setState(() {
+                                  beatUnit = v;
+                                  beat = 0;
+                                });
+                                _restartIfRunning();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
