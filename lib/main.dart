@@ -360,12 +360,14 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     );
   }
 
+  // Parse beat unit from config, with validation and fallbacks based on time signature
   BeatUnit _parseBeatUnit(
     dynamic raw, {
     required int fallbackBeats,
     required int fallbackNote,
   }) {
     final rawText = (raw is String) ? raw.trim().toLowerCase() : '';
+    // Recognize common beat unit names and fractions, with some flexibility
     switch (rawText) {
       case 'half':
       case '1/2':
@@ -409,6 +411,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     return BeatUnit.quarter;
   }
 
+  // Get a user-friendly label for a beat unit (for display in the meter picker)
   String _beatUnitLabel(BeatUnit unit) {
     switch (unit) {
       case BeatUnit.half:
@@ -464,6 +467,244 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       case BeatUnit.dottedEighth:
         return 3.0 / 16.0;
     }
+  }
+
+  // Get the index of the current time signature in the options list, for initializing the picker
+  int _timeSignatureIndex() {
+    final key = '$timeSignatureBeats/$timeSignatureNote';
+    final idx = _timeSignatureOptions.indexOf(key);
+    return idx >= 0 ? idx : _timeSignatureOptions.indexOf('4/4');
+  }
+
+  int _beatUnitIndex() {
+    final idx = BeatUnit.values.indexOf(beatUnit);
+    return idx >= 0 ? idx : BeatUnit.values.indexOf(BeatUnit.quarter);
+  }
+
+  Future<void> _openMeterPickerSheet() async {
+    final tsController = FixedExtentScrollController(initialItem: _timeSignatureIndex());
+    final unitController = FixedExtentScrollController(initialItem: _beatUnitIndex());
+    int tsIndex = _timeSignatureIndex();
+    int unitIndex = _beatUnitIndex();
+
+    final result = await showModalBottomSheet<(int, int)>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final scheme = Theme.of(context).colorScheme;
+            final previewText =
+                '${_timeSignatureOptions[tsIndex]} · ${_beatUnitLabel(BeatUnit.values[unitIndex])}';
+
+            return Container(
+              height: 306,
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              ),
+              child: Column(
+                children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(sheetContext).pop((tsIndex, unitIndex)),
+                            child: const Text('Done'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: scheme.surfaceContainerHighest,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.tune_rounded, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            previewText,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: 290,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                color: scheme.surfaceContainerLow,
+                              ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 136,
+                                  child: ListWheelScrollView.useDelegate(
+                                    controller: tsController,
+                                    itemExtent: 36,
+                                    diameterRatio: 1.7,
+                                    perspective: 0.003,
+                                    physics: const FixedExtentScrollPhysics(),
+                                    onSelectedItemChanged: (index) {
+                                      setModalState(() => tsIndex = index);
+                                    },
+                                    childDelegate: ListWheelChildBuilderDelegate(
+                                      childCount: _timeSignatureOptions.length,
+                                      builder: (context, index) {
+                                        if (index < 0 || index >= _timeSignatureOptions.length) {
+                                          return null;
+                                        }
+                                        final selected = index == tsIndex;
+                                        return Center(
+                                          child: Text(
+                                            _timeSignatureOptions[index],
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                  fontWeight:
+                                                      selected ? FontWeight.w700 : FontWeight.w400,
+                                                  color: selected
+                                                      ? scheme.onSurface
+                                                      : scheme.onSurfaceVariant,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 132,
+                                  color: scheme.outlineVariant.withValues(alpha: 0.55),
+                                ),
+                                SizedBox(
+                                  width: 136,
+                                  child: ListWheelScrollView.useDelegate(
+                                    controller: unitController,
+                                    itemExtent: 36,
+                                    diameterRatio: 1.7,
+                                    perspective: 0.003,
+                                    physics: const FixedExtentScrollPhysics(),
+                                    onSelectedItemChanged: (index) {
+                                      setModalState(() => unitIndex = index);
+                                    },
+                                    childDelegate: ListWheelChildBuilderDelegate(
+                                      childCount: BeatUnit.values.length,
+                                      builder: (context, index) {
+                                        if (index < 0 || index >= BeatUnit.values.length) {
+                                          return null;
+                                        }
+                                        final selected = index == unitIndex;
+                                        return Center(
+                                          child: Text(
+                                            _beatUnitLabel(BeatUnit.values[index]),
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                  fontWeight:
+                                                      selected ? FontWeight.w700 : FontWeight.w400,
+                                                  color: selected
+                                                      ? scheme.onSurface
+                                                      : scheme.onSurfaceVariant,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IgnorePointer(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 136,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: scheme.primary.withValues(alpha: 0.06),
+                                      border: Border(
+                                        top: BorderSide(
+                                          color: scheme.primary.withValues(alpha: 0.28),
+                                        ),
+                                        bottom: BorderSide(
+                                          color: scheme.primary.withValues(alpha: 0.28),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 1),
+                                  Container(
+                                    width: 136,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: scheme.primary.withValues(alpha: 0.06),
+                                      border: Border(
+                                        top: BorderSide(
+                                          color: scheme.primary.withValues(alpha: 0.28),
+                                        ),
+                                        bottom: BorderSide(
+                                          color: scheme.primary.withValues(alpha: 0.28),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    tsController.dispose();
+    unitController.dispose();
+
+    if (result == null) return;
+    final selectedTimeSignature = _timeSignatureOptions[result.$1];
+    final parts = selectedTimeSignature.split('/');
+    if (parts.length != 2) return;
+    final parsedBeats = int.tryParse(parts[0]);
+    final parsedNote = int.tryParse(parts[1]);
+    if (parsedBeats == null || parsedNote == null) return;
+
+    // Debug print selected values before applying
+    debugPrint('Selected time signature: $parsedBeats/$parsedNote, beat unit: ${BeatUnit.values[result.$2]}');
+    setState(() {
+      timeSignatureBeats = parsedBeats;
+      timeSignatureNote = parsedNote;
+      beatUnit = BeatUnit.values[result.$2];
+      beat = 0;
+    });
+    _restartIfRunning();
   }
 
   int _computeTickIntervalMs() {
@@ -1145,92 +1386,30 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
                 const SizedBox(height: 8),
 
-                // Compact meter + beat-unit controls (single row)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.bar_chart_rounded, size: 18),
-                          const SizedBox(width: 6),
-                          DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: '$timeSignatureBeats/$timeSignatureNote',
-                              isDense: true,
-                              menuMaxHeight: 320,
-                              items: _timeSignatureOptions
-                                  .map(
-                                    (ts) => DropdownMenuItem<String>(
-                                      value: ts,
-                                      child: Text(ts),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v == null) return;
-                                final parts = v.split('/');
-                                if (parts.length != 2) return;
-                                final parsedBeats = int.tryParse(parts[0]);
-                                final parsedNote = int.tryParse(parts[1]);
-                                if (parsedBeats == null || parsedNote == null) return;
-                                setState(() {
-                                  timeSignatureBeats = parsedBeats;
-                                  timeSignatureNote = parsedNote;
-                                  beat = 0;
-                                });
-                                _restartIfRunning();
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                // Compact meter control: one container, tap to expand dual wheel picker.
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _openMeterPickerSheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.timer_rounded, size: 18),
-                          const SizedBox(width: 6),
-                          DropdownButtonHideUnderline(
-                            child: DropdownButton<BeatUnit>(
-                              value: beatUnit,
-                              isDense: true,
-                              menuMaxHeight: 320,
-                              items: BeatUnit.values
-                                  .map(
-                                    (u) => DropdownMenuItem<BeatUnit>(
-                                      value: u,
-                                      child: Text(_beatUnitLabel(u)),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v == null) return;
-                                setState(() {
-                                  beatUnit = v;
-                                  beat = 0;
-                                });
-                                _restartIfRunning();
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.tune_rounded, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$timeSignatureBeats/$timeSignatureNote · ${_beatUnitLabel(beatUnit)}',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.expand_more_rounded, size: 18),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
 
                 const SizedBox(height: 8),
@@ -1324,19 +1503,38 @@ class MetronomeSwing extends StatelessWidget {
       child: AnimatedBuilder(
         animation: anim,
         builder: (context, _) {
+          final scheme = Theme.of(context).colorScheme;
           final angle = (amplitudeDeg * math.pi / 180.0) * anim.value;
 
           return Stack(
             alignment: Alignment.center,
             children: [
               Positioned(
-                bottom: 18,
+                bottom: 16,
                 child: Container(
-                  width: 180,
-                  height: 20,
+                  width: 188,
+                  height: 22,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                    color: scheme.surfaceContainerHighest,
+                    boxShadow: [
+                      BoxShadow(
+                        color: scheme.shadow.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 30,
+                child: Container(
+                  width: 136,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: scheme.surfaceContainerLow,
                   ),
                 ),
               ),
@@ -1350,33 +1548,52 @@ class MetronomeSwing extends StatelessWidget {
                   children: [
                     // center pivot point
                     Container(
-                      width: 14,
-                      height: 14,
+                      width: 12,
+                      height: 12,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isRunning
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).disabledColor,
+                        color: isRunning ? scheme.primary : scheme.outlineVariant,
                       ),
                     ),
                     // rod
                     Container(
-                      width: 6,
-                      height: 150,
+                      width: 5,
+                      height: 146,
                       margin: const EdgeInsets.only(top: 6),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6),
-                        color: Theme.of(context).colorScheme.onSurface,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            scheme.onSurface.withValues(alpha: 0.85),
+                            scheme.onSurface.withValues(alpha: 0.62),
+                          ],
+                        ),
                       ),
                     ),
                     // weight
                     Container(
-                      width: 46,
-                      height: 34,
-                      margin: const EdgeInsets.only(top: 8),
+                      width: 54,
+                      height: 32,
+                      margin: const EdgeInsets.only(top: 10),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(11),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            scheme.primaryContainer,
+                            scheme.surfaceContainerHigh,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: scheme.shadow.withValues(alpha: isRunning ? 0.14 : 0.08),
+                            blurRadius: isRunning ? 9 : 6,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                     ),
                   ],
