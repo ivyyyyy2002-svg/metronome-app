@@ -6,11 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:math' as math;
 
-enum ClickAccent {
-  strong,
-  secondary,
-  weak,
-}
+enum ClickAccent { strong, secondary, weak }
 
 enum BeatUnit {
   half,
@@ -43,16 +39,38 @@ class MyApp extends StatelessWidget {
 }
 
 // The MetronomeDemo widget
-class MetronomeDemo extends StatefulWidget  {
+class MetronomeDemo extends StatefulWidget {
   const MetronomeDemo({super.key});
   @override
   State<MetronomeDemo> createState() => _MetronomeDemoState();
 }
 
 // The state for the MetronomeDemo widget
-class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProviderStateMixin {
+class _MetronomeDemoState extends State<MetronomeDemo>
+    with SingleTickerProviderStateMixin {
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
+  static const int _assetMinOctave = 2;
+  static const int _assetMaxOctave = 6;
+  static const Map<String, int> _noteToSemitone = {
+    'C': 0,
+    'C#': 1,
+    'Db': 1,
+    'D': 2,
+    'D#': 3,
+    'Eb': 3,
+    'E': 4,
+    'F': 5,
+    'F#': 6,
+    'Gb': 6,
+    'G': 7,
+    'G#': 8,
+    'Ab': 8,
+    'A': 9,
+    'A#': 10,
+    'Bb': 10,
+    'B': 11,
+  };
   static const List<String> _timeSignatureOptions = [
     '1/4',
     '2/4',
@@ -99,7 +117,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   late final List<AudioPlayer> notePlayers;
   int notePoolIndex = 0;
   double noteGate = 0.9; // how long the note plays before cutting off
-  final List<int> playerTokens = List.filled(notePoolSize, 0); // for tracking which player is playing which note
+  final List<int> playerTokens = List.filled(
+    notePoolSize,
+    0,
+  ); // for tracking which player is playing which note
 
   bool enableClick = true; // Enable click sound
   bool enableSound = true; // Enable musical sound
@@ -126,12 +147,17 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
   // Available instruments
   final List<String> instruments = ['piano', 'flute', 'sine'];
+  final Map<String, bool> instrumentAvailability = {};
   String selectedInstrument = 'piano';
 
   // base octave
-  int baseOctave = 2;
-  int minOctave = 2;
-  int maxOctave = 6;
+  int baseOctave = 3;
+  int minOctave = _assetMinOctave;
+  int maxOctave = _assetMaxOctave;
+  int octaveCount = 2;
+  int octaveShift = 0;
+  int _octaveStepSpan = 1;
+  double baseFrequencyHz = 220.0;
 
   // --- cache to avoid rebuilding/setting source every beat ---
   String? _lastNotePath;
@@ -188,45 +214,64 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   Future<void> _initAudio() async {
     // Make iOS allow 2 players (click + note) without one stealing the session
     final session = await AudioSession.instance;
-    await session.configure(const AudioSessionConfiguration(
-      avAudioSessionCategory: AVAudioSessionCategory.playback,
-      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
-      avAudioSessionMode: AVAudioSessionMode.defaultMode,
-      androidAudioAttributes: AndroidAudioAttributes(
-        contentType: AndroidAudioContentType.music,
-        usage: AndroidAudioUsage.media,
+    await session.configure(
+      const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playback,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.mixWithOthers,
+        avAudioSessionMode: AVAudioSessionMode.defaultMode,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.music,
+          usage: AndroidAudioUsage.media,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: false,
       ),
-      androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-      androidWillPauseWhenDucked: false,
-    ));
+    );
   }
 
   // ---------- Config ----------
   Future<void> loadConfig() async {
     try {
-      final jsonStr =
-          await rootBundle.loadString('assets/config/scale_config.json');
-      final data = jsonDecode(jsonStr);
+      final jsonStr = await rootBundle.loadString(
+        'assets/config/scale_config.json',
+      );
+      final data = jsonDecode(jsonStr) as Map<String, dynamic>;
 
-      final loadedScale = List<String>.from(data['scale']);
-      final loadedAsc = List<int>.from(data['ascending']);
-      final loadedDesc = List<int>.from(data['descending']);
-      final loadedBaseOctave =
-          (data['baseoctave'] is int) ? data['baseoctave'] as int : 2;
+      final loadedScale = List<String>.from(data['scale'] ?? const <String>[]);
+      final loadedAsc = List<int>.from(data['ascending'] ?? const <int>[]);
+      final loadedDesc = List<int>.from(data['descending'] ?? const <int>[]);
+      final loadedBaseOctave = (data['baseoctave'] is int)
+          ? data['baseoctave'] as int
+          : baseOctave;
+      final loadedOctaveCount =
+          (data['octaveCount'] is int && data['octaveCount'] > 0)
+          ? data['octaveCount'] as int
+          : octaveCount;
+      final loadedBaseFrequencyHz = _parsePositiveDouble(
+        data['baseFrequencyHz'],
+      );
 
       // safer: if steps missing or <=0, fall back to pattern length
       final rawStepsUp = data['stepsUp'];
       final rawStepsDown = data['stepsDown'];
+      final rawSequenceLength = data['sequenceLength'];
 
-      final loadedStepsUp =
-          (rawStepsUp is int && rawStepsUp > 0) ? rawStepsUp : loadedAsc.length;
+      final loadedStepsUp = (rawSequenceLength is int && rawSequenceLength > 0)
+          ? rawSequenceLength
+          : (rawStepsUp is int && rawStepsUp > 0)
+          ? rawStepsUp
+          : loadedAsc.length;
       final loadedStepsDown = (rawStepsDown is int && rawStepsDown > 0)
           ? rawStepsDown
           : loadedDesc.length;
 
       final loadedUseDescending = (data['useDescending'] ?? true) as bool;
-      final loadedTimeSignature =
-          _parseTimeSignature(data['timeSignature'], fallbackBeats: 4, fallbackNote: 4);
+      final loadedTimeSignature = _parseTimeSignature(
+        data['timeSignature'],
+        fallbackBeats: 4,
+        fallbackNote: 4,
+      );
       final loadedClickAssets = _parseClickAssets(data['clickAssets']);
       final loadedBeatUnit = _parseBeatUnit(
         data['beatUnit'],
@@ -244,6 +289,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
         stepsDown = loadedStepsDown;
         useDescending = loadedUseDescending;
         baseOctave = loadedBaseOctave;
+        octaveCount = loadedOctaveCount;
+        octaveShift = 0;
+        _syncOctaveBounds();
         timeSignatureBeats = loadedTimeSignature.$1;
         timeSignatureNote = loadedTimeSignature.$2;
         beatUnit = loadedBeatUnit;
@@ -251,21 +299,19 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
         clickWeakAsset = loadedClickAssets.$2;
         uiUpdateEvery = 1;
 
+        if (loadedBaseFrequencyHz != null) {
+          baseFrequencyHz = loadedBaseFrequencyHz;
+          _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+        } else {
+          _syncBaseFrequencyFromAnchor();
+        }
+
         configLoaded = true;
         buildPlayPattern();
-
-        // Set initial sound based on first pattern index
-        if (scale.isNotEmpty && playPattern.isNotEmpty) {
-          final firstToken = scale[playPattern[0]];
-          final parsed = _parseNoteWithOctave(firstToken);
-          currentSound = parsed != null ? firstToken : '$firstToken$baseOctave';
-        } else {
-          currentSound = '';
-        }
+        _refreshCurrentSoundPreview();
       });
 
-      // Keep the UI notifier in sync immediately
-      currentSoundVN.value = currentSound;
+      await _refreshInstrumentAvailability();
       await preloadClick();
 
       // Warm up first note to reduce first-hit latency
@@ -273,8 +319,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
         final idx = playPattern[0];
         if (idx >= 0 && idx < scale.length) {
           final token = scale[idx];
-          final parsed = _parseNoteWithOctave(token);
-          final warmName = parsed != null ? token : '$token$baseOctave';
+          final warmName = _resolveFullNoteName(
+            token,
+            baseOctave,
+            stepNumber: 0,
+          );
 
           if (_usePerNotePlayers) {
             await _ensurePerNotePlayerReady(warmName);
@@ -295,7 +344,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
       // Debug once (helps verify pattern is not stuck)
       debugPrint(
-          'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending baseOctave=$baseOctave timeSignature=$timeSignatureBeats/$timeSignatureNote beatUnit=${_beatUnitToConfigValue(beatUnit)} clickAssets=[$clickStrongAsset,$clickWeakAsset]');
+        'Loaded config: scale=$scale ascending=$ascending descending=$descending stepsUp=$stepsUp stepsDown=$stepsDown useDescending=$useDescending baseOctave=$baseOctave octaveCount=$octaveCount baseFrequencyHz=${baseFrequencyHz.toStringAsFixed(2)} timeSignature=$timeSignatureBeats/$timeSignatureNote beatUnit=${_beatUnitToConfigValue(beatUnit)} clickAssets=[$clickStrongAsset,$clickWeakAsset]',
+      );
       debugPrint('playPattern=$playPattern');
     } catch (e, st) {
       debugPrint('Failed to load config: $e');
@@ -312,6 +362,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   void buildPlayPattern() {
     playPattern = [];
     if (ascending.isEmpty) return;
+    _octaveStepSpan = math.max(1, ascending.length);
 
     // Up
     for (int i = 0; i < stepsUp; i++) {
@@ -326,6 +377,228 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     }
 
     playIndex = 0;
+  }
+
+  double? _parsePositiveDouble(dynamic raw) {
+    if (raw is num && raw > 0) return raw.toDouble();
+    return null;
+  }
+
+  void _syncOctaveBounds() {
+    final maxCount = _assetMaxOctave - _assetMinOctave + 1;
+    octaveCount = octaveCount.clamp(1, maxCount).toInt();
+    final maxBase = _assetMaxOctave - octaveCount + 1;
+    baseOctave = baseOctave.clamp(_assetMinOctave, maxBase).toInt();
+    minOctave = baseOctave;
+    maxOctave = baseOctave + octaveCount - 1;
+  }
+
+  int _clampPlayableOctave(int octave) {
+    return octave.clamp(minOctave, maxOctave).toInt();
+  }
+
+  String _anchorScaleToken() {
+    if (scale.isEmpty) return 'A';
+    if (ascending.isNotEmpty) {
+      final idx = ascending.first;
+      if (idx >= 0 && idx < scale.length) return scale[idx];
+    }
+    return scale.first;
+  }
+
+  String _noteNameFromToken(String token) {
+    final parsed = _parseNoteWithOctave(token);
+    return parsed?.note ?? token.trim();
+  }
+
+  double? _frequencyForNote(String note, int octave) {
+    final semitone = _noteToSemitone[note];
+    if (semitone == null) return null;
+    final midi = (octave + 1) * 12 + semitone;
+    return 440.0 * math.pow(2.0, (midi - 69) / 12.0).toDouble();
+  }
+
+  int _nearestBaseOctaveForFrequency(
+    String note,
+    double targetHz,
+    int fallbackBase,
+  ) {
+    final semitone = _noteToSemitone[note];
+    if (semitone == null) return fallbackBase;
+
+    final int maxBase = _assetMaxOctave - octaveCount + 1;
+    int bestOctave = fallbackBase.clamp(_assetMinOctave, maxBase).toInt();
+    double bestDiff = double.infinity;
+
+    for (int octave = _assetMinOctave; octave <= maxBase; octave++) {
+      final freq = _frequencyForNote(note, octave);
+      if (freq == null) continue;
+      final diff = (freq - targetHz).abs();
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestOctave = octave;
+      }
+    }
+    return bestOctave;
+  }
+
+  // Set base octave based on a target frequency for the anchor note, without calling setState (used during config load and when changing base frequency)
+  void _setBaseFromFrequencyNoSetState(double targetHz) {
+    if (scale.isEmpty) return;
+    final anchorToken = _anchorScaleToken();
+    final anchorNote = _noteNameFromToken(anchorToken);
+    final parsedAnchor = _parseNoteWithOctave(anchorToken);
+    final targetBase = _nearestBaseOctaveForFrequency(
+      anchorNote,
+      targetHz,
+      baseOctave,
+    );
+
+    baseOctave = targetBase;
+    _syncOctaveBounds();
+    octaveShift = parsedAnchor != null ? (baseOctave - parsedAnchor.octave) : 0;
+  }
+
+  void _syncBaseFrequencyFromAnchor() {
+    if (scale.isEmpty) return;
+    final anchorToken = _anchorScaleToken();
+    final full = _resolveFullNoteName(anchorToken, baseOctave, stepNumber: 0);
+    final parsed = _parseNoteWithOctave(full);
+    if (parsed == null) return;
+    final anchorHz = _frequencyForNote(parsed.note, parsed.octave);
+    if (anchorHz != null) {
+      baseFrequencyHz = anchorHz;
+    }
+  }
+
+  // Resolve a full note name with octave based on a token, base octave, and step number (for octave shifts)
+  void _refreshCurrentSoundPreview() {
+    if (scale.isEmpty || playPattern.isEmpty) {
+      currentSound = '';
+      currentSoundVN.value = currentSound;
+      return;
+    }
+
+    final firstIdx = playPattern.first;
+    if (firstIdx < 0 || firstIdx >= scale.length) {
+      currentSound = '';
+      currentSoundVN.value = currentSound;
+      return;
+    }
+
+    currentSound = _resolveFullNoteName(
+      scale[firstIdx],
+      baseOctave,
+      stepNumber: 0,
+    );
+    currentSoundVN.value = currentSound;
+  }
+
+  // Resolve a full note name with octave based on a token, base octave, and step number (for octave shifts)
+  Future<void> _setSequenceLength(int newLength) async {
+    final safeLength = newLength.clamp(1, 128).toInt();
+    setState(() {
+      stepsUp = safeLength;
+      beat = 0;
+      playIndex = 0;
+      stepCounter = 0;
+      buildPlayPattern();
+      _refreshCurrentSoundPreview();
+    });
+    await _refreshInstrumentAvailability();
+    _restartIfRunning();
+  }
+
+  Future<void> _setOctaveCount(int newCount) async {
+    final safeCount = newCount
+        .clamp(1, _assetMaxOctave - _assetMinOctave + 1)
+        .toInt();
+    if (safeCount == octaveCount) return;
+    setState(() {
+      octaveCount = safeCount;
+      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+      beat = 0;
+      playIndex = 0;
+      stepCounter = 0;
+      _refreshCurrentSoundPreview();
+    });
+    await _refreshInstrumentAvailability();
+    _restartIfRunning();
+  }
+
+  Future<void> _applyBaseFrequency(double newFrequencyHz) async {
+    final clampedHz = newFrequencyHz.clamp(55.0, 880.0).toDouble();
+    setState(() {
+      baseFrequencyHz = clampedHz;
+      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+      beat = 0;
+      playIndex = 0;
+      stepCounter = 0;
+      _refreshCurrentSoundPreview();
+    });
+    await _refreshInstrumentAvailability();
+    _restartIfRunning();
+  }
+
+  List<String> _samplePatternNotesForProbe({int maxNotes = 12}) {
+    final notes = <String>{};
+    if (playPattern.isNotEmpty && scale.isNotEmpty) {
+      final limit = math.min(maxNotes, playPattern.length);
+      for (int step = 0; step < limit; step++) {
+        final idx = playPattern[step];
+        if (idx < 0 || idx >= scale.length) continue;
+        notes.add(
+          _resolveFullNoteName(scale[idx], baseOctave, stepNumber: step),
+        );
+      }
+    }
+
+    if (notes.isEmpty && scale.isNotEmpty) {
+      notes.add(_resolveFullNoteName(scale.first, baseOctave, stepNumber: 0));
+    }
+    return notes.toList(growable: false);
+  }
+
+  // Check if the given instrument has at least one playable asset based on the current pattern (used to determine availability in the picker)
+  Future<bool> _instrumentHasPlayableAsset(String instrument) async {
+    final probeNotes = _samplePatternNotesForProbe();
+    for (final fullNote in probeNotes) {
+      final path = 'assets/notes/$instrument/$fullNote.wav';
+      try {
+        await rootBundle.load(path);
+        return true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  Future<void> _refreshInstrumentAvailability() async {
+    final nextAvailability = <String, bool>{};
+    for (final instrument in instruments) {
+      nextAvailability[instrument] = await _instrumentHasPlayableAsset(
+        instrument,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      instrumentAvailability
+        ..clear()
+        ..addAll(nextAvailability);
+    });
+
+    if (!(instrumentAvailability[selectedInstrument] ?? false)) {
+      String? fallback;
+      for (final entry in instrumentAvailability.entries) {
+        if (entry.value) {
+          fallback = entry.key;
+          break;
+        }
+      }
+      if (fallback != null) {
+        await _onInstrumentChanged(fallback);
+      }
+    }
   }
 
   // Parse time signature from config, with validation and fallbacks
@@ -350,14 +623,13 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       final strong = raw['strong'];
       final weak = raw['weak'];
       return (
-        strong is String && strong.isNotEmpty ? strong : _defaultStrongClickAsset,
+        strong is String && strong.isNotEmpty
+            ? strong
+            : _defaultStrongClickAsset,
         weak is String && weak.isNotEmpty ? weak : _defaultWeakClickAsset,
       );
     }
-    return (
-      _defaultStrongClickAsset,
-      _defaultWeakClickAsset,
-    );
+    return (_defaultStrongClickAsset, _defaultWeakClickAsset);
   }
 
   // Parse beat unit from config, with validation and fallbacks based on time signature
@@ -482,8 +754,12 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   }
 
   Future<void> _openMeterPickerSheet() async {
-    final tsController = FixedExtentScrollController(initialItem: _timeSignatureIndex());
-    final unitController = FixedExtentScrollController(initialItem: _beatUnitIndex());
+    final tsController = FixedExtentScrollController(
+      initialItem: _timeSignatureIndex(),
+    );
+    final unitController = FixedExtentScrollController(
+      initialItem: _beatUnitIndex(),
+    );
     int tsIndex = _timeSignatureIndex();
     int unitIndex = _beatUnitIndex();
 
@@ -503,180 +779,213 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(22),
+                ),
               ),
               child: Column(
                 children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Row(
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () =>
-                                Navigator.of(sheetContext).pop((tsIndex, unitIndex)),
-                            child: const Text('Done'),
-                          ),
-                        ],
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => Navigator.of(
+                            sheetContext,
+                          ).pop((tsIndex, unitIndex)),
+                          child: const Text('Done'),
+                        ),
+                      ],
                     ),
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: scheme.surfaceContainerHighest,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.tune_rounded, size: 16),
-                          const SizedBox(width: 6),
-                          Text(
-                            previewText,
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                        ],
-                      ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    Expanded(
-                      child: Center(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 290,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                color: scheme.surfaceContainerLow,
-                              ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: scheme.surfaceContainerHighest,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.tune_rounded, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          previewText,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 290,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              color: scheme.surfaceContainerLow,
                             ),
-                            Row(
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 136,
+                                child: ListWheelScrollView.useDelegate(
+                                  controller: tsController,
+                                  itemExtent: 36,
+                                  diameterRatio: 1.7,
+                                  perspective: 0.003,
+                                  physics: const FixedExtentScrollPhysics(),
+                                  onSelectedItemChanged: (index) {
+                                    setModalState(() => tsIndex = index);
+                                  },
+                                  childDelegate: ListWheelChildBuilderDelegate(
+                                    childCount: _timeSignatureOptions.length,
+                                    builder: (context, index) {
+                                      if (index < 0 ||
+                                          index >=
+                                              _timeSignatureOptions.length) {
+                                        return null;
+                                      }
+                                      final selected = index == tsIndex;
+                                      return Center(
+                                        child: Text(
+                                          _timeSignatureOptions[index],
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: selected
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w400,
+                                                color: selected
+                                                    ? scheme.onSurface
+                                                    : scheme.onSurfaceVariant,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 132,
+                                color: scheme.outlineVariant.withValues(
+                                  alpha: 0.55,
+                                ),
+                              ),
+                              SizedBox(
+                                width: 136,
+                                child: ListWheelScrollView.useDelegate(
+                                  controller: unitController,
+                                  itemExtent: 36,
+                                  diameterRatio: 1.7,
+                                  perspective: 0.003,
+                                  physics: const FixedExtentScrollPhysics(),
+                                  onSelectedItemChanged: (index) {
+                                    setModalState(() => unitIndex = index);
+                                  },
+                                  childDelegate: ListWheelChildBuilderDelegate(
+                                    childCount: BeatUnit.values.length,
+                                    builder: (context, index) {
+                                      if (index < 0 ||
+                                          index >= BeatUnit.values.length) {
+                                        return null;
+                                      }
+                                      final selected = index == unitIndex;
+                                      return Center(
+                                        child: Text(
+                                          _beatUnitLabel(
+                                            BeatUnit.values[index],
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: selected
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w400,
+                                                color: selected
+                                                    ? scheme.onSurface
+                                                    : scheme.onSurfaceVariant,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          IgnorePointer(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SizedBox(
+                                Container(
                                   width: 136,
-                                  child: ListWheelScrollView.useDelegate(
-                                    controller: tsController,
-                                    itemExtent: 36,
-                                    diameterRatio: 1.7,
-                                    perspective: 0.003,
-                                    physics: const FixedExtentScrollPhysics(),
-                                    onSelectedItemChanged: (index) {
-                                      setModalState(() => tsIndex = index);
-                                    },
-                                    childDelegate: ListWheelChildBuilderDelegate(
-                                      childCount: _timeSignatureOptions.length,
-                                      builder: (context, index) {
-                                        if (index < 0 || index >= _timeSignatureOptions.length) {
-                                          return null;
-                                        }
-                                        final selected = index == tsIndex;
-                                        return Center(
-                                          child: Text(
-                                            _timeSignatureOptions[index],
-                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                  fontWeight:
-                                                      selected ? FontWeight.w700 : FontWeight.w400,
-                                                  color: selected
-                                                      ? scheme.onSurface
-                                                      : scheme.onSurfaceVariant,
-                                                ),
-                                          ),
-                                        );
-                                      },
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: scheme.primary.withValues(
+                                      alpha: 0.06,
+                                    ),
+                                    border: Border(
+                                      top: BorderSide(
+                                        color: scheme.primary.withValues(
+                                          alpha: 0.28,
+                                        ),
+                                      ),
+                                      bottom: BorderSide(
+                                        color: scheme.primary.withValues(
+                                          alpha: 0.28,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 1),
                                 Container(
-                                  width: 1,
-                                  height: 132,
-                                  color: scheme.outlineVariant.withValues(alpha: 0.55),
-                                ),
-                                SizedBox(
                                   width: 136,
-                                  child: ListWheelScrollView.useDelegate(
-                                    controller: unitController,
-                                    itemExtent: 36,
-                                    diameterRatio: 1.7,
-                                    perspective: 0.003,
-                                    physics: const FixedExtentScrollPhysics(),
-                                    onSelectedItemChanged: (index) {
-                                      setModalState(() => unitIndex = index);
-                                    },
-                                    childDelegate: ListWheelChildBuilderDelegate(
-                                      childCount: BeatUnit.values.length,
-                                      builder: (context, index) {
-                                        if (index < 0 || index >= BeatUnit.values.length) {
-                                          return null;
-                                        }
-                                        final selected = index == unitIndex;
-                                        return Center(
-                                          child: Text(
-                                            _beatUnitLabel(BeatUnit.values[index]),
-                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                  fontWeight:
-                                                      selected ? FontWeight.w700 : FontWeight.w400,
-                                                  color: selected
-                                                      ? scheme.onSurface
-                                                      : scheme.onSurfaceVariant,
-                                                ),
-                                          ),
-                                        );
-                                      },
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: scheme.primary.withValues(
+                                      alpha: 0.06,
+                                    ),
+                                    border: Border(
+                                      top: BorderSide(
+                                        color: scheme.primary.withValues(
+                                          alpha: 0.28,
+                                        ),
+                                      ),
+                                      bottom: BorderSide(
+                                        color: scheme.primary.withValues(
+                                          alpha: 0.28,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            IgnorePointer(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 136,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                      color: scheme.primary.withValues(alpha: 0.06),
-                                      border: Border(
-                                        top: BorderSide(
-                                          color: scheme.primary.withValues(alpha: 0.28),
-                                        ),
-                                        bottom: BorderSide(
-                                          color: scheme.primary.withValues(alpha: 0.28),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 1),
-                                  Container(
-                                    width: 136,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                      color: scheme.primary.withValues(alpha: 0.06),
-                                      border: Border(
-                                        top: BorderSide(
-                                          color: scheme.primary.withValues(alpha: 0.28),
-                                        ),
-                                        bottom: BorderSide(
-                                          color: scheme.primary.withValues(alpha: 0.28),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
+                  ),
                 ],
               ),
             );
@@ -697,7 +1006,9 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     if (parsedBeats == null || parsedNote == null) return;
 
     // Debug print selected values before applying
-    debugPrint('Selected time signature: $parsedBeats/$parsedNote, beat unit: ${BeatUnit.values[result.$2]}');
+    debugPrint(
+      'Selected time signature: $parsedBeats/$parsedNote, beat unit: ${BeatUnit.values[result.$2]}',
+    );
     setState(() {
       timeSignatureBeats = parsedBeats;
       timeSignatureNote = parsedNote;
@@ -748,7 +1059,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     }
   }
 
-  Future<void> _loadClickWithFallback(AudioPlayer player, String preferredAsset) async {
+  Future<void> _loadClickWithFallback(
+    AudioPlayer player,
+    String preferredAsset,
+  ) async {
     try {
       await player.setAsset(preferredAsset);
       return;
@@ -857,12 +1171,17 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     }
   }
 
-  Future<void> _fadeOutAndPause(AudioPlayer player, {int releaseMs = 40}) async {
+  Future<void> _fadeOutAndPause(
+    AudioPlayer player, {
+    int releaseMs = 40,
+  }) async {
     try {
       const int steps = 5;
       final double startVol = player.volume;
       for (int i = 1; i <= steps; i++) {
-        await Future.delayed(Duration(milliseconds: (releaseMs / steps).round()));
+        await Future.delayed(
+          Duration(milliseconds: (releaseMs / steps).round()),
+        );
         player.setVolume(startVol * (1.0 - i / steps));
       }
       await player.pause();
@@ -880,10 +1199,23 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   }
 
   // Resolve a scale token to a full note name like "Bb2".
-  String _resolveFullNoteName(String token, int octaveFallback) {
+  String _resolveFullNoteName(
+    String token,
+    int octaveFallback, {
+    int stepNumber = 0,
+  }) {
     final parsed = _parseNoteWithOctave(token);
-    if (parsed != null) return token;
-    return '$token$octaveFallback';
+    if (parsed != null) {
+      final adjustedOctave = _clampPlayableOctave(parsed.octave + octaveShift);
+      return '${parsed.note}$adjustedOctave';
+    }
+
+    final span = math.max(1, _octaveStepSpan);
+    final octaveOffset = stepNumber ~/ span;
+    final resolvedOctave = _clampPlayableOctave(
+      octaveFallback + octaveOffset + octaveShift,
+    );
+    return '$token$resolvedOctave';
   }
 
   // Ensure a per-note AudioPlayer is ready for the given full note name.
@@ -911,10 +1243,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     if (!configLoaded || playPattern.isEmpty || scale.isEmpty) return;
 
     final unique = <String>{};
-    for (final idx in playPattern) {
+    for (int step = 0; step < playPattern.length; step++) {
+      final idx = playPattern[step];
       if (idx < 0 || idx >= scale.length) continue;
       final token = scale[idx];
-      unique.add(_resolveFullNoteName(token, baseOctave));
+      unique.add(_resolveFullNoteName(token, baseOctave, stepNumber: step));
     }
 
     for (final full in unique) {
@@ -938,10 +1271,11 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     if (!configLoaded || playPattern.isEmpty || scale.isEmpty) return;
 
     final uniquePaths = <String>{};
-    for (final idx in playPattern) {
+    for (int step = 0; step < playPattern.length; step++) {
+      final idx = playPattern[step];
       if (idx < 0 || idx >= scale.length) continue;
       final token = scale[idx];
-      final full = _resolveFullNoteName(token, baseOctave);
+      final full = _resolveFullNoteName(token, baseOctave, stepNumber: step);
       uniquePaths.add('assets/notes/$selectedInstrument/$full.wav');
     }
 
@@ -968,7 +1302,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
         // Schedule stop after gate duration
         final int beatMs = _intervalMs;
-        final int gateMs = math.max(80, math.min(220, (beatMs * noteGate).round()));
+        final int gateMs = math.max(
+          80,
+          math.min(220, (beatMs * noteGate).round()),
+        );
 
         Timer(Duration(milliseconds: gateMs), () {
           if ((_perNoteTokens[fullNoteName] ?? 0) != token) return;
@@ -982,7 +1319,7 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       return;
     }
 
-    final int playerIndex  = notePoolIndex;
+    final int playerIndex = notePoolIndex;
     notePoolIndex = (notePoolIndex + 1) % notePoolSize;
     final AudioPlayer player = notePlayers[playerIndex];
 
@@ -999,7 +1336,10 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
       // Schedule stop after gate duration
       final int beatMs = _intervalMs;
-      final int gateMs = math.max(80, math.min(220, (beatMs * noteGate).round()));
+      final int gateMs = math.max(
+        80,
+        math.min(220, (beatMs * noteGate).round()),
+      );
 
       Timer(Duration(milliseconds: gateMs), () {
         // Only stop if this player is still playing the same note (token matches)
@@ -1015,6 +1355,18 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
 
   // Handle instrument change: clear caches, dispose players, and preload for new instrument
   Future<void> _onInstrumentChanged(String newInstrument) async {
+    if (instrumentAvailability.isNotEmpty &&
+        !(instrumentAvailability[newInstrument] ?? false)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No playable assets found for $newInstrument'),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => selectedInstrument = newInstrument);
 
     _lastNotePath = null;
@@ -1069,36 +1421,24 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     if (idx < 0 || idx >= scale.length) return;
 
     final token = scale[idx]; // could be "Bb" or "Bb2"
+    final parsedToken = _parseNoteWithOctave(token);
+    final resolvedFull = _resolveFullNoteName(
+      token,
+      baseOctave,
+      stepNumber: stepCounter,
+    );
+    final resolvedParsed = _parseNoteWithOctave(resolvedFull);
+    if (resolvedParsed == null) return;
 
-    // If the scale item already includes an octave (e.g., "Bb2"),
-    // play exactly that note+octave. Otherwise, use the existing octave math.
-    final parsed = _parseNoteWithOctave(token);
-
-    final String noteToPlay;
-    final int octaveToPlay;
-
-    if (parsed != null) {
-      noteToPlay = parsed.note;
-      octaveToPlay = parsed.octave;
-    } else {
-      noteToPlay = token;
-
-      // Existing behavior: raise octave after completing one full scale length.
-      final int octaveOffset = stepCounter ~/ scale.length;
-      int o = baseOctave + octaveOffset;
-      if (o > maxOctave) o = maxOctave;
-      if (o < minOctave) o = minOctave;
-
-      octaveToPlay = o;
-    }
+    final String noteToPlay = resolvedParsed.note;
+    final int octaveToPlay = resolvedParsed.octave;
 
     beat++;
     playIndex = (playIndex + 1) % playPattern.length;
     final beatInBar = ((beat - 1) % timeSignatureBeats) + 1;
 
-    // Only advance stepCounter when octave is computed.
-    // If octave is embedded in the token list, stepCounter is not needed for octave math.
-    if (parsed == null) {
+    // Only advance stepCounter when octave is generated from the pattern.
+    if (parsedToken == null) {
       stepCounter++;
     }
 
@@ -1196,18 +1536,8 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
       beat = 0;
       playIndex = 0;
       stepCounter = 0;
-
-      // Set initial sound based on first pattern index
-      if (scale.isNotEmpty && playPattern.isNotEmpty) {
-        final firstToken = scale[playPattern[0]];
-        final parsed = _parseNoteWithOctave(firstToken);
-        currentSound = parsed != null ? firstToken : '$firstToken$baseOctave';
-      } else {
-        currentSound = '';
-      }
+      _refreshCurrentSoundPreview();
     });
-
-    currentSoundVN.value = currentSound;
 
     if (currentSound.isNotEmpty && !_usePerNotePlayers) {
       final player = notePlayers[notePoolIndex];
@@ -1217,6 +1547,135 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
   }
 
   // ---------- UI ----------
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Build the content of the advanced settings drawer
+  Widget _buildAdvancedSettingsContent(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.tune_rounded),
+              const SizedBox(width: 8),
+              Text(
+                'Advanced Settings',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const SizedBox(width: 8),
+              Text('Base Pitch', style: Theme.of(context).textTheme.titleSmall),
+              const Spacer(),
+              Text('${baseFrequencyHz.toStringAsFixed(1)} Hz'),
+            ],
+          ),
+          Slider(
+            value: baseFrequencyHz,
+            min: 55,
+            max: 880,
+            divisions: 825,
+            label: baseFrequencyHz.toStringAsFixed(1),
+            onChanged: (v) {
+              setState(() => baseFrequencyHz = v);
+            },
+            onChangeEnd: (v) => _applyBaseFrequency(v),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const SizedBox(width: 8),
+              Text('Octaves', style: Theme.of(context).textTheme.titleSmall),
+              const Spacer(),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: octaveCount <= 1
+                    ? null
+                    : () => _setOctaveCount(octaveCount - 1),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              Text('$octaveCount'),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed:
+                    octaveCount >= (_assetMaxOctave - _assetMinOctave + 1)
+                    ? null
+                    : () => _setOctaveCount(octaveCount + 1),
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 26),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Range: $minOctave-$maxOctave'),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const SizedBox(width: 8),
+              Text(
+                'Sequence Length',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const Spacer(),
+              Text('$stepsUp'),
+            ],
+          ),
+          Slider(
+            value: stepsUp.clamp(1, 128).toDouble(),
+            min: 1,
+            max: 128,
+            divisions: 127,
+            label: '$stepsUp',
+            onChanged: (v) {
+              setState(() => stepsUp = v.round());
+            },
+            onChangeEnd: (v) => _setSequenceLength(v.round()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build the transport control bar with Start, Stop, and Reset buttons
+  Widget _buildTransportBar(bool isRunning) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            FilledButton.icon(
+              onPressed: isRunning ? null : start,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Start'),
+            ),
+            const SizedBox(width: 10),
+            OutlinedButton.icon(
+              onPressed: isRunning ? () => stop() : null,
+              icon: const Icon(Icons.stop),
+              label: const Text('Stop'),
+            ),
+            const SizedBox(width: 10),
+            TextButton.icon(
+              onPressed: reset,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reset'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRunning = timer != null;
@@ -1226,242 +1685,262 @@ class _MetronomeDemoState extends State<MetronomeDemo> with SingleTickerProvider
     final int beatDenominator = timeSignatureNote;
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Metronome'),
+        actions: [
+          IconButton(
+            tooltip: 'Advanced',
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+            icon: const Icon(Icons.tune_rounded),
+          ),
+        ],
       ),
+      endDrawer: Drawer(child: _buildAdvancedSettingsContent(context)),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Swing animation
-                MetronomeSwing(
-                  anim: swingAnim,
-                  isRunning: isRunning,
-                  amplitudeDeg: 18,
-                ),
-                const SizedBox(height: 12),
-
-                // Beat display (center, modern)
-                Column(
-                  children: [
-                    Text(
-                      '$beatNumerator/$beatDenominator',
-                      style:
-                          Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 16,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        // Generate beat indicators based on time signature, with accent colors and active beat scaling
-                        children: List.generate(beatsForDisplay, (i) {
-                          final accent = _accentForBeatPosition(i + 1);
-                          final isActive = (i + 1) == beatInBar;
-                          final Color activeColor = switch (accent) {
-                            ClickAccent.strong => Theme.of(context).colorScheme.primary,
-                            ClickAccent.secondary => Theme.of(context).colorScheme.secondary,
-                            ClickAccent.weak => Theme.of(context).colorScheme.tertiary,
-                          };
-                          final Color idleColor = switch (accent) {
-                            ClickAccent.strong => Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
-                            ClickAccent.secondary => Theme.of(context).colorScheme.secondary.withValues(alpha: 0.28),
-                            ClickAccent.weak => Theme.of(context).colorScheme.outlineVariant,
-                          };
-                          return SizedBox(
-                            width: 18,
-                            height: 16,
-                            child: Center(
-                              child: TweenAnimationBuilder<double>(
-                                tween: Tween<double>(end: isActive ? 1.0 : 0.66),
-                                duration: const Duration(milliseconds: 140),
-                                curve: Curves.easeOut,
-                                builder: (context, scale, child) {
-                                  return Transform.scale(scale: scale, child: child);
-                                },
-                                child: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isActive ? activeColor : idleColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$bpm',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'BPM',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                // Slider for BPM (30-240)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 16,
+                  ),
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Slider(
-                        value: bpm.toDouble(),
-                        min: 30,
-                        max: 240,
-                        divisions: 210,
-                        label: '$bpm',
-                        onChanged: (v) {
-                          setState(() => bpm = v.round());
-                        },
-                        onChangeEnd: (v) {
-                          _applyBpm(v.round());
-                        },
+                      // Swing animation
+                      MetronomeSwing(
+                        anim: swingAnim,
+                        isRunning: isRunning,
+                        amplitudeDeg: 18,
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text('30'),
-                          Text('240'),
+                      const SizedBox(height: 12),
+
+                      // Beat display (center, modern)
+                      Column(
+                        children: [
+                          Text(
+                            '$beatNumerator/$beatDenominator',
+                            style: Theme.of(context).textTheme.headlineLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 16,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              // Generate beat indicators based on time signature, with accent colors and active beat scaling
+                              children: List.generate(beatsForDisplay, (i) {
+                                final accent = _accentForBeatPosition(i + 1);
+                                final isActive = (i + 1) == beatInBar;
+                                final Color activeColor = switch (accent) {
+                                  ClickAccent.strong => Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
+                                  ClickAccent.secondary => Theme.of(
+                                    context,
+                                  ).colorScheme.secondary,
+                                  ClickAccent.weak => Theme.of(
+                                    context,
+                                  ).colorScheme.tertiary,
+                                };
+                                final Color idleColor = switch (accent) {
+                                  ClickAccent.strong => Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.35),
+                                  ClickAccent.secondary =>
+                                    Theme.of(context).colorScheme.secondary
+                                        .withValues(alpha: 0.28),
+                                  ClickAccent.weak => Theme.of(
+                                    context,
+                                  ).colorScheme.outlineVariant,
+                                };
+                                return SizedBox(
+                                  width: 18,
+                                  height: 16,
+                                  child: Center(
+                                    child: TweenAnimationBuilder<double>(
+                                      tween: Tween<double>(
+                                        end: isActive ? 1.0 : 0.66,
+                                      ),
+                                      duration: const Duration(
+                                        milliseconds: 140,
+                                      ),
+                                      curve: Curves.easeOut,
+                                      builder: (context, scale, child) {
+                                        return Transform.scale(
+                                          scale: scale,
+                                          child: child,
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isActive
+                                              ? activeColor
+                                              : idleColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '$bpm',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'BPM',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
                         ],
-                      )
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Slider for BPM (30-240)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Column(
+                          children: [
+                            Slider(
+                              value: bpm.toDouble(),
+                              min: 30,
+                              max: 240,
+                              divisions: 210,
+                              label: '$bpm',
+                              onChanged: (v) {
+                                setState(() => bpm = v.round());
+                              },
+                              onChangeEnd: (v) {
+                                _applyBpm(v.round());
+                              },
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: const [Text('30'), Text('240')],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Compact toggles
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          FilterChip(
+                            label: const Text('Click'),
+                            avatar: const Icon(Icons.volume_up, size: 18),
+                            selected: enableClick,
+                            onSelected: (v) async {
+                              setState(() => enableClick = v);
+                              if (!v) {
+                                await _pauseClickPlayers();
+                              }
+                            },
+                          ),
+                          FilterChip(
+                            label: const Text('Sound'),
+                            avatar: const Icon(
+                              Icons.graphic_eq_rounded,
+                              size: 18,
+                            ),
+                            selected: enableSound,
+                            onSelected: (v) async {
+                              setState(() => enableSound = v);
+                              if (!v) {
+                                try {} catch (_) {}
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Compact meter control: one container, tap to expand dual wheel picker.
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: _openMeterPickerSheet,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.tune_rounded, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$timeSignatureBeats/$timeSignatureNote · ${_beatUnitLabel(beatUnit)}',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.expand_more_rounded, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Instrument
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Instrument: '),
+                          const SizedBox(width: 8),
+                          DropdownButton<String>(
+                            value: selectedInstrument,
+                            items: instruments.map((ins) {
+                              final hasAssets =
+                                  instrumentAvailability[ins] ?? true;
+                              final label = hasAssets ? ins : '$ins (missing)';
+                              return DropdownMenuItem(
+                                value: ins,
+                                enabled: hasAssets,
+                                child: Text(label),
+                              );
+                            }).toList(),
+                            onChanged: (v) {
+                              if (v == null) return;
+                              _onInstrumentChanged(v);
+                            },
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                // Compact toggles
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    FilterChip(
-                      label: const Text('Click'),
-                      avatar: const Icon(Icons.volume_up, size: 18),
-                      selected: enableClick,
-                      onSelected: (v) async {
-                        setState(() => enableClick = v);
-                        if (!v) {
-                          await _pauseClickPlayers();
-                        }
-                      },
-                    ),
-                    FilterChip(
-                      label: const Text('Sound'),
-                      avatar: const Icon(Icons.graphic_eq_rounded, size: 18),
-                      selected: enableSound,
-                      onSelected: (v) async {
-                        setState(() => enableSound = v);
-                        if (!v) {
-                          try {
-                          } catch (_) {}
-                        }
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // Compact meter control: one container, tap to expand dual wheel picker.
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _openMeterPickerSheet,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.tune_rounded, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          '$timeSignatureBeats/$timeSignatureNote · ${_beatUnitLabel(beatUnit)}',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.expand_more_rounded, size: 18),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Instrument
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Instrument: '),
-                    const SizedBox(width: 8),
-                    DropdownButton<String>(
-                      value: selectedInstrument,
-                      items: instruments
-                          .map((ins) =>
-                              DropdownMenuItem(value: ins, child: Text(ins)))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        _onInstrumentChanged(v);
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                // Controls
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: isRunning ? null : start,
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Start'),
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton.icon(
-                      onPressed: isRunning ? () => stop() : null,
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop'),
-                    ),
-                    const SizedBox(width: 10),
-                    TextButton.icon(
-                      onPressed: reset,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reset'),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
-          ),
+            _buildTransportBar(isRunning),
+          ],
         ),
       ),
     );
@@ -1496,6 +1975,7 @@ class MetronomeSwing extends StatelessWidget {
   });
 
   @override
+  // Build a pendulum-like swing animation using rotation and stacking
   Widget build(BuildContext context) {
     return SizedBox(
       height: 220,
@@ -1552,7 +2032,9 @@ class MetronomeSwing extends StatelessWidget {
                       height: 12,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isRunning ? scheme.primary : scheme.outlineVariant,
+                        color: isRunning
+                            ? scheme.primary
+                            : scheme.outlineVariant,
                       ),
                     ),
                     // rod
@@ -1589,7 +2071,9 @@ class MetronomeSwing extends StatelessWidget {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: scheme.shadow.withValues(alpha: isRunning ? 0.14 : 0.08),
+                            color: scheme.shadow.withValues(
+                              alpha: isRunning ? 0.14 : 0.08,
+                            ),
                             blurRadius: isRunning ? 9 : 6,
                             offset: const Offset(0, 4),
                           ),
