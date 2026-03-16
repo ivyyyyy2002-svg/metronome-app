@@ -151,7 +151,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // --- Per-note preloaded players to avoid setAudioSource on every beat ---
   final Map<String, AudioPlayer> _perNotePlayers = {};
   final Map<String, int> _perNoteTokens = {};
-  bool _usePerNotePlayers = false;
+  final bool _usePerNotePlayers = false;
 
   int uiUpdateEvery = 4;
 
