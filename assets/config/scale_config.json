@@ -1,0 +1,14 @@
+{
+  "baseoctave": 3,
+  "octaveCount": 3,
+  "baseFrequencyHz": 196.0,
+  "clickAssets": {
+    "strong": "assets/sounds/click_hi.wav",
+    "weak": "assets/sounds/click_lo.wav"
+  },
+  "timeSignature": {
+    "beats": 4,
+    "note": 4
+  },
+  "beatUnit": "quarter"
+}
