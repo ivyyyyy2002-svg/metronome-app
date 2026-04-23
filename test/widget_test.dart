@@ -15,6 +15,6 @@ void main() {
     await tester.pumpWidget(const MyApp());
 
     expect(find.text('Metronome Studio'), findsOneWidget);
-    expect(find.text('Start Session'), findsOneWidget);
+    expect(find.text('Start Metronome'), findsOneWidget);
   });
 }
