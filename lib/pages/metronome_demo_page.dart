@@ -643,6 +643,26 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return idx >= 0 ? idx : BeatUnit.values.indexOf(BeatUnit.quarter);
   }
 
+  void _applyMeterSelection(int tsIndex, int unitIndex) {
+    final selectedTimeSignature = _timeSignatureOptions[tsIndex];
+    final parts = selectedTimeSignature.split('/');
+    if (parts.length != 2) return;
+    final parsedBeats = int.tryParse(parts[0]);
+    final parsedNote = int.tryParse(parts[1]);
+    if (parsedBeats == null || parsedNote == null) return;
+
+    debugPrint(
+      'Selected time signature: $parsedBeats/$parsedNote, beat unit: ${BeatUnit.values[unitIndex]}',
+    );
+    setState(() {
+      timeSignatureBeats = parsedBeats;
+      timeSignatureNote = parsedNote;
+      beatUnit = BeatUnit.values[unitIndex];
+      beat = 0;
+    });
+    _restartIfRunning();
+  }
+
   Future<void> _openMeterPickerSheet() async {
     final tsController = FixedExtentScrollController(
       initialItem: _timeSignatureIndex(),
@@ -653,7 +673,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     int tsIndex = _timeSignatureIndex();
     int unitIndex = _beatUnitIndex();
 
-    final result = await showModalBottomSheet<(int, int)>(
+    await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.transparent,
@@ -664,8 +684,26 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             final previewText =
                 '${_timeSignatureOptions[tsIndex]} · ${_beatUnitLabel(BeatUnit.values[unitIndex])}';
 
+            void applySelection() {
+              _applyMeterSelection(tsIndex, unitIndex);
+            }
+
+            Widget pickerLabel(String text) {
+              return SizedBox(
+                width: 136,
+                child: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            }
+
             return Container(
-              height: 306,
+              height: 336,
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
               decoration: BoxDecoration(
                 color: scheme.surface,
@@ -681,13 +719,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                       children: [
                         TextButton(
                           onPressed: () => Navigator.of(sheetContext).pop(),
-                          child: const Text('Cancel'),
+                          child: const Text('Close'),
                         ),
                         const Spacer(),
                         TextButton(
-                          onPressed: () => Navigator.of(
-                            sheetContext,
-                          ).pop((tsIndex, unitIndex)),
+                          onPressed: () => Navigator.of(sheetContext).pop(),
                           child: const Text('Done'),
                         ),
                       ],
@@ -715,6 +751,17 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                       ],
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        pickerLabel('Time Signature'),
+                        const SizedBox(width: 1),
+                        pickerLabel('Beat Unit'),
+                      ],
+                    ),
+                  ),
                   Expanded(
                     child: Center(
                       child: Stack(
@@ -739,7 +786,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   perspective: 0.003,
                                   physics: const FixedExtentScrollPhysics(),
                                   onSelectedItemChanged: (index) {
-                                    setModalState(() => tsIndex = index);
+                                    setModalState(() {
+                                      tsIndex = index;
+                                      applySelection();
+                                    });
                                   },
                                   childDelegate: ListWheelChildBuilderDelegate(
                                     childCount: _timeSignatureOptions.length,
@@ -786,7 +836,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   perspective: 0.003,
                                   physics: const FixedExtentScrollPhysics(),
                                   onSelectedItemChanged: (index) {
-                                    setModalState(() => unitIndex = index);
+                                    setModalState(() {
+                                      unitIndex = index;
+                                      applySelection();
+                                    });
                                   },
                                   childDelegate: ListWheelChildBuilderDelegate(
                                     childCount: BeatUnit.values.length,
@@ -886,26 +939,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     tsController.dispose();
     unitController.dispose();
-
-    if (result == null) return;
-    final selectedTimeSignature = _timeSignatureOptions[result.$1];
-    final parts = selectedTimeSignature.split('/');
-    if (parts.length != 2) return;
-    final parsedBeats = int.tryParse(parts[0]);
-    final parsedNote = int.tryParse(parts[1]);
-    if (parsedBeats == null || parsedNote == null) return;
-
-    // Debug print selected values before applying
-    debugPrint(
-      'Selected time signature: $parsedBeats/$parsedNote, beat unit: ${BeatUnit.values[result.$2]}',
-    );
-    setState(() {
-      timeSignatureBeats = parsedBeats;
-      timeSignatureNote = parsedNote;
-      beatUnit = BeatUnit.values[result.$2];
-      beat = 0;
-    });
-    _restartIfRunning();
   }
 
   int _computeTickIntervalMs() {
@@ -1520,6 +1553,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     );
   }
 
+  // Generate a preview string for the loaded note sequence, showing the first few notes and total count
+  String _sequencePreviewText() {
+    if (noteSequence.isEmpty) return 'No sequence loaded';
+    const int previewLimit = 24;
+    final preview = noteSequence.take(previewLimit).join(' ');
+    if (noteSequence.length <= previewLimit) return preview;
+    return '$preview ...';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRunning = timer != null;
@@ -1575,6 +1617,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                             height: 16,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
+
                               // Generate beat indicators based on time signature, with accent colors and active beat scaling
                               children: List.generate(beatsForDisplay, (i) {
                                 final accent = _accentForBeatPosition(i + 1);
@@ -1655,6 +1698,76 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                       ),
 
                       const SizedBox(height: 14),
+
+                      // Note sequence info and current sound preview
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.library_music_rounded,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${noteSequence.length} notes loaded',
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const Spacer(),
+                                ValueListenableBuilder<String>(
+                                  valueListenable: currentSoundVN,
+                                  builder: (context, sound, _) {
+                                    return Text(
+                                      sound.isEmpty ? '--' : sound,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _sequencePreviewText(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
 
                       // Slider for BPM (30-240)
                       Padding(
