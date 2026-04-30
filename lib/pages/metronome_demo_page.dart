@@ -118,7 +118,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   Future<void>? _clickPreloadFuture;
 
   // Available instruments
-  final List<String> instruments = ['piano', 'flute', 'sine'];
+  final List<String> instruments = ['piano', 'harmonium', 'guzheng'];
   final Map<String, bool> instrumentAvailability = {};
   String selectedInstrument = 'piano';
 
@@ -343,6 +343,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return 440.0 * math.pow(2.0, (midi - 69) / 12.0).toDouble();
   }
 
+  // Find the nearest base octave that allows the anchor note to be as close as possible to the target frequency
   int _nearestBaseOctaveForFrequency(
     String note,
     double targetHz,
@@ -408,6 +409,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     currentSoundVN.value = currentSound;
   }
 
+  // Change the number of octaves in the playable range, adjusting the base octave if necessary to stay within asset limits, and refreshing the current sound preview
   Future<void> _setOctaveCount(int newCount) async {
     final safeCount = newCount
         .clamp(1, _assetMaxOctave - _assetMinOctave + 1)
@@ -593,6 +595,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
+  // Get the corresponding config value for a beat unit (for saving to config)
   String _beatUnitToConfigValue(BeatUnit unit) {
     switch (unit) {
       case BeatUnit.half:
@@ -612,6 +615,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
+  // Get the length of a beat unit in whole notes (for calculating tick intervals)
   double _beatUnitWholeNoteLength(BeatUnit unit) {
     switch (unit) {
       case BeatUnit.half:
@@ -663,6 +667,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     _restartIfRunning();
   }
 
+  // Open the bottom sheet for picking time signature and beat unit, with scrollable pickers and a preview of the current selection
   Future<void> _openMeterPickerSheet() async {
     final tsController = FixedExtentScrollController(
       initialItem: _timeSignatureIndex(),
@@ -1093,6 +1098,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
+  // Fade out the player volume over releaseMs milliseconds, then pause and reset it
   Future<void> _fadeOutAndPause(
     AudioPlayer player, {
     int releaseMs = 40,
@@ -1110,6 +1116,25 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       await player.seek(Duration.zero);
       player.setVolume(1.0);
     } catch (_) {}
+  }
+
+  // Release all note players by fading out and pausing
+  Future<void> _releaseAllNotePlayers({
+    int releaseMs = 70,
+  }) async {
+    for (int i = 0; i < notePlayers.length; i++) {
+      playerTokens[i]++;
+    }
+
+    for (final key in _perNotePlayers.keys) {
+      _perNoteTokens[key] = (_perNoteTokens[key] ?? 0) + 1;
+    }
+
+    await Future.wait([
+      for (final player in notePlayers) _fadeOutAndPause(player, releaseMs: releaseMs),
+      for (final player in _perNotePlayers.values)
+        _fadeOutAndPause(player, releaseMs: releaseMs),
+    ]);
   }
 
   // Parse a token like "Bb2", "C#4", "F3" into (note, octave).
@@ -1406,27 +1431,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     swingController.stop();
 
     await _pauseClickPlayers();
-
-    // Invalidate scheduled gate timers and stop notes
-    for (int i = 0; i < notePlayers.length; i++) {
-      playerTokens[i]++;
-      try {
-        await notePlayers[i].pause();
-        await notePlayers[i].seek(Duration.zero);
-        notePlayers[i].setVolume(1.0);
-      } catch (_) {}
-    }
-
-    // Stop per-note players
-    for (final key in _perNotePlayers.keys.toList()) {
-      _perNoteTokens[key] = (_perNoteTokens[key] ?? 0) + 1;
-      final p = _perNotePlayers[key]!;
-      try {
-        await p.pause();
-        await p.seek(Duration.zero);
-        p.setVolume(1.0);
-      } catch (_) {}
-    }
+    await _releaseAllNotePlayers(releaseMs: 60);
   }
 
   // Reset to initial state
@@ -1824,7 +1829,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                             onSelected: (v) async {
                               setState(() => enableSound = v);
                               if (!v) {
-                                try {} catch (_) {}
+                                await _releaseAllNotePlayers();
                               }
                             },
                           ),

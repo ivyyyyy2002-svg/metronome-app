@@ -28,6 +28,7 @@ flutter:
     - assets/config/
     - assets/sounds/
     - assets/notes/piano/
-    - assets/notes/flute/
-    - assets/notes/sine/
+    - assets/notes/harmonium/
+    - assets/notes/guzheng/
+    - assets/notes/
     - assets/sf2/
