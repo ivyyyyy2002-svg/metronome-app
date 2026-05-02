@@ -6,18 +6,15 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:math' as math;
 
-enum ClickAccent { strong, secondary, weak }
+import 'metronome/metronome_music.dart';
+import 'metronome/instrument_sf2_controller.dart';
+import 'metronome/widgets/advanced_settings_drawer.dart';
+import 'metronome/widgets/metronome_controls_panel.dart';
+import 'metronome/widgets/meter_picker_sheet.dart';
+import 'metronome/widgets/playback_status_panel.dart';
+import 'metronome/widgets/transport_bar.dart';
 
-// second column: beat unit
-enum BeatUnit {
-  half,
-  quarter,
-  eighth,
-  sixteenth,
-  dottedHalf,
-  dottedQuarter,
-  dottedEighth,
-}
+enum ClickAccent { strong, secondary, weak }
 
 // The MetronomeDemo widget
 class MetronomeDemo extends StatefulWidget {
@@ -33,50 +30,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
   static const int _assetMinOctave = 2;
   static const int _assetMaxOctave = 6;
-  static const Map<String, int> _noteToSemitone = {
-    'C': 0,
-    'C#': 1,
-    'Db': 1,
-    'D': 2,
-    'D#': 3,
-    'Eb': 3,
-    'E': 4,
-    'F': 5,
-    'F#': 6,
-    'Gb': 6,
-    'G': 7,
-    'G#': 8,
-    'Ab': 8,
-    'A': 9,
-    'A#': 10,
-    'Bb': 10,
-    'B': 11,
-  };
-  static const List<String> _timeSignatureOptions = [
-    '1/4',
-    '2/4',
-    '3/4',
-    '4/4',
-    '5/4',
-    '6/4',
-    '7/4',
-    '2/2',
-    '3/2',
-    '4/2',
-    '2/8',
-    '3/8',
-    '4/8',
-    '5/8',
-    '6/8',
-    '7/8',
-    '9/8',
-    '12/8',
-    '3/16',
-    '5/16',
-    '7/16',
-    '9/16',
-    '12/16',
-  ];
 
   // Animation for pendulum swing
   late final AnimationController swingController;
@@ -90,6 +43,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // just_audio players
   final AudioPlayer clickStrongPlayer = AudioPlayer();
   final AudioPlayer clickWeakPlayer = AudioPlayer();
+  final InstrumentSf2Controller instrumentSf2Controller = InstrumentSf2Controller(
+    channelCount: notePoolSize,
+    assetSpecs: const {
+      'piano': Sf2Spec(assetPath: 'assets/sf2/piano.sf2', bank: 0, program: 0),
+      'guzheng': Sf2Spec(assetPath: 'assets/sf2/guzheng.sf2', bank: 1, program: 107),
+    },
+  );
   String clickStrongAsset = _defaultStrongClickAsset;
   String clickWeakAsset = _defaultWeakClickAsset;
 
@@ -142,6 +102,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   final Map<String, AudioPlayer> _perNotePlayers = {};
   final Map<String, int> _perNoteTokens = {};
   final bool _usePerNotePlayers = false;
+  int? activeSf2MidiNote;
+  bool _sf2TestInProgress = false;
+
+  // SF2 (flutter_midi_pro) reaches the speakers faster than just_audio clicks
+  // on iOS, which makes notes sound like they "rush" the beat. Delay SF2
+  // triggers slightly to compensate. Tune if click/SF2 still feel misaligned.
+  static const int sf2LatencyOffsetMs = 55;
 
   int uiUpdateEvery = 4;
 
@@ -230,7 +197,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         fallbackNote: 4,
       );
       final loadedClickAssets = _parseClickAssets(data['clickAssets']);
-      final loadedBeatUnit = _parseBeatUnit(
+      final loadedBeatUnit = parseBeatUnit(
         data['beatUnit'],
         fallbackBeats: loadedTimeSignature.$1,
         fallbackNote: loadedTimeSignature.$2,
@@ -264,7 +231,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
       // Debug once (helps verify pattern is not stuck)
       debugPrint(
-        'Loaded config: baseOctave=$baseOctave octaveCount=$octaveCount baseFrequencyHz=${baseFrequencyHz.toStringAsFixed(2)} timeSignature=$timeSignatureBeats/$timeSignatureNote beatUnit=${_beatUnitToConfigValue(beatUnit)} clickAssets=[$clickStrongAsset,$clickWeakAsset]',
+        'Loaded config: baseOctave=$baseOctave octaveCount=$octaveCount baseFrequencyHz=${baseFrequencyHz.toStringAsFixed(2)} timeSignature=$timeSignatureBeats/$timeSignatureNote beatUnit=${beatUnitConfigValue(beatUnit)} clickAssets=[$clickStrongAsset,$clickWeakAsset]',
       );
     } catch (e, st) {
       debugPrint('Failed to load config: $e');
@@ -337,10 +304,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   double? _frequencyForNote(String note, int octave) {
-    final semitone = _noteToSemitone[note];
+    final semitone = noteToSemitone[note];
     if (semitone == null) return null;
     final midi = (octave + 1) * 12 + semitone;
     return 440.0 * math.pow(2.0, (midi - 69) / 12.0).toDouble();
+  }
+
+  bool _useSf2ForCurrentInstrument() {
+    return instrumentSf2Controller.isReadyFor(selectedInstrument);
   }
 
   // Find the nearest base octave that allows the anchor note to be as close as possible to the target frequency
@@ -349,7 +320,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     double targetHz,
     int fallbackBase,
   ) {
-    final semitone = _noteToSemitone[note];
+    final semitone = noteToSemitone[note];
     if (semitone == null) return fallbackBase;
 
     final int maxBase = _assetMaxOctave - octaveCount + 1;
@@ -453,6 +424,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Check if the given instrument has at least one playable asset based on the current sequence (used to determine availability in the picker)
   Future<bool> _instrumentHasPlayableAsset(String instrument) async {
+    if (await instrumentSf2Controller.hasSoundfontAsset(instrument)) {
+      return true;
+    }
+
     final probeNotes = _sampleSequenceNotesForProbe();
     for (final fullNote in probeNotes) {
       final path = 'assets/notes/$instrument/$fullNote.wav';
@@ -462,6 +437,69 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       } catch (_) {}
     }
     return false;
+  }
+
+  Future<void> _runSf2SmokeTest() async {
+    if (_sf2TestInProgress) return;
+
+    setState(() => _sf2TestInProgress = true);
+    try {
+      final hasSoundfont = await instrumentSf2Controller.hasSoundfontAsset(
+        selectedInstrument,
+      );
+      if (!hasSoundfont) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No SF2 asset found for $selectedInstrument'),
+          ),
+        );
+        return;
+      }
+
+      await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
+      if (!instrumentSf2Controller.isReadyFor(selectedInstrument)) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('SF2 did not become ready for $selectedInstrument'),
+          ),
+        );
+        return;
+      }
+
+      const int midiNote = 60; // C4
+      await instrumentSf2Controller.playNote(
+        midiNote: midiNote,
+        channel: 0,
+        velocity: 108,
+      );
+      await Future.delayed(const Duration(milliseconds: 700));
+      await instrumentSf2Controller.stopNote(
+        midiNote: midiNote,
+        channel: 0,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('SF2 test played C4 for $selectedInstrument'),
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('SF2 smoke test failed: $e');
+      debugPrintStack(stackTrace: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('SF2 test failed for $selectedInstrument'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _sf2TestInProgress = false);
+      }
+    }
   }
 
   Future<void> _refreshInstrumentAvailability() async {
@@ -524,122 +562,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return (_defaultStrongClickAsset, _defaultWeakClickAsset);
   }
 
-  // Parse beat unit from config, with validation and fallbacks based on time signature
-  BeatUnit _parseBeatUnit(
-    dynamic raw, {
-    required int fallbackBeats,
-    required int fallbackNote,
-  }) {
-    final rawText = (raw is String) ? raw.trim().toLowerCase() : '';
-    // Recognize common beat unit names and fractions, with some flexibility
-    switch (rawText) {
-      case 'half':
-      case '1/2':
-        return BeatUnit.half;
-      case 'quarter':
-      case '1/4':
-        return BeatUnit.quarter;
-      case 'eighth':
-      case '1/8':
-        return BeatUnit.eighth;
-      case 'sixteenth':
-      case '1/16':
-        return BeatUnit.sixteenth;
-      case 'dotted_half':
-      case 'dotted-half':
-      case 'dotted half':
-      case '3/4':
-        return BeatUnit.dottedHalf;
-      case 'dotted_quarter':
-      case 'dotted-quarter':
-      case 'dotted quarter':
-      case '3/8':
-        return BeatUnit.dottedQuarter;
-      case 'dotted_eighth':
-      case 'dotted-eighth':
-      case 'dotted eighth':
-      case '3/16':
-        return BeatUnit.dottedEighth;
-      default:
-        return _defaultBeatUnitForSignature(fallbackBeats, fallbackNote);
-    }
-  }
-
-  BeatUnit _defaultBeatUnitForSignature(int beats, int note) {
-    if (note == 8 && beats >= 6 && beats % 3 == 0) {
-      return BeatUnit.dottedQuarter;
-    }
-    if (note == 16 && beats >= 6 && beats % 3 == 0) {
-      return BeatUnit.dottedEighth;
-    }
-    return BeatUnit.quarter;
-  }
-
-  // Get a user-friendly label for a beat unit (for display in the meter picker)
-  String _beatUnitLabel(BeatUnit unit) {
-    switch (unit) {
-      case BeatUnit.half:
-        return '1/2';
-      case BeatUnit.quarter:
-        return '1/4';
-      case BeatUnit.eighth:
-        return '1/8';
-      case BeatUnit.sixteenth:
-        return '1/16';
-      case BeatUnit.dottedHalf:
-        return '1/2.';
-      case BeatUnit.dottedQuarter:
-        return '1/4.';
-      case BeatUnit.dottedEighth:
-        return '1/8.';
-    }
-  }
-
-  // Get the corresponding config value for a beat unit (for saving to config)
-  String _beatUnitToConfigValue(BeatUnit unit) {
-    switch (unit) {
-      case BeatUnit.half:
-        return 'half';
-      case BeatUnit.quarter:
-        return 'quarter';
-      case BeatUnit.eighth:
-        return 'eighth';
-      case BeatUnit.sixteenth:
-        return 'sixteenth';
-      case BeatUnit.dottedHalf:
-        return 'dotted_half';
-      case BeatUnit.dottedQuarter:
-        return 'dotted_quarter';
-      case BeatUnit.dottedEighth:
-        return 'dotted_eighth';
-    }
-  }
-
-  // Get the length of a beat unit in whole notes (for calculating tick intervals)
-  double _beatUnitWholeNoteLength(BeatUnit unit) {
-    switch (unit) {
-      case BeatUnit.half:
-        return 1.0 / 2.0;
-      case BeatUnit.quarter:
-        return 1.0 / 4.0;
-      case BeatUnit.eighth:
-        return 1.0 / 8.0;
-      case BeatUnit.sixteenth:
-        return 1.0 / 16.0;
-      case BeatUnit.dottedHalf:
-        return 3.0 / 4.0;
-      case BeatUnit.dottedQuarter:
-        return 3.0 / 8.0;
-      case BeatUnit.dottedEighth:
-        return 3.0 / 16.0;
-    }
-  }
-
   // Get the index of the current time signature in the options list, for initializing the picker
   int _timeSignatureIndex() {
     final key = '$timeSignatureBeats/$timeSignatureNote';
-    final idx = _timeSignatureOptions.indexOf(key);
-    return idx >= 0 ? idx : _timeSignatureOptions.indexOf('4/4');
+    final idx = timeSignatureOptions.indexOf(key);
+    return idx >= 0 ? idx : timeSignatureOptions.indexOf('4/4');
   }
 
   int _beatUnitIndex() {
@@ -648,7 +575,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   void _applyMeterSelection(int tsIndex, int unitIndex) {
-    final selectedTimeSignature = _timeSignatureOptions[tsIndex];
+    final selectedTimeSignature = timeSignatureOptions[tsIndex];
     final parts = selectedTimeSignature.split('/');
     if (parts.length != 2) return;
     final parsedBeats = int.tryParse(parts[0]);
@@ -669,286 +596,23 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Open the bottom sheet for picking time signature and beat unit, with scrollable pickers and a preview of the current selection
   Future<void> _openMeterPickerSheet() async {
-    final tsController = FixedExtentScrollController(
-      initialItem: _timeSignatureIndex(),
-    );
-    final unitController = FixedExtentScrollController(
-      initialItem: _beatUnitIndex(),
-    );
-    int tsIndex = _timeSignatureIndex();
-    int unitIndex = _beatUnitIndex();
-
-    await showModalBottomSheet<void>(
+    await showMeterPickerSheet(
       context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final scheme = Theme.of(context).colorScheme;
-            final previewText =
-                '${_timeSignatureOptions[tsIndex]} · ${_beatUnitLabel(BeatUnit.values[unitIndex])}';
-
-            void applySelection() {
-              _applyMeterSelection(tsIndex, unitIndex);
-            }
-
-            Widget pickerLabel(String text) {
-              return SizedBox(
-                width: 136,
-                child: Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              );
-            }
-
-            return Container(
-              height: 336,
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(22),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          child: const Text('Close'),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          child: const Text('Done'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: scheme.surfaceContainerHighest,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.tune_rounded, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          previewText,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        pickerLabel('Time Signature'),
-                        const SizedBox(width: 1),
-                        pickerLabel('Beat Unit'),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 290,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              color: scheme.surfaceContainerLow,
-                            ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 136,
-                                child: ListWheelScrollView.useDelegate(
-                                  controller: tsController,
-                                  itemExtent: 36,
-                                  diameterRatio: 1.7,
-                                  perspective: 0.003,
-                                  physics: const FixedExtentScrollPhysics(),
-                                  onSelectedItemChanged: (index) {
-                                    setModalState(() {
-                                      tsIndex = index;
-                                      applySelection();
-                                    });
-                                  },
-                                  childDelegate: ListWheelChildBuilderDelegate(
-                                    childCount: _timeSignatureOptions.length,
-                                    builder: (context, index) {
-                                      if (index < 0 ||
-                                          index >=
-                                              _timeSignatureOptions.length) {
-                                        return null;
-                                      }
-                                      final selected = index == tsIndex;
-                                      return Center(
-                                        child: Text(
-                                          _timeSignatureOptions[index],
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: selected
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w400,
-                                                color: selected
-                                                    ? scheme.onSurface
-                                                    : scheme.onSurfaceVariant,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                width: 1,
-                                height: 132,
-                                color: scheme.outlineVariant.withValues(
-                                  alpha: 0.55,
-                                ),
-                              ),
-                              SizedBox(
-                                width: 136,
-                                child: ListWheelScrollView.useDelegate(
-                                  controller: unitController,
-                                  itemExtent: 36,
-                                  diameterRatio: 1.7,
-                                  perspective: 0.003,
-                                  physics: const FixedExtentScrollPhysics(),
-                                  onSelectedItemChanged: (index) {
-                                    setModalState(() {
-                                      unitIndex = index;
-                                      applySelection();
-                                    });
-                                  },
-                                  childDelegate: ListWheelChildBuilderDelegate(
-                                    childCount: BeatUnit.values.length,
-                                    builder: (context, index) {
-                                      if (index < 0 ||
-                                          index >= BeatUnit.values.length) {
-                                        return null;
-                                      }
-                                      final selected = index == unitIndex;
-                                      return Center(
-                                        child: Text(
-                                          _beatUnitLabel(
-                                            BeatUnit.values[index],
-                                          ),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: selected
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w400,
-                                                color: selected
-                                                    ? scheme.onSurface
-                                                    : scheme.onSurfaceVariant,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          IgnorePointer(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 136,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(10),
-                                    color: scheme.primary.withValues(
-                                      alpha: 0.06,
-                                    ),
-                                    border: Border(
-                                      top: BorderSide(
-                                        color: scheme.primary.withValues(
-                                          alpha: 0.28,
-                                        ),
-                                      ),
-                                      bottom: BorderSide(
-                                        color: scheme.primary.withValues(
-                                          alpha: 0.28,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 1),
-                                Container(
-                                  width: 136,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(10),
-                                    color: scheme.primary.withValues(
-                                      alpha: 0.06,
-                                    ),
-                                    border: Border(
-                                      top: BorderSide(
-                                        color: scheme.primary.withValues(
-                                          alpha: 0.28,
-                                        ),
-                                      ),
-                                      bottom: BorderSide(
-                                        color: scheme.primary.withValues(
-                                          alpha: 0.28,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
+      timeSignatureOptions: timeSignatureOptions,
+      beatUnitLabels: [
+        for (final unit in BeatUnit.values) beatUnitLabel(unit),
+      ],
+      initialTimeSignatureIndex: _timeSignatureIndex(),
+      initialBeatUnitIndex: _beatUnitIndex(),
+      onSelectionChanged: (selection) {
+        _applyMeterSelection(selection.$1, selection.$2);
       },
     );
-
-    tsController.dispose();
-    unitController.dispose();
   }
 
   int _computeTickIntervalMs() {
     final double displayedBeatLength = 1.0 / timeSignatureNote;
-    final double beatUnitLength = _beatUnitWholeNoteLength(beatUnit);
+    final double beatUnitLength = beatUnitWholeNoteLength(beatUnit);
     final double intervalMs =
         (60000.0 / bpm) * (displayedBeatLength / beatUnitLength);
     return intervalMs.round().clamp(40, 4000);
@@ -1130,6 +794,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       _perNoteTokens[key] = (_perNoteTokens[key] ?? 0) + 1;
     }
 
+    await instrumentSf2Controller.stopAllNotes();
+    activeSf2MidiNote = null;
+
     await Future.wait([
       for (final player in notePlayers) _fadeOutAndPause(player, releaseMs: releaseMs),
       for (final player in _perNotePlayers.values)
@@ -1218,7 +885,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   Future<void> _warmUpCurrentNote() async {
-    if (currentSound.isEmpty || _usePerNotePlayers) return;
+    if (currentSound.isEmpty || _usePerNotePlayers || _useSf2ForCurrentInstrument()) {
+      return;
+    }
     final player = notePlayers[notePoolIndex];
     notePoolIndex = (notePoolIndex + 1) % notePoolSize;
     await _prepareNoteIfNeeded(player, currentSound, preload: true);
@@ -1226,6 +895,70 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Play note by name and octave
   Future<void> playNoteByName(String note, int octave) async {
+    if (_useSf2ForCurrentInstrument()) {
+      final midiNote = instrumentSf2Controller.midiNoteFor(
+        note,
+        octave,
+        noteToSemitone,
+      );
+      if (midiNote == null) return;
+
+      const int channel = 0;
+      final int token = ++playerTokens[channel];
+
+      try {
+        final previousMidiNote = activeSf2MidiNote;
+        if (previousMidiNote != null && previousMidiNote != midiNote) {
+          try {
+            await instrumentSf2Controller.stopNote(
+              midiNote: previousMidiNote,
+              channel: channel,
+            );
+          } catch (_) {}
+        }
+
+        // Delay SF2 trigger to align with the slower just_audio click path.
+        Future<void> firePlayNote() async {
+          if (playerTokens[channel] != token) return;
+          await instrumentSf2Controller.playNote(
+            midiNote: midiNote,
+            channel: channel,
+          );
+          activeSf2MidiNote = midiNote;
+        }
+
+        if (sf2LatencyOffsetMs > 0) {
+          Timer(Duration(milliseconds: sf2LatencyOffsetMs), firePlayNote);
+        } else {
+          await firePlayNote();
+        }
+
+        final int beatMs = _intervalMs;
+        final int gateMs = math.max(
+          80,
+          math.min(320, (beatMs * noteGate).round()),
+        );
+        final int totalGateMs = gateMs + sf2LatencyOffsetMs;
+
+        Timer(Duration(milliseconds: totalGateMs), () async {
+          if (playerTokens[channel] != token) return;
+          try {
+            await instrumentSf2Controller.stopNote(
+              midiNote: midiNote,
+              channel: channel,
+            );
+            if (activeSf2MidiNote == midiNote) {
+              activeSf2MidiNote = null;
+            }
+          } catch (_) {}
+        });
+      } catch (e, st) {
+        debugPrint('Failed to play SF2 note $note$octave (midi=$midiNote): $e');
+        debugPrintStack(stackTrace: st);
+      }
+      return;
+    }
+
     // Prefer per-note players: avoids setAudioSource each tick at high BPM
     if (_usePerNotePlayers) {
       final fullNoteName = '$note$octave';
@@ -1321,7 +1054,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
 
     // Warm up current sound again
-    if (currentSound.isNotEmpty && !_usePerNotePlayers) {
+    if (currentSound.isNotEmpty &&
+        !_usePerNotePlayers &&
+        !_useSf2ForCurrentInstrument()) {
       final player = notePlayers[notePoolIndex];
       notePoolIndex = (notePoolIndex + 1) % notePoolSize;
       await _prepareNoteIfNeeded(player, currentSound, preload: true);
@@ -1454,110 +1189,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // ---------- UI ----------
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Build the content of the advanced settings drawer
-  Widget _buildAdvancedSettingsContent(BuildContext context) {
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.tune_rounded),
-              const SizedBox(width: 8),
-              Text(
-                'Advanced Settings',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              Text('Base Pitch', style: Theme.of(context).textTheme.titleSmall),
-              const Spacer(),
-              Text('${baseFrequencyHz.toStringAsFixed(1)} Hz'),
-            ],
-          ),
-          Slider(
-            value: baseFrequencyHz,
-            min: 55,
-            max: 880,
-            divisions: 825,
-            label: baseFrequencyHz.toStringAsFixed(1),
-            onChanged: (v) {
-              setState(() => baseFrequencyHz = v);
-            },
-            onChangeEnd: (v) => _applyBaseFrequency(v),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              Text('Octaves', style: Theme.of(context).textTheme.titleSmall),
-              const Spacer(),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed: octaveCount <= 1
-                    ? null
-                    : () => _setOctaveCount(octaveCount - 1),
-                icon: const Icon(Icons.remove_circle_outline),
-              ),
-              Text('$octaveCount'),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed:
-                    octaveCount >= (_assetMaxOctave - _assetMinOctave + 1)
-                    ? null
-                    : () => _setOctaveCount(octaveCount + 1),
-                icon: const Icon(Icons.add_circle_outline),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 26),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Range: $minOctave-$maxOctave'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Build the transport control bar with Start, Stop, and Reset buttons
-  Widget _buildTransportBar(bool isRunning) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FilledButton.icon(
-              onPressed: isRunning ? null : start,
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('Start'),
-            ),
-            const SizedBox(width: 10),
-            OutlinedButton.icon(
-              onPressed: isRunning ? () => stop() : null,
-              icon: const Icon(Icons.stop),
-              label: const Text('Stop'),
-            ),
-            const SizedBox(width: 10),
-            TextButton.icon(
-              onPressed: reset,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reset'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Generate a preview string for the loaded note sequence, showing the first few notes and total count
   String _sequencePreviewText() {
     if (noteSequence.isEmpty) return 'No sequence loaded';
@@ -1574,12 +1205,49 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final int beatInBar = (beat == 0) ? 1 : ((beat - 1) % beatsForDisplay) + 1;
     final int beatNumerator = beatInBar;
     final int beatDenominator = timeSignatureNote;
+    final beatIndicators = List.generate(beatsForDisplay, (i) {
+      final accent = _accentForBeatPosition(i + 1);
+      final isActive = (i + 1) == beatInBar;
+      final Color activeColor = switch (accent) {
+        ClickAccent.strong => Theme.of(context).colorScheme.primary,
+        ClickAccent.secondary => Theme.of(context).colorScheme.secondary,
+        ClickAccent.weak => Theme.of(context).colorScheme.tertiary,
+      };
+      final Color idleColor = switch (accent) {
+        ClickAccent.strong => Theme.of(
+          context,
+        ).colorScheme.primary.withValues(alpha: 0.35),
+        ClickAccent.secondary => Theme.of(
+          context,
+        ).colorScheme.secondary.withValues(alpha: 0.28),
+        ClickAccent.weak => Theme.of(context).colorScheme.outlineVariant,
+      };
+      return BeatIndicatorItem(
+        isActive: isActive,
+        activeColor: activeColor,
+        idleColor: idleColor,
+      );
+    });
+    final instrumentItems = instruments.map((ins) {
+      final hasAssets = instrumentAvailability[ins] ?? true;
+      final label = hasAssets ? ins : '$ins (missing)';
+      return DropdownMenuItem(
+        value: ins,
+        enabled: hasAssets,
+        child: Text(label),
+      );
+    }).toList(growable: false);
 
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Metronome'),
         actions: [
+          TextButton.icon(
+            onPressed: _sf2TestInProgress ? null : _runSf2SmokeTest,
+            icon: const Icon(Icons.music_note_rounded),
+            label: Text(_sf2TestInProgress ? 'Testing...' : 'SF2 Test'),
+          ),
           IconButton(
             tooltip: 'Advanced',
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
@@ -1587,7 +1255,26 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           ),
         ],
       ),
-      endDrawer: Drawer(child: _buildAdvancedSettingsContent(context)),
+      endDrawer: Drawer(
+        child: AdvancedSettingsDrawer(
+          baseFrequencyHz: baseFrequencyHz,
+          octaveCount: octaveCount,
+          minOctave: minOctave,
+          maxOctave: maxOctave,
+          maxOctaveCount: _assetMaxOctave - _assetMinOctave + 1,
+          onBaseFrequencyChanged: (v) {
+            setState(() => baseFrequencyHz = v);
+          },
+          onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+          onDecreaseOctaveCount: octaveCount <= 1
+              ? null
+              : () => _setOctaveCount(octaveCount - 1),
+          onIncreaseOctaveCount:
+              octaveCount >= (_assetMaxOctave - _assetMinOctave + 1)
+              ? null
+              : () => _setOctaveCount(octaveCount + 1),
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -1601,307 +1288,61 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Swing animation
-                      MetronomeSwing(
+                      PlaybackStatusPanel(
                         anim: swingAnim,
                         isRunning: isRunning,
-                        amplitudeDeg: 18,
+                        beatNumerator: beatNumerator,
+                        beatDenominator: beatDenominator,
+                        bpm: bpm,
+                        beatIndicators: beatIndicators,
                       ),
-                      const SizedBox(height: 12),
-
-                      // Beat display (center, modern)
-                      Column(
-                        children: [
-                          Text(
-                            '$beatNumerator/$beatDenominator',
-                            style: Theme.of(context).textTheme.headlineLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 16,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-
-                              // Generate beat indicators based on time signature, with accent colors and active beat scaling
-                              children: List.generate(beatsForDisplay, (i) {
-                                final accent = _accentForBeatPosition(i + 1);
-                                final isActive = (i + 1) == beatInBar;
-                                final Color activeColor = switch (accent) {
-                                  ClickAccent.strong => Theme.of(
-                                    context,
-                                  ).colorScheme.primary,
-                                  ClickAccent.secondary => Theme.of(
-                                    context,
-                                  ).colorScheme.secondary,
-                                  ClickAccent.weak => Theme.of(
-                                    context,
-                                  ).colorScheme.tertiary,
-                                };
-                                final Color idleColor = switch (accent) {
-                                  ClickAccent.strong => Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withValues(alpha: 0.35),
-                                  ClickAccent.secondary =>
-                                    Theme.of(context).colorScheme.secondary
-                                        .withValues(alpha: 0.28),
-                                  ClickAccent.weak => Theme.of(
-                                    context,
-                                  ).colorScheme.outlineVariant,
-                                };
-                                return SizedBox(
-                                  width: 18,
-                                  height: 16,
-                                  child: Center(
-                                    child: TweenAnimationBuilder<double>(
-                                      tween: Tween<double>(
-                                        end: isActive ? 1.0 : 0.66,
-                                      ),
-                                      duration: const Duration(
-                                        milliseconds: 140,
-                                      ),
-                                      curve: Curves.easeOut,
-                                      builder: (context, scale, child) {
-                                        return Transform.scale(
-                                          scale: scale,
-                                          child: child,
-                                        );
-                                      },
-                                      child: Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: isActive
-                                              ? activeColor
-                                              : idleColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '$bpm',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'BPM',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-
                       const SizedBox(height: 14),
-
-                      // Note sequence info and current sound preview
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.library_music_rounded,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${noteSequence.length} notes loaded',
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                                const Spacer(),
-                                ValueListenableBuilder<String>(
-                                  valueListenable: currentSoundVN,
-                                  builder: (context, sound, _) {
-                                    return Text(
-                                      sound.isEmpty ? '--' : sound,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _sequencePreviewText(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Slider for BPM (30-240)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Column(
-                          children: [
-                            Slider(
-                              value: bpm.toDouble(),
-                              min: 30,
-                              max: 240,
-                              divisions: 210,
-                              label: '$bpm',
-                              onChanged: (v) {
-                                setState(() => bpm = v.round());
-                              },
-                              onChangeEnd: (v) {
-                                _applyBpm(v.round());
-                              },
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: const [Text('30'), Text('240')],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // Compact toggles
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          FilterChip(
-                            label: const Text('Click'),
-                            avatar: const Icon(Icons.volume_up, size: 18),
-                            selected: enableClick,
-                            onSelected: (v) async {
-                              setState(() => enableClick = v);
-                              if (!v) {
-                                await _pauseClickPlayers();
-                              }
-                            },
-                          ),
-                          FilterChip(
-                            label: const Text('Sound'),
-                            avatar: const Icon(
-                              Icons.graphic_eq_rounded,
-                              size: 18,
-                            ),
-                            selected: enableSound,
-                            onSelected: (v) async {
-                              setState(() => enableSound = v);
-                              if (!v) {
-                                await _releaseAllNotePlayers();
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Compact meter control: one container, tap to expand dual wheel picker.
-                      InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: _openMeterPickerSheet,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.tune_rounded, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$timeSignatureBeats/$timeSignatureNote · ${_beatUnitLabel(beatUnit)}',
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.expand_more_rounded, size: 18),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Instrument
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('Instrument: '),
-                          const SizedBox(width: 8),
-                          DropdownButton<String>(
-                            value: selectedInstrument,
-                            items: instruments.map((ins) {
-                              final hasAssets =
-                                  instrumentAvailability[ins] ?? true;
-                              final label = hasAssets ? ins : '$ins (missing)';
-                              return DropdownMenuItem(
-                                value: ins,
-                                enabled: hasAssets,
-                                child: Text(label),
-                              );
-                            }).toList(),
-                            onChanged: (v) {
-                              if (v == null) return;
-                              _onInstrumentChanged(v);
-                            },
-                          ),
-                        ],
+                      MetronomeControlsPanel(
+                        noteCount: noteSequence.length,
+                        currentSoundListenable: currentSoundVN,
+                        sequencePreviewText: _sequencePreviewText(),
+                        bpm: bpm,
+                        enableClick: enableClick,
+                        enableSound: enableSound,
+                        onBpmChanged: (v) {
+                          setState(() => bpm = v.round());
+                        },
+                        onBpmChangeEnd: (v) {
+                          _applyBpm(v.round());
+                        },
+                        onClickToggle: (v) async {
+                          setState(() => enableClick = v);
+                          if (!v) {
+                            await _pauseClickPlayers();
+                          }
+                        },
+                        onSoundToggle: (v) async {
+                          setState(() => enableSound = v);
+                          if (!v) {
+                            await _releaseAllNotePlayers();
+                          }
+                        },
+                        onMeterTap: _openMeterPickerSheet,
+                        meterLabel:
+                            '$timeSignatureBeats/$timeSignatureNote · ${beatUnitLabel(beatUnit)}',
+                        selectedInstrument: selectedInstrument,
+                        instrumentItems: instrumentItems,
+                        onInstrumentChanged: (v) {
+                          if (v == null) return;
+                          _onInstrumentChanged(v);
+                        },
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-            _buildTransportBar(isRunning),
+            TransportBar(
+              isRunning: isRunning,
+              onStart: start,
+              onStop: () => stop(),
+              onReset: reset,
+            ),
           ],
         ),
       ),
@@ -1913,6 +1354,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     timer?.cancel();
     clickStrongPlayer.dispose();
     clickWeakPlayer.dispose();
+    instrumentSf2Controller.dispose();
     for (final p in notePlayers) {
       p.dispose();
     }
@@ -1920,135 +1362,5 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     currentSoundVN.dispose();
     swingController.dispose();
     super.dispose();
-  }
-}
-
-// A simple widget to visualize the metronome swing based on the current beat
-class MetronomeSwing extends StatelessWidget {
-  final Animation<double> anim; // -1 ~ 1
-  final double amplitudeDeg; // amplitude in degrees for max swing
-  final bool isRunning;
-
-  const MetronomeSwing({
-    super.key,
-    required this.anim,
-    this.amplitudeDeg = 18,
-    required this.isRunning,
-  });
-
-  @override
-  // Build a pendulum-like swing animation using rotation and stacking
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 220,
-      width: 220,
-      child: AnimatedBuilder(
-        animation: anim,
-        builder: (context, _) {
-          final scheme = Theme.of(context).colorScheme;
-          final angle = (amplitudeDeg * math.pi / 180.0) * anim.value;
-
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                bottom: 16,
-                child: Container(
-                  width: 188,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    color: scheme.surfaceContainerHighest,
-                    boxShadow: [
-                      BoxShadow(
-                        color: scheme.shadow.withValues(alpha: 0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 30,
-                child: Container(
-                  width: 136,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: scheme.surfaceContainerLow,
-                  ),
-                ),
-              ),
-
-              // Pendulum
-              Transform.rotate(
-                angle: angle,
-                alignment: const Alignment(0, -1), // rotate around top center
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // center pivot point
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isRunning
-                            ? scheme.primary
-                            : scheme.outlineVariant,
-                      ),
-                    ),
-                    // rod
-                    Container(
-                      width: 5,
-                      height: 146,
-                      margin: const EdgeInsets.only(top: 6),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            scheme.onSurface.withValues(alpha: 0.85),
-                            scheme.onSurface.withValues(alpha: 0.62),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // weight
-                    Container(
-                      width: 54,
-                      height: 32,
-                      margin: const EdgeInsets.only(top: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(11),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            scheme.primaryContainer,
-                            scheme.surfaceContainerHigh,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: scheme.shadow.withValues(
-                              alpha: isRunning ? 0.14 : 0.08,
-                            ),
-                            blurRadius: isRunning ? 9 : 6,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
   }
 }

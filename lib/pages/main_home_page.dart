@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// Main home page of the app that welcomes users and provides navigation to the metronome feature
 class MainHomePage extends StatelessWidget {
   const MainHomePage({super.key});
 
@@ -79,7 +80,6 @@ class MainHomePage extends StatelessWidget {
                               label: const Text('Start Metronome'),
                             ),
                           ),
-                          const SizedBox(width: 10),
                         ],
                       ),
                     ],

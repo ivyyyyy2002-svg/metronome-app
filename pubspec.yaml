@@ -13,6 +13,7 @@ dependencies:
   just_audio: ^0.10.5          
   audio_session: ^0.2.2   
   audioplayers: ^6.5.1     
+  flutter_midi_pro: ^3.1.6
   
   # UI
   cupertino_icons: ^1.0.8
