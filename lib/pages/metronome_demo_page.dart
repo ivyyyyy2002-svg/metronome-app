@@ -46,8 +46,20 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   final InstrumentSf2Controller instrumentSf2Controller = InstrumentSf2Controller(
     channelCount: notePoolSize,
     assetSpecs: const {
-      'piano': Sf2Spec(assetPath: 'assets/sf2/piano.sf2', bank: 0, program: 0),
+      // piano.sf2 has 2 presets: program=0 (MutedPiano Pedal On - sustained,
+      // softer) and program=1 (MutedPiano Pedal Off - shorter, clearer).
+      // Pedal Off is closer to a normal piano hit.
+      'piano': Sf2Spec(assetPath: 'assets/sf2/piano.sf2', bank: 0, program: 1),
       'guzheng': Sf2Spec(assetPath: 'assets/sf2/guzheng.sf2', bank: 1, program: 107),
+      // flute.sf2 ships 11 presets at bank=0 program=0..10 (Bamboo Flute 1-7,
+      // Terra Viva 1-3, Terra Viva FX). Default to "Bamboo Flute 1".
+      'flute': Sf2Spec(assetPath: 'assets/sf2/flute.sf2', bank: 0, program: 0),
+      'pipa': Sf2Spec(assetPath: 'assets/sf2/pipa.sf2', bank: 0, program: 0),
+      'shamisen': Sf2Spec(assetPath: 'assets/sf2/shamisen.sf2', bank: 0, program: 0),
+      'harmonium': Sf2Spec(assetPath: 'assets/sf2/harmonium.sf2', bank: 0, program: 0),
+      // m3_Instruments.sf2 is a 63-preset Turkish/Arabic compilation.
+      // Currently exposing program=11 (Oud) — the iconic Arab/Turkish lute.
+      'oud': Sf2Spec(assetPath: 'assets/sf2/m3_Instruments.sf2', bank: 0, program: 11),
     },
   );
   String clickStrongAsset = _defaultStrongClickAsset;
@@ -78,7 +90,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   Future<void>? _clickPreloadFuture;
 
   // Available instruments
-  final List<String> instruments = ['piano', 'harmonium', 'guzheng'];
+  // SF2-only mode: only list instruments that have a SoundFont in assetSpecs.
+  final List<String> instruments = [
+    'piano', 'guzheng', 'flute', 'pipa', 'shamisen', 'harmonium', 'oud',
+  ];
   final Map<String, bool> instrumentAvailability = {};
   String selectedInstrument = 'piano';
 
@@ -424,19 +439,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Check if the given instrument has at least one playable asset based on the current sequence (used to determine availability in the picker)
   Future<bool> _instrumentHasPlayableAsset(String instrument) async {
-    if (await instrumentSf2Controller.hasSoundfontAsset(instrument)) {
-      return true;
-    }
-
-    final probeNotes = _sampleSequenceNotesForProbe();
-    for (final fullNote in probeNotes) {
-      final path = 'assets/notes/$instrument/$fullNote.wav';
-      try {
-        await rootBundle.load(path);
-        return true;
-      } catch (_) {}
-    }
-    return false;
+    // SF2-only mode: an instrument is playable iff it has a SoundFont asset.
+    return instrumentSf2Controller.hasSoundfontAsset(instrument);
   }
 
   Future<void> _runSf2SmokeTest() async {
@@ -527,7 +531,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       }
       if (fallback != null) {
         await _onInstrumentChanged(fallback);
+        return;
       }
+    }
+
+    // SF2-only mode: ensure the SoundFont for the currently selected
+    // instrument is loaded and ready, so notes play immediately without
+    // needing the user to hit "SF2 Test".
+    if (instrumentAvailability[selectedInstrument] ?? false) {
+      await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
     }
   }
 
@@ -1045,7 +1057,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     _noteReady = false;
     _noteSourceCache.clear();
 
-    // Rebuild per-note players for the new instrument
+    // SF2-only mode: load the SoundFont for the new instrument up front
+    // so the first note plays without delay.
+    await instrumentSf2Controller.prepareForInstrument(newInstrument);
+
+    // Rebuild per-note players for the new instrument (only matters if the
+    // wav fallback is ever re-enabled; harmless otherwise).
     if (_usePerNotePlayers) {
       await _disposePerNotePlayers();
       await _preloadAllNotesForSequence();
@@ -1053,7 +1070,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       await _precacheSourcesForSequence();
     }
 
-    // Warm up current sound again
+    // Warm up current sound again (wav path; skipped when SF2 is ready)
     if (currentSound.isNotEmpty &&
         !_usePerNotePlayers &&
         !_useSf2ForCurrentInstrument()) {

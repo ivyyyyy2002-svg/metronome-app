@@ -7,10 +7,15 @@ class Sf2Spec {
   final String assetPath;
   final int bank;
   final int program;
+  // Semitones added to the requested MIDI note before playback.
+  // Use +/-12 to shift one octave when the SF2 doesn't match the
+  // scientific pitch convention (MIDI 60 = C4) used by the rest of the app.
+  final int noteOffset;
   const Sf2Spec({
     required this.assetPath,
     this.bank = 0,
     this.program = 0,
+    this.noteOffset = 0,
   });
 }
 
@@ -103,7 +108,12 @@ class InstrumentSf2Controller {
   ) {
     final semitone = noteToSemitone[note];
     if (semitone == null) return null;
-    return (octave + 1) * 12 + semitone;
+    final base = (octave + 1) * 12 + semitone;
+    final spec = assetSpecs[_loadedInstrument];
+    final shifted = base + (spec?.noteOffset ?? 0);
+    // Clamp to valid MIDI range.
+    if (shifted < 0 || shifted > 127) return null;
+    return shifted;
   }
 
   Future<void> playNote({
