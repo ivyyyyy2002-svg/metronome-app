@@ -30,6 +30,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
   static const int _assetMinOctave = 2;
   static const int _assetMaxOctave = 6;
+  static const double _minBaseFrequencyHz = 27.5;
+  static const double _maxBaseFrequencyHz = 1760.0;
 
   // Animation for pendulum swing
   late final AnimationController swingController;
@@ -37,31 +39,88 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Metronome state
   int beat = 0;
-  int bpm = 60; // Beats per minute
+  int bpm = 90; // Beats per minute
   Timer? timer;
 
   // just_audio players
   final AudioPlayer clickStrongPlayer = AudioPlayer();
   final AudioPlayer clickWeakPlayer = AudioPlayer();
-  final InstrumentSf2Controller instrumentSf2Controller = InstrumentSf2Controller(
-    channelCount: notePoolSize,
-    assetSpecs: const {
-      // piano.sf2 has 2 presets: program=0 (MutedPiano Pedal On - sustained,
-      // softer) and program=1 (MutedPiano Pedal Off - shorter, clearer).
-      // Pedal Off is closer to a normal piano hit.
-      'piano': Sf2Spec(assetPath: 'assets/sf2/piano.sf2', bank: 0, program: 1),
-      'guzheng': Sf2Spec(assetPath: 'assets/sf2/guzheng.sf2', bank: 1, program: 107),
-      // flute.sf2 ships 11 presets at bank=0 program=0..10 (Bamboo Flute 1-7,
-      // Terra Viva 1-3, Terra Viva FX). Default to "Bamboo Flute 1".
-      'flute': Sf2Spec(assetPath: 'assets/sf2/flute.sf2', bank: 0, program: 0),
-      'pipa': Sf2Spec(assetPath: 'assets/sf2/pipa.sf2', bank: 0, program: 0),
-      'shamisen': Sf2Spec(assetPath: 'assets/sf2/shamisen.sf2', bank: 0, program: 0),
-      'harmonium': Sf2Spec(assetPath: 'assets/sf2/harmonium.sf2', bank: 0, program: 0),
-      // m3_Instruments.sf2 is a 63-preset Turkish/Arabic compilation.
-      // Currently exposing program=11 (Oud) — the iconic Arab/Turkish lute.
-      'oud': Sf2Spec(assetPath: 'assets/sf2/m3_Instruments.sf2', bank: 0, program: 11),
-    },
-  );
+  final InstrumentSf2Controller instrumentSf2Controller =
+      InstrumentSf2Controller(
+        channelCount: notePoolSize,
+        assetSpecs: const {
+          'piano': Sf2Spec(
+            assetPath: 'assets/sf2/piano.sf2',
+            bank: 0,
+            program: 1,
+            velocity: 92,
+            volume: 112,
+            expression: 112,
+            maxGateMs: 260,
+          ),
+          'guzheng': Sf2Spec(
+            assetPath: 'assets/sf2/guzheng.sf2',
+            bank: 1,
+            program: 107,
+            velocity: 86,
+            volume: 104,
+            expression: 108,
+            maxGateMs: 240,
+          ),
+
+          'flute': Sf2Spec(
+            assetPath: 'assets/sf2/flute.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 80,
+            volume: 98,
+            expression: 104,
+            gateScale: 1.15,
+            maxGateMs: 360,
+          ),
+          'pipa': Sf2Spec(
+            assetPath: 'assets/sf2/pipa.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 84,
+            volume: 104,
+            expression: 108,
+            maxGateMs: 230,
+          ),
+          'shamisen': Sf2Spec(
+            assetPath: 'assets/sf2/shamisen.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 82,
+            volume: 102,
+            expression: 106,
+            maxGateMs: 220,
+          ),
+          'harmonium': Sf2Spec(
+            assetPath: 'assets/sf2/harmonium.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 72,
+            volume: 86,
+            expression: 96,
+            gateScale: 1.45,
+            minGateMs: 140,
+            maxGateMs: 520,
+            overlapMs: 90,
+          ),
+          // m3_Instruments.sf2 is a 63-preset Turkish/Arabic compilation.
+          // Currently exposing program=11 (Oud) — the iconic Arab/Turkish lute.
+          'oud': Sf2Spec(
+            assetPath: 'assets/sf2/m3_Instruments.sf2',
+            bank: 0,
+            program: 11,
+            velocity: 84,
+            volume: 104,
+            expression: 108,
+            maxGateMs: 260,
+          ),
+        },
+      );
   String clickStrongAsset = _defaultStrongClickAsset;
   String clickWeakAsset = _defaultWeakClickAsset;
 
@@ -92,7 +151,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // Available instruments
   // SF2-only mode: only list instruments that have a SoundFont in assetSpecs.
   final List<String> instruments = [
-    'piano', 'guzheng', 'flute', 'pipa', 'shamisen', 'harmonium', 'oud',
+    'piano',
+    'guzheng',
+    'flute',
+    'pipa',
+    'shamisen',
+    'harmonium',
+    'oud',
   ];
   final Map<String, bool> instrumentAvailability = {};
   String selectedInstrument = 'piano';
@@ -118,12 +183,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   final Map<String, int> _perNoteTokens = {};
   final bool _usePerNotePlayers = false;
   int? activeSf2MidiNote;
-  bool _sf2TestInProgress = false;
-
-  // SF2 (flutter_midi_pro) reaches the speakers faster than just_audio clicks
-  // on iOS, which makes notes sound like they "rush" the beat. Delay SF2
-  // triggers slightly to compensate. Tune if click/SF2 still feel misaligned.
-  static const int sf2LatencyOffsetMs = 55;
 
   int uiUpdateEvery = 4;
 
@@ -413,7 +472,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   Future<void> _applyBaseFrequency(double newFrequencyHz) async {
-    final clampedHz = newFrequencyHz.clamp(55.0, 880.0).toDouble();
+    final clampedHz = newFrequencyHz
+        .clamp(_minBaseFrequencyHz, _maxBaseFrequencyHz)
+        .toDouble();
     setState(() {
       baseFrequencyHz = clampedHz;
       _setBaseFromFrequencyNoSetState(baseFrequencyHz);
@@ -425,85 +486,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     _restartIfRunning();
   }
 
-  List<String> _sampleSequenceNotesForProbe({int maxNotes = 12}) {
-    final notes = <String>{};
-    if (noteSequence.isNotEmpty) {
-      final limit = math.min(maxNotes, noteSequence.length);
-      for (int step = 0; step < limit; step++) {
-        notes.add(_resolveFullNoteName(noteSequence[step], baseOctave));
-      }
-    }
-
-    return notes.toList(growable: false);
-  }
-
   // Check if the given instrument has at least one playable asset based on the current sequence (used to determine availability in the picker)
   Future<bool> _instrumentHasPlayableAsset(String instrument) async {
     // SF2-only mode: an instrument is playable iff it has a SoundFont asset.
     return instrumentSf2Controller.hasSoundfontAsset(instrument);
-  }
-
-  Future<void> _runSf2SmokeTest() async {
-    if (_sf2TestInProgress) return;
-
-    setState(() => _sf2TestInProgress = true);
-    try {
-      final hasSoundfont = await instrumentSf2Controller.hasSoundfontAsset(
-        selectedInstrument,
-      );
-      if (!hasSoundfont) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No SF2 asset found for $selectedInstrument'),
-          ),
-        );
-        return;
-      }
-
-      await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
-      if (!instrumentSf2Controller.isReadyFor(selectedInstrument)) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('SF2 did not become ready for $selectedInstrument'),
-          ),
-        );
-        return;
-      }
-
-      const int midiNote = 60; // C4
-      await instrumentSf2Controller.playNote(
-        midiNote: midiNote,
-        channel: 0,
-        velocity: 108,
-      );
-      await Future.delayed(const Duration(milliseconds: 700));
-      await instrumentSf2Controller.stopNote(
-        midiNote: midiNote,
-        channel: 0,
-      );
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('SF2 test played C4 for $selectedInstrument'),
-        ),
-      );
-    } catch (e, st) {
-      debugPrint('SF2 smoke test failed: $e');
-      debugPrintStack(stackTrace: st);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('SF2 test failed for $selectedInstrument'),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _sf2TestInProgress = false);
-      }
-    }
   }
 
   Future<void> _refreshInstrumentAvailability() async {
@@ -536,8 +522,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
 
     // SF2-only mode: ensure the SoundFont for the currently selected
-    // instrument is loaded and ready, so notes play immediately without
-    // needing the user to hit "SF2 Test".
+    // instrument is loaded and ready, so notes play immediately.
     if (instrumentAvailability[selectedInstrument] ?? false) {
       await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
     }
@@ -611,9 +596,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await showMeterPickerSheet(
       context: context,
       timeSignatureOptions: timeSignatureOptions,
-      beatUnitLabels: [
-        for (final unit in BeatUnit.values) beatUnitLabel(unit),
-      ],
+      beatUnitLabels: [for (final unit in BeatUnit.values) beatUnitLabel(unit)],
       initialTimeSignatureIndex: _timeSignatureIndex(),
       initialBeatUnitIndex: _beatUnitIndex(),
       onSelectionChanged: (selection) {
@@ -795,9 +778,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   // Release all note players by fading out and pausing
-  Future<void> _releaseAllNotePlayers({
-    int releaseMs = 70,
-  }) async {
+  Future<void> _releaseAllNotePlayers({int releaseMs = 70}) async {
     for (int i = 0; i < notePlayers.length; i++) {
       playerTokens[i]++;
     }
@@ -810,7 +791,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     activeSf2MidiNote = null;
 
     await Future.wait([
-      for (final player in notePlayers) _fadeOutAndPause(player, releaseMs: releaseMs),
+      for (final player in notePlayers)
+        _fadeOutAndPause(player, releaseMs: releaseMs),
       for (final player in _perNotePlayers.values)
         _fadeOutAndPause(player, releaseMs: releaseMs),
     ]);
@@ -897,7 +879,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   Future<void> _warmUpCurrentNote() async {
-    if (currentSound.isEmpty || _usePerNotePlayers || _useSf2ForCurrentInstrument()) {
+    if (currentSound.isEmpty ||
+        _usePerNotePlayers ||
+        _useSf2ForCurrentInstrument()) {
       return;
     }
     final player = notePlayers[notePoolIndex];
@@ -917,10 +901,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
       const int channel = 0;
       final int token = ++playerTokens[channel];
+      final sf2Spec = instrumentSf2Controller.specFor(selectedInstrument);
+      final int latencyOffsetMs = sf2Spec?.latencyOffsetMs ?? 55;
+      final int overlapMs = sf2Spec?.overlapMs ?? 0;
 
       try {
         final previousMidiNote = activeSf2MidiNote;
-        if (previousMidiNote != null && previousMidiNote != midiNote) {
+        if (previousMidiNote != null && previousMidiNote == midiNote) {
           try {
             await instrumentSf2Controller.stopNote(
               midiNote: previousMidiNote,
@@ -937,20 +924,33 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             channel: channel,
           );
           activeSf2MidiNote = midiNote;
+          if (previousMidiNote != null && previousMidiNote != midiNote) {
+            Timer(Duration(milliseconds: overlapMs), () async {
+              try {
+                await instrumentSf2Controller.stopNote(
+                  midiNote: previousMidiNote,
+                  channel: channel,
+                );
+              } catch (_) {}
+            });
+          }
         }
 
-        if (sf2LatencyOffsetMs > 0) {
-          Timer(Duration(milliseconds: sf2LatencyOffsetMs), firePlayNote);
+        if (latencyOffsetMs > 0) {
+          Timer(Duration(milliseconds: latencyOffsetMs), firePlayNote);
         } else {
           await firePlayNote();
         }
 
         final int beatMs = _intervalMs;
         final int gateMs = math.max(
-          80,
-          math.min(320, (beatMs * noteGate).round()),
+          sf2Spec?.minGateMs ?? 80,
+          math.min(
+            sf2Spec?.maxGateMs ?? 320,
+            (beatMs * noteGate * (sf2Spec?.gateScale ?? 1.0)).round(),
+          ),
         );
-        final int totalGateMs = gateMs + sf2LatencyOffsetMs;
+        final int totalGateMs = gateMs + latencyOffsetMs;
 
         Timer(Duration(milliseconds: totalGateMs), () async {
           if (playerTokens[channel] != token) return;
@@ -1052,6 +1052,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       return;
     }
 
+    if (newInstrument == selectedInstrument) return;
+
+    for (int i = 0; i < notePlayers.length; i++) {
+      playerTokens[i]++;
+    }
+    activeSf2MidiNote = null;
+    await instrumentSf2Controller.releaseCurrentInstrument();
+
+    if (!mounted) return;
     setState(() => selectedInstrument = newInstrument);
 
     _noteReady = false;
@@ -1245,26 +1254,23 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         idleColor: idleColor,
       );
     });
-    final instrumentItems = instruments.map((ins) {
-      final hasAssets = instrumentAvailability[ins] ?? true;
-      final label = hasAssets ? ins : '$ins (missing)';
-      return DropdownMenuItem(
-        value: ins,
-        enabled: hasAssets,
-        child: Text(label),
-      );
-    }).toList(growable: false);
+    final instrumentItems = instruments
+        .map((ins) {
+          final hasAssets = instrumentAvailability[ins] ?? true;
+          final label = hasAssets ? ins : '$ins (missing)';
+          return DropdownMenuItem(
+            value: ins,
+            enabled: hasAssets,
+            child: Text(label),
+          );
+        })
+        .toList(growable: false);
 
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Metronome'),
         actions: [
-          TextButton.icon(
-            onPressed: _sf2TestInProgress ? null : _runSf2SmokeTest,
-            icon: const Icon(Icons.music_note_rounded),
-            label: Text(_sf2TestInProgress ? 'Testing...' : 'SF2 Test'),
-          ),
           IconButton(
             tooltip: 'Advanced',
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
@@ -1279,6 +1285,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           minOctave: minOctave,
           maxOctave: maxOctave,
           maxOctaveCount: _assetMaxOctave - _assetMinOctave + 1,
+          minBaseFrequencyHz: _minBaseFrequencyHz,
+          maxBaseFrequencyHz: _maxBaseFrequencyHz,
           onBaseFrequencyChanged: (v) {
             setState(() => baseFrequencyHz = v);
           },

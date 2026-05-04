@@ -9,6 +9,8 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.minOctave,
     required this.maxOctave,
     required this.maxOctaveCount,
+    required this.minBaseFrequencyHz,
+    required this.maxBaseFrequencyHz,
     required this.onBaseFrequencyChanged,
     required this.onBaseFrequencyChangeEnd,
     required this.onDecreaseOctaveCount,
@@ -20,6 +22,8 @@ class AdvancedSettingsDrawer extends StatelessWidget {
   final int minOctave;
   final int maxOctave;
   final int maxOctaveCount;
+  final double minBaseFrequencyHz;
+  final double maxBaseFrequencyHz;
   final ValueChanged<double> onBaseFrequencyChanged;
   final ValueChanged<double> onBaseFrequencyChangeEnd;
   final VoidCallback? onDecreaseOctaveCount;
@@ -51,10 +55,13 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             ],
           ),
           Slider(
-            value: baseFrequencyHz,
-            min: 55,
-            max: 880,
-            divisions: 825,
+            value: baseFrequencyHz.clamp(
+              minBaseFrequencyHz,
+              maxBaseFrequencyHz,
+            ),
+            min: minBaseFrequencyHz,
+            max: maxBaseFrequencyHz,
+            divisions: ((maxBaseFrequencyHz - minBaseFrequencyHz) * 2).round(),
             label: baseFrequencyHz.toStringAsFixed(1),
             onChanged: onBaseFrequencyChanged,
             onChangeEnd: onBaseFrequencyChangeEnd,
