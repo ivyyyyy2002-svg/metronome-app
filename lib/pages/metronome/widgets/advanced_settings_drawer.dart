@@ -15,6 +15,8 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.onBaseFrequencyChangeEnd,
     required this.onDecreaseOctaveCount,
     required this.onIncreaseOctaveCount,
+    this.minBaseLabel,
+    this.maxBaseLabel,
   });
 
   final double baseFrequencyHz;
@@ -28,6 +30,9 @@ class AdvancedSettingsDrawer extends StatelessWidget {
   final ValueChanged<double> onBaseFrequencyChangeEnd;
   final VoidCallback? onDecreaseOctaveCount;
   final VoidCallback? onIncreaseOctaveCount;
+  // Note-name labels rendered at the slider edges (e.g. "A1" and "A6").
+  final String? minBaseLabel;
+  final String? maxBaseLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -46,25 +51,43 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // Pitch row: slider with note-name labels at the edges instead of
+          // a raw frequency readout. The slider tooltip still shows Hz.
           Row(
             children: [
-              const SizedBox(width: 8),
-              Text('Base Pitch', style: Theme.of(context).textTheme.titleSmall),
-              const Spacer(),
-              Text('${baseFrequencyHz.toStringAsFixed(1)} Hz'),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  minBaseLabel ?? '',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
+              Expanded(
+                child: Slider(
+                  value: baseFrequencyHz.clamp(
+                    minBaseFrequencyHz,
+                    maxBaseFrequencyHz,
+                  ),
+                  min: minBaseFrequencyHz,
+                  max: maxBaseFrequencyHz,
+                  divisions: ((maxBaseFrequencyHz - minBaseFrequencyHz) * 2)
+                      .round()
+                      .clamp(1, 1 << 30),
+                  label: '${baseFrequencyHz.toStringAsFixed(1)} Hz',
+                  onChanged: onBaseFrequencyChanged,
+                  onChangeEnd: onBaseFrequencyChangeEnd,
+                ),
+              ),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  maxBaseLabel ?? '',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
             ],
-          ),
-          Slider(
-            value: baseFrequencyHz.clamp(
-              minBaseFrequencyHz,
-              maxBaseFrequencyHz,
-            ),
-            min: minBaseFrequencyHz,
-            max: maxBaseFrequencyHz,
-            divisions: ((maxBaseFrequencyHz - minBaseFrequencyHz) * 2).round(),
-            label: baseFrequencyHz.toStringAsFixed(1),
-            onChanged: onBaseFrequencyChanged,
-            onChangeEnd: onBaseFrequencyChangeEnd,
           ),
           const SizedBox(height: 8),
           Row(
@@ -89,7 +112,7 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             padding: const EdgeInsets.only(left: 26),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Range: $minOctave-$maxOctave'),
+              child: Text('Range: A$minOctave - A$maxOctave'),
             ),
           ),
           if (octaveCount >= maxOctaveCount)

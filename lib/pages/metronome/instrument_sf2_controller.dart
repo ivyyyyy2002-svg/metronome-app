@@ -19,6 +19,11 @@ class Sf2Spec {
   final int maxGateMs;
   final int latencyOffsetMs;
   final int overlapMs;
+  // Per-instrument playable octave range for the metronome UI.
+  // Defaults cover A1..A6 (the app's default span). Override when an
+  // instrument's SF2 has a narrower usable range (e.g. oud caps at C#5).
+  final int minOctave;
+  final int maxOctave;
   const Sf2Spec({
     required this.assetPath,
     this.bank = 0,
@@ -32,6 +37,8 @@ class Sf2Spec {
     this.maxGateMs = 320,
     this.latencyOffsetMs = 55,
     this.overlapMs = 0,
+    this.minOctave = 1,
+    this.maxOctave = 6,
   });
 }
 

@@ -28,10 +28,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     with SingleTickerProviderStateMixin {
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
-  static const int _assetMinOctave = 2;
-  static const int _assetMaxOctave = 6;
-  static const double _minBaseFrequencyHz = 27.5;
-  static const double _maxBaseFrequencyHz = 1760.0;
+  // Lower-bound floor for any instrument (A0). Each instrument's actual usable
+  // range is read from its Sf2Spec at runtime via _instrumentMinOctave /
+  // _instrumentMaxOctave below.
+  static const int _absoluteMinOctave = 0;
+  static const int _absoluteMaxOctave = 7;
 
   // Animation for pendulum swing
   late final AnimationController swingController;
@@ -49,14 +50,26 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       InstrumentSf2Controller(
         channelCount: notePoolSize,
         assetSpecs: const {
+          // Per-instrument min/max octave reflects the SF2's actual sampled
+          // range. pipa caps at E6 (no full octave 6) so max=5; oud caps at
+          // C#5 so max=4. Others have ~A1..A6 covered.
           'piano': Sf2Spec(
             assetPath: 'assets/sf2/piano.sf2',
+            // program=0 is Pedal On (long sustain), program=1 is Pedal Off
+            // (clean cut). Pedal On + a moderate gate gives a "half-pedal"
+            // feel: the sample's natural decay rings out for a beat or so,
+            // then is released cleanly before the next hit.
             bank: 0,
-            program: 1,
+            program: 0,
             velocity: 92,
             volume: 112,
             expression: 112,
-            maxGateMs: 260,
+            // Allow the natural decay to ring longer than Pedal Off did,
+            // but cap so it never fully bleeds across a slow beat.
+            gateScale: 1.1,
+            maxGateMs: 520,
+            minOctave: 1,
+            maxOctave: 6,
           ),
           'guzheng': Sf2Spec(
             assetPath: 'assets/sf2/guzheng.sf2',
@@ -66,6 +79,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             volume: 104,
             expression: 108,
             maxGateMs: 240,
+            minOctave: 1,
+            maxOctave: 6,
           ),
 
           'flute': Sf2Spec(
@@ -77,6 +92,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             expression: 104,
             gateScale: 1.15,
             maxGateMs: 360,
+            minOctave: 1,
+            maxOctave: 6,
           ),
           'pipa': Sf2Spec(
             assetPath: 'assets/sf2/pipa.sf2',
@@ -86,6 +103,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             volume: 104,
             expression: 108,
             maxGateMs: 230,
+            minOctave: 1,
+            maxOctave: 5,
           ),
           'shamisen': Sf2Spec(
             assetPath: 'assets/sf2/shamisen.sf2',
@@ -95,6 +114,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             volume: 102,
             expression: 106,
             maxGateMs: 220,
+            minOctave: 1,
+            maxOctave: 6,
           ),
           'harmonium': Sf2Spec(
             assetPath: 'assets/sf2/harmonium.sf2',
@@ -107,6 +128,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             minGateMs: 140,
             maxGateMs: 520,
             overlapMs: 90,
+            minOctave: 1,
+            maxOctave: 6,
           ),
           // m3_Instruments.sf2 is a 63-preset Turkish/Arabic compilation.
           // Currently exposing program=11 (Oud) — the iconic Arab/Turkish lute.
@@ -118,6 +141,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             volume: 104,
             expression: 108,
             maxGateMs: 260,
+            minOctave: 1,
+            maxOctave: 4,
           ),
         },
       );
@@ -164,8 +189,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // base octave
   int baseOctave = 3;
-  int minOctave = _assetMinOctave;
-  int maxOctave = _assetMaxOctave;
+  // Initialised from the default Sf2Spec range (1..6); _syncOctaveBounds()
+  // recomputes per active instrument once specs are loaded.
+  int minOctave = 1;
+  int maxOctave = 6;
   int octaveCount = 2;
   int octaveShift = 0;
   double baseFrequencyHz = 220.0;
@@ -354,11 +381,34 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return null;
   }
 
+  // Per-instrument usable range derived from the active SF2 spec.
+  int get _instrumentMinOctave =>
+      instrumentSf2Controller.assetSpecs[selectedInstrument]?.minOctave ??
+      _absoluteMinOctave;
+  int get _instrumentMaxOctave =>
+      instrumentSf2Controller.assetSpecs[selectedInstrument]?.maxOctave ??
+      _absoluteMaxOctave;
+
+  // Slider frequency bounds: the lowest is the anchor at A in min octave;
+  // the highest is the anchor at A in (maxOctave - octaveCount + 1) so the
+  // top of the played span never exceeds the instrument's max octave.
+  double get _minBaseFrequencyHz =>
+      440.0 * math.pow(2.0, _instrumentMinOctave - 4).toDouble();
+  double get _maxBaseFrequencyHz {
+    final highestAnchorOctave = math.max(
+      _instrumentMinOctave,
+      _instrumentMaxOctave - octaveCount + 1,
+    );
+    return 440.0 * math.pow(2.0, highestAnchorOctave - 4).toDouble();
+  }
+
   void _syncOctaveBounds() {
-    final maxCount = _assetMaxOctave - _assetMinOctave + 1;
+    final lo = _instrumentMinOctave;
+    final hi = _instrumentMaxOctave;
+    final maxCount = hi - lo + 1;
     octaveCount = octaveCount.clamp(1, maxCount).toInt();
-    final maxBase = _assetMaxOctave - octaveCount + 1;
-    baseOctave = baseOctave.clamp(_assetMinOctave, maxBase).toInt();
+    final maxBase = hi - octaveCount + 1;
+    baseOctave = baseOctave.clamp(lo, maxBase).toInt();
     minOctave = baseOctave;
     maxOctave = baseOctave + octaveCount - 1;
   }
@@ -397,11 +447,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final semitone = noteToSemitone[note];
     if (semitone == null) return fallbackBase;
 
-    final int maxBase = _assetMaxOctave - octaveCount + 1;
-    int bestOctave = fallbackBase.clamp(_assetMinOctave, maxBase).toInt();
+    final int lo = _instrumentMinOctave;
+    final int hi = _instrumentMaxOctave;
+    final int maxBase = hi - octaveCount + 1;
+    int bestOctave = fallbackBase.clamp(lo, maxBase).toInt();
     double bestDiff = double.infinity;
 
-    for (int octave = _assetMinOctave; octave <= maxBase; octave++) {
+    for (int octave = lo; octave <= maxBase; octave++) {
       final freq = _frequencyForNote(note, octave);
       if (freq == null) continue;
       final diff = (freq - targetHz).abs();
@@ -457,7 +509,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // Change the number of octaves in the playable range, adjusting the base octave if necessary to stay within asset limits, and refreshing the current sound preview
   Future<void> _setOctaveCount(int newCount) async {
     final safeCount = newCount
-        .clamp(1, _assetMaxOctave - _assetMinOctave + 1)
+        .clamp(1, _instrumentMaxOctave - _instrumentMinOctave + 1)
         .toInt();
     if (safeCount == octaveCount) return;
     setState(() {
@@ -1061,7 +1113,17 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await instrumentSf2Controller.releaseCurrentInstrument();
 
     if (!mounted) return;
-    setState(() => selectedInstrument = newInstrument);
+    setState(() {
+      selectedInstrument = newInstrument;
+      // Re-clamp octave settings to the new instrument's playable range,
+      // then snap baseFrequencyHz to the nearest valid anchor frequency.
+      _syncOctaveBounds();
+      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+      baseFrequencyHz = baseFrequencyHz.clamp(
+        _minBaseFrequencyHz,
+        _maxBaseFrequencyHz,
+      );
+    });
 
     _noteReady = false;
     _noteSourceCache.clear();
@@ -1284,9 +1346,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           octaveCount: octaveCount,
           minOctave: minOctave,
           maxOctave: maxOctave,
-          maxOctaveCount: _assetMaxOctave - _assetMinOctave + 1,
+          maxOctaveCount: _instrumentMaxOctave - _instrumentMinOctave + 1,
           minBaseFrequencyHz: _minBaseFrequencyHz,
           maxBaseFrequencyHz: _maxBaseFrequencyHz,
+          // Note-name labels for the slider edges: lowest anchor is A in
+          // the instrument's min octave; highest anchor stays one full span
+          // below the instrument's max octave.
+          minBaseLabel: 'A$_instrumentMinOctave',
+          maxBaseLabel:
+              'A${math.max(_instrumentMinOctave, _instrumentMaxOctave - octaveCount + 1)}',
           onBaseFrequencyChanged: (v) {
             setState(() => baseFrequencyHz = v);
           },
@@ -1295,7 +1363,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               ? null
               : () => _setOctaveCount(octaveCount - 1),
           onIncreaseOctaveCount:
-              octaveCount >= (_assetMaxOctave - _assetMinOctave + 1)
+              octaveCount >= (_instrumentMaxOctave - _instrumentMinOctave + 1)
               ? null
               : () => _setOctaveCount(octaveCount + 1),
         ),
