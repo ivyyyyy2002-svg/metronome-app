@@ -8,6 +8,7 @@ class MetronomeControlsPanel extends StatelessWidget {
     required this.noteCount,
     required this.currentSoundListenable,
     required this.sequencePreviewText,
+    required this.onSequenceTap,
     required this.bpm,
     required this.enableClick,
     required this.enableSound,
@@ -25,6 +26,7 @@ class MetronomeControlsPanel extends StatelessWidget {
   final int noteCount;
   final ValueListenable<String> currentSoundListenable;
   final String sequencePreviewText;
+  final VoidCallback onSequenceTap;
   final int bpm;
   final bool enableClick;
   final bool enableSound;
@@ -38,62 +40,70 @@ class MetronomeControlsPanel extends StatelessWidget {
   final List<DropdownMenuItem<String>> instrumentItems;
   final ValueChanged<String?> onInstrumentChanged;
 
+  // Builds the UI for the metronome controls panel,
+  // including BPM slider, click/sound toggles, meter picker, and instrument selector.
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
+        // Sequence display and tap area
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onSequenceTap,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.library_music_rounded,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$noteCount notes loaded',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const Spacer(),
-                  ValueListenableBuilder<String>(
-                    valueListenable: currentSoundListenable,
-                    builder: (context, sound, _) {
-                      return Text(
-                        sound.isEmpty ? '--' : sound,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                sequencePreviewText,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.library_music_rounded,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$noteCount notes loaded',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    ValueListenableBuilder<String>(
+                      valueListenable: currentSoundListenable,
+                      builder: (context, sound, _) {
+                        return Text(
+                          sound.isEmpty ? '--' : sound,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  sequencePreviewText,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -152,10 +162,7 @@ class MetronomeControlsPanel extends StatelessWidget {
               children: [
                 const Icon(Icons.tune_rounded, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                  meterLabel,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                Text(meterLabel, style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(width: 6),
                 const Icon(Icons.expand_more_rounded, size: 18),
               ],

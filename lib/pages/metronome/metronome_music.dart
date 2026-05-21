@@ -55,6 +55,7 @@ const List<String> timeSignatureOptions = [
   '12/16',
 ];
 
+// Parses a beat unit from a string, with fallbacks based on the time signature if the string is unrecognized.
 BeatUnit parseBeatUnit(
   dynamic raw, {
   required int fallbackBeats,
@@ -104,6 +105,7 @@ BeatUnit defaultBeatUnitForSignature(int beats, int note) {
   return BeatUnit.quarter;
 }
 
+// Returns a user-friendly label for the given beat unit, e.g. "1/4" for quarter notes.
 String beatUnitLabel(BeatUnit unit) {
   switch (unit) {
     case BeatUnit.half:
@@ -142,6 +144,7 @@ String beatUnitConfigValue(BeatUnit unit) {
   }
 }
 
+// Returns the length of the given beat unit in whole notes, e.g. 0.25 for quarter notes.
 double beatUnitWholeNoteLength(BeatUnit unit) {
   switch (unit) {
     case BeatUnit.half:
@@ -159,4 +162,13 @@ double beatUnitWholeNoteLength(BeatUnit unit) {
     case BeatUnit.dottedEighth:
       return 3.0 / 16.0;
   }
+}
+
+// Parses a sequence of musical notes from a string, returning a list of note letters (A-G) in uppercase.
+List<String> parseNoteSequenceText(String text) {
+  return text
+      .toUpperCase()
+      .split('')
+      .where((letter) => RegExp(r'[A-G]').hasMatch(letter))
+      .toList(growable: false);
 }

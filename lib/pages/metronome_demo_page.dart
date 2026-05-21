@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:math' as math;
 
+import '../note_sequence_controller.dart';
 import 'metronome/metronome_music.dart';
 import 'metronome/instrument_sf2_controller.dart';
 import 'metronome/widgets/advanced_settings_drawer.dart';
@@ -18,7 +19,10 @@ enum ClickAccent { strong, secondary, weak }
 
 // The MetronomeDemo widget
 class MetronomeDemo extends StatefulWidget {
-  const MetronomeDemo({super.key});
+  const MetronomeDemo({super.key, required this.noteSequenceController});
+
+  final NoteSequenceController noteSequenceController;
+
   @override
   State<MetronomeDemo> createState() => _MetronomeDemoState();
 }
@@ -351,11 +355,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       final text = await rootBundle.loadString(
         'assets/config/noteSequence.txt',
       );
-      final loadedSequence = text
-          .toUpperCase()
-          .split('')
-          .where((letter) => RegExp(r'[A-G]').hasMatch(letter))
-          .toList(growable: false);
+      final defaultSequence = parseNoteSequenceText(text);
+
+      await widget.noteSequenceController.load(
+        fallbackSequence: defaultSequence,
+      );
+
+      final loadedSequence = widget.noteSequenceController.sequence;
+
       setState(() {
         noteSequence = loadedSequence;
         noteIndex = 0;
@@ -438,7 +445,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return instrumentSf2Controller.isReadyFor(selectedInstrument);
   }
 
-  // Find the nearest base octave that allows the anchor note to be as close as possible to the target frequency
+  // Find the nearest base octave that allows the anchor note to be
+  // as close as possible to the target frequency
   int _nearestBaseOctaveForFrequency(
     String note,
     double targetHz,
@@ -465,7 +473,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return bestOctave;
   }
 
-  // Set base octave based on a target frequency for the anchor note, without calling setState (used during config load and when changing base frequency)
+  // Set base octave based on a target frequency for the anchor note, without
+  // calling setState (used during config load and when changing base frequency)
   void _setBaseFromFrequencyNoSetState(double targetHz) {
     if (noteSequence.isEmpty) return;
     final anchorToken = _anchorNoteToken();
@@ -494,7 +503,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
-  // Resolve a full note name with octave based on a token, base octave, and step number (for octave shifts)
+  // Resolve a full note name with octave based on
+  // a token, base octave, and step number (for octave shifts)
   void _refreshCurrentSoundPreview() {
     if (noteSequence.isEmpty) {
       currentSound = '';
@@ -506,7 +516,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     currentSoundVN.value = currentSound;
   }
 
-  // Change the number of octaves in the playable range, adjusting the base octave if necessary to stay within asset limits, and refreshing the current sound preview
+  // Change the number of octaves in the playable range, adjusting the base
+  // octave if necessary to stay within asset limits, and refreshing the current sound preview
   Future<void> _setOctaveCount(int newCount) async {
     final safeCount = newCount
         .clamp(1, _instrumentMaxOctave - _instrumentMinOctave + 1)
@@ -1277,7 +1288,70 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // ---------- UI ----------
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Generate a preview string for the loaded note sequence, showing the first few notes and total count
+  // Apply a custom note sequence from text input, with parsing,
+  // validation, and preparation of audio assets
+  Future<void> _applyCustomNoteSequenceText(String text) async {
+    final saved = await widget.noteSequenceController.setSequenceFromText(text);
+    if (!saved) return;
+
+    await stop();
+
+    setState(() {
+      noteSequence = widget.noteSequenceController.sequence;
+      noteIndex = 0;
+      beat = 0;
+      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+      _refreshCurrentSoundPreview();
+    });
+
+    await _refreshInstrumentAvailability();
+    await _warmUpCurrentNote();
+
+    if (_usePerNotePlayers) {
+      await _preloadAllNotesForSequence();
+    } else {
+      await _precacheSourcesForSequence();
+    }
+  }
+
+  // Open a dialog with a TextField for editing the note sequence,
+  // pre-filled with the current sequence, and apply changes on confirmation
+  Future<void> _openNoteSequenceEditor() async {
+    final controller = TextEditingController(text: noteSequence.join());
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit note sequence'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Apply'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (result == null) return;
+    await _applyCustomNoteSequenceText(result);
+  }
+
+  // Generate a preview string for the loaded note sequence,
+  // showing the first few notes and total count
   String _sequencePreviewText() {
     if (noteSequence.isEmpty) return 'No sequence loaded';
     const int previewLimit = 24;
@@ -1390,10 +1464,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                         beatIndicators: beatIndicators,
                       ),
                       const SizedBox(height: 14),
+
+                      // Metronome controls panel, including BPM slider,
+                      // click/sound toggles, meter picker, and instrument selector
                       MetronomeControlsPanel(
                         noteCount: noteSequence.length,
                         currentSoundListenable: currentSoundVN,
                         sequencePreviewText: _sequencePreviewText(),
+                        onSequenceTap: _openNoteSequenceEditor,
                         bpm: bpm,
                         enableClick: enableClick,
                         enableSound: enableSound,
