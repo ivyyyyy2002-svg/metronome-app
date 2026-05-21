@@ -6,14 +6,14 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:math' as math;
 
-import '../note_sequence_controller.dart';
-import 'metronome/metronome_music.dart';
-import 'metronome/instrument_sf2_controller.dart';
-import 'metronome/widgets/advanced_settings_drawer.dart';
-import 'metronome/widgets/metronome_controls_panel.dart';
-import 'metronome/widgets/meter_picker_sheet.dart';
-import 'metronome/widgets/playback_status_panel.dart';
-import 'metronome/widgets/transport_bar.dart';
+import 'note_sequence_controller.dart';
+import 'metronome_music.dart';
+import 'instrument_sf2_controller.dart';
+import 'widgets/advanced_settings_drawer.dart';
+import 'widgets/metronome_controls_panel.dart';
+import 'widgets/meter_picker_sheet.dart';
+import 'widgets/playback_status_panel.dart';
+import 'widgets/transport_bar.dart';
 
 enum ClickAccent { strong, secondary, weak }
 

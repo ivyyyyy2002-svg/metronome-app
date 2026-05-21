@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
-import 'note_sequence_controller.dart';
+import 'pages/metronome/note_sequence_controller.dart';
 import 'pages/main_home_page.dart';
 import 'pages/metronome/metronome_music.dart';
-import 'pages/metronome_demo_page.dart';
+import 'pages/metronome/metronome_demo_page.dart';
 
 // Main app widget, setting up the theme and routes for the metronome application.
 class MyApp extends StatefulWidget {

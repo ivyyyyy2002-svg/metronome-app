@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'pages/metronome/metronome_music.dart';
+import 'metronome_music.dart';
 
 // Controller class for managing the note sequence used in the metronome demo, 
 // including loading/saving from persistent storage and parsing from text input.

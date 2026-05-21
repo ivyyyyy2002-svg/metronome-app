@@ -1,4 +1,5 @@
-// Core music theory definitions and utilities for the metronome page, including beat units, note-to-semitone mapping, and time signature options.
+// Core music theory definitions and utilities for the metronome page, 
+// including beat units, note-to-semitone mapping, and time signature options.
 enum BeatUnit {
   half,
   quarter,

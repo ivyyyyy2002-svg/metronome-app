@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../note_sequence_controller.dart';
+import 'metronome/note_sequence_controller.dart';
 
 // Main home page of the app, with a welcome message and button to start the metronome demo page.
 class MainHomePage extends StatefulWidget {
