@@ -1327,7 +1327,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           content: TextField(
             controller: controller,
             autofocus: true,
-            textCapitalization: TextCapitalization.characters,
+            textCapitalization: TextCapitalization.none,
             decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
           actions: [

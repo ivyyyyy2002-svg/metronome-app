@@ -1,4 +1,4 @@
-// Core music theory definitions and utilities for the metronome page, 
+// Core music theory definitions and utilities for the metronome page,
 // including beat units, note-to-semitone mapping, and time signature options.
 enum BeatUnit {
   half,
@@ -12,12 +12,15 @@ enum BeatUnit {
 
 const Map<String, int> noteToSemitone = {
   'C': 0,
+  'Cb': -1,
   'C#': 1,
   'Db': 1,
   'D': 2,
   'D#': 3,
   'Eb': 3,
   'E': 4,
+  'E#': 5,
+  'Fb': 4,
   'F': 5,
   'F#': 6,
   'Gb': 6,
@@ -28,6 +31,7 @@ const Map<String, int> noteToSemitone = {
   'A#': 10,
   'Bb': 10,
   'B': 11,
+  'B#': 12,
 };
 
 const List<String> timeSignatureOptions = [
@@ -165,11 +169,36 @@ double beatUnitWholeNoteLength(BeatUnit unit) {
   }
 }
 
-// Parses a sequence of musical notes from a string, returning a list of note letters (A-G) in uppercase.
+// Parses a sequence of musical notes from text, supporting natural notes and accidentals.
 List<String> parseNoteSequenceText(String text) {
-  return text
-      .toUpperCase()
-      .split('')
-      .where((letter) => RegExp(r'[A-G]').hasMatch(letter))
-      .toList(growable: false);
+  final notes = <String>[];
+  int i = 0;
+
+  while (i < text.length) {
+    final char = text[i].toUpperCase();
+
+    if (!RegExp(r'[A-G]').hasMatch(char)) {
+      i++;
+      continue;
+    }
+
+    String note = char;
+
+    if (i + 1 < text.length) {
+      final nextChar = text[i + 1];
+
+      if (nextChar == '#' || nextChar == '♯') {
+        note += '#';
+        i++;
+      } else if (nextChar == 'b' || nextChar == '♭') {
+        note += 'b';
+        i++;
+      }
+    }
+
+    notes.add(note);
+    i++;
+  }
+
+  return notes.toList(growable: false);
 }
