@@ -89,7 +89,7 @@ class InstrumentSf2Controller {
     if (_loadedInstrument == instrument) return;
 
     final spec = assetSpecs[instrument];
-    if (spec == null || !await hasSoundfontAsset(instrument)) {
+    if (spec == null) {
       debugPrint('SF2 prepare skipped for $instrument');
       await unload();
       return;

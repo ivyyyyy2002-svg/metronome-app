@@ -248,8 +248,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       });
     }
 
-    _initAudio(); // session setup
-    _loadStartupData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _initAudio(); // session setup
+      _loadStartupData();
+    });
   }
 
   Future<void> _loadStartupData() async {
@@ -332,7 +335,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         _refreshCurrentSoundPreview();
       });
 
-      await preloadClick();
+      unawaited(preloadClick());
 
       // Debug once (helps verify pattern is not stuck)
       debugPrint(
@@ -369,12 +372,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         _setBaseFromFrequencyNoSetState(baseFrequencyHz);
         _refreshCurrentSoundPreview();
       });
-      await _refreshInstrumentAvailability();
-      await _warmUpCurrentNote();
+      await _refreshInstrumentAvailability(prepareCurrentInstrument: false);
+      unawaited(_prepareCurrentInstrumentForStartup());
       if (_usePerNotePlayers) {
-        await _preloadAllNotesForSequence();
+        unawaited(_preloadAllNotesForSequence());
       } else {
-        await _precacheSourcesForSequence();
+        unawaited(_precacheSourcesForSequence());
       }
       debugPrint('Loaded note sequence: $noteSequence');
     } catch (e, st) {
@@ -552,10 +555,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // Check if the given instrument has at least one playable asset based on the current sequence (used to determine availability in the picker)
   Future<bool> _instrumentHasPlayableAsset(String instrument) async {
     // SF2-only mode: an instrument is playable iff it has a SoundFont asset.
-    return instrumentSf2Controller.hasSoundfontAsset(instrument);
+    return instrumentSf2Controller.assetSpecs.containsKey(instrument);
   }
 
-  Future<void> _refreshInstrumentAvailability() async {
+  Future<void> _refreshInstrumentAvailability({
+    bool prepareCurrentInstrument = true,
+  }) async {
     final nextAvailability = <String, bool>{};
     for (final instrument in instruments) {
       nextAvailability[instrument] = await _instrumentHasPlayableAsset(
@@ -586,9 +591,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     // SF2-only mode: ensure the SoundFont for the currently selected
     // instrument is loaded and ready, so notes play immediately.
-    if (instrumentAvailability[selectedInstrument] ?? false) {
+    if (prepareCurrentInstrument &&
+        (instrumentAvailability[selectedInstrument] ?? false)) {
       await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
     }
+  }
+
+  Future<void> _prepareCurrentInstrumentForStartup() async {
+    await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
+    if (!mounted) return;
+    await _warmUpCurrentNote();
   }
 
   // Parse time signature from config, with validation and fallbacks
