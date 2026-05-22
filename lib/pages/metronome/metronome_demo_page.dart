@@ -399,28 +399,20 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       instrumentSf2Controller.assetSpecs[selectedInstrument]?.maxOctave ??
       _absoluteMaxOctave;
 
-  // Slider frequency bounds: the lowest is the anchor at A in min octave;
-  // the highest is the anchor at A in (maxOctave - octaveCount + 1) so the
-  // top of the played span never exceeds the instrument's max octave.
+  // Slider frequency bounds follow the active instrument's usable octave range.
   double get _minBaseFrequencyHz =>
       440.0 * math.pow(2.0, _instrumentMinOctave - 4).toDouble();
-  double get _maxBaseFrequencyHz {
-    final highestAnchorOctave = math.max(
-      _instrumentMinOctave,
-      _instrumentMaxOctave - octaveCount + 1,
-    );
-    return 440.0 * math.pow(2.0, highestAnchorOctave - 4).toDouble();
-  }
+  double get _maxBaseFrequencyHz =>
+      440.0 * math.pow(2.0, _instrumentMaxOctave - 4).toDouble();
 
   void _syncOctaveBounds() {
     final lo = _instrumentMinOctave;
     final hi = _instrumentMaxOctave;
     final maxCount = hi - lo + 1;
     octaveCount = octaveCount.clamp(1, maxCount).toInt();
-    final maxBase = hi - octaveCount + 1;
-    baseOctave = baseOctave.clamp(lo, maxBase).toInt();
-    minOctave = baseOctave;
-    maxOctave = baseOctave + octaveCount - 1;
+    baseOctave = baseOctave.clamp(lo, hi).toInt();
+    minOctave = lo;
+    maxOctave = hi;
   }
 
   int _clampPlayableOctave(int octave) {
@@ -460,11 +452,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     final int lo = _instrumentMinOctave;
     final int hi = _instrumentMaxOctave;
-    final int maxBase = hi - octaveCount + 1;
-    int bestOctave = fallbackBase.clamp(lo, maxBase).toInt();
+    int bestOctave = fallbackBase.clamp(lo, hi).toInt();
     double bestDiff = double.infinity;
 
-    for (int octave = lo; octave <= maxBase; octave++) {
+    for (int octave = lo; octave <= hi; octave++) {
       final freq = _frequencyForNote(note, octave);
       if (freq == null) continue;
       final diff = (freq - targetHz).abs();
@@ -517,24 +508,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     currentSound = _resolveFullNoteName(noteSequence.first, baseOctave);
     currentSoundVN.value = currentSound;
-  }
-
-  // Change the number of octaves in the playable range, adjusting the base
-  // octave if necessary to stay within asset limits, and refreshing the current sound preview
-  Future<void> _setOctaveCount(int newCount) async {
-    final safeCount = newCount
-        .clamp(1, _instrumentMaxOctave - _instrumentMinOctave + 1)
-        .toInt();
-    if (safeCount == octaveCount) return;
-    setState(() {
-      octaveCount = safeCount;
-      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
-      beat = 0;
-      noteIndex = 0;
-      _refreshCurrentSoundPreview();
-    });
-    await _refreshInstrumentAvailability();
-    _restartIfRunning();
   }
 
   Future<void> _applyBaseFrequency(double newFrequencyHz) async {
@@ -1429,29 +1402,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       endDrawer: Drawer(
         child: AdvancedSettingsDrawer(
           baseFrequencyHz: baseFrequencyHz,
-          octaveCount: octaveCount,
-          minOctave: minOctave,
-          maxOctave: maxOctave,
-          maxOctaveCount: _instrumentMaxOctave - _instrumentMinOctave + 1,
           minBaseFrequencyHz: _minBaseFrequencyHz,
           maxBaseFrequencyHz: _maxBaseFrequencyHz,
-          // Note-name labels for the slider edges: lowest anchor is A in
-          // the instrument's min octave; highest anchor stays one full span
-          // below the instrument's max octave.
+          // Note-name labels for the slider edges.
           minBaseLabel: 'A$_instrumentMinOctave',
-          maxBaseLabel:
-              'A${math.max(_instrumentMinOctave, _instrumentMaxOctave - octaveCount + 1)}',
+          maxBaseLabel: 'A$_instrumentMaxOctave',
           onBaseFrequencyChanged: (v) {
             setState(() => baseFrequencyHz = v);
           },
           onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
-          onDecreaseOctaveCount: octaveCount <= 1
-              ? null
-              : () => _setOctaveCount(octaveCount - 1),
-          onIncreaseOctaveCount:
-              octaveCount >= (_instrumentMaxOctave - _instrumentMinOctave + 1)
-              ? null
-              : () => _setOctaveCount(octaveCount + 1),
         ),
       ),
       body: SafeArea(

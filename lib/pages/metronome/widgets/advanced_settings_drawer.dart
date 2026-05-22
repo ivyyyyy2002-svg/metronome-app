@@ -1,35 +1,23 @@
 import 'package:flutter/material.dart';
 
-// Drawer widget for advanced metronome settings like base pitch and octave range
+// Drawer widget for advanced metronome settings like base pitch
 class AdvancedSettingsDrawer extends StatelessWidget {
   const AdvancedSettingsDrawer({
     super.key,
     required this.baseFrequencyHz,
-    required this.octaveCount,
-    required this.minOctave,
-    required this.maxOctave,
-    required this.maxOctaveCount,
     required this.minBaseFrequencyHz,
     required this.maxBaseFrequencyHz,
     required this.onBaseFrequencyChanged,
     required this.onBaseFrequencyChangeEnd,
-    required this.onDecreaseOctaveCount,
-    required this.onIncreaseOctaveCount,
     this.minBaseLabel,
     this.maxBaseLabel,
   });
 
   final double baseFrequencyHz;
-  final int octaveCount;
-  final int minOctave;
-  final int maxOctave;
-  final int maxOctaveCount;
   final double minBaseFrequencyHz;
   final double maxBaseFrequencyHz;
   final ValueChanged<double> onBaseFrequencyChanged;
   final ValueChanged<double> onBaseFrequencyChangeEnd;
-  final VoidCallback? onDecreaseOctaveCount;
-  final VoidCallback? onIncreaseOctaveCount;
   // Note-name labels rendered at the slider edges (e.g. "A1" and "A6").
   final String? minBaseLabel;
   final String? maxBaseLabel;
@@ -89,37 +77,6 @@ class AdvancedSettingsDrawer extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              Text('Octaves', style: Theme.of(context).textTheme.titleSmall),
-              const Spacer(),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed: onDecreaseOctaveCount,
-                icon: const Icon(Icons.remove_circle_outline),
-              ),
-              Text('$octaveCount'),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                onPressed: onIncreaseOctaveCount,
-                icon: const Icon(Icons.add_circle_outline),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 26),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Range: A$minOctave - A$maxOctave'),
-            ),
-          ),
-          if (octaveCount >= maxOctaveCount)
-            const Padding(
-              padding: EdgeInsets.only(left: 26, top: 4),
-              child: Text('Maximum octave span reached'),
-            ),
         ],
       ),
     );
