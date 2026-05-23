@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import 'pages/app_settings_controller.dart';
 import 'pages/metronome/note_sequence_controller.dart';
 import 'pages/main_home_page.dart';
 import 'pages/metronome/metronome_music.dart';
@@ -17,11 +18,13 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final NoteSequenceController noteSequenceController =
       NoteSequenceController();
+  final AppSettingsController appSettingsController = AppSettingsController();
 
   @override
   void initState() {
     super.initState();
     _loadSavedNoteSequence();
+    appSettingsController.load();
   }
 
   Future<void> _loadSavedNoteSequence() async {
@@ -31,25 +34,41 @@ class _MyAppState extends State<MyApp> {
     await noteSequenceController.load(fallbackSequence: defaultSequence);
   }
 
-  // Builds the MaterialApp with theme and routes for the main home page and metronome demo page.
+  // Builds the MaterialApp with theme and routes, using the app
+  // settings controller to determine the theme mode and providing
+  // the note sequence controller to the home page and metronome demo
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Metronome Studio',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 146, 215, 222),
-          brightness: Brightness.light,
-        ),
-      ),
-     // Sets the main home page as the initial route, 
-     // passing the note sequence controller.
-     home: MainHomePage(noteSequenceController: noteSequenceController),
-      routes: {
-        '/metronome': (context) =>
-            MetronomeDemo(noteSequenceController: noteSequenceController),
+    return AnimatedBuilder(
+      animation: appSettingsController,
+      builder: (context, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Metronome Studio',
+          themeMode: appSettingsController.themeMode,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color.fromARGB(255, 146, 215, 222),
+              brightness: Brightness.light,
+            ),
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color.fromARGB(255, 146, 215, 222),
+              brightness: Brightness.dark,
+            ),
+          ),
+          home: MainHomePage(
+            noteSequenceController: noteSequenceController,
+            appSettingsController: appSettingsController,
+          ),
+          routes: {
+            '/metronome': (context) =>
+                MetronomeDemo(noteSequenceController: noteSequenceController),
+          },
+        );
       },
     );
   }
@@ -57,6 +76,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void dispose() {
     noteSequenceController.dispose();
+    appSettingsController.dispose();
     super.dispose();
   }
 }

@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 
-import 'metronome/note_sequence_controller.dart';
+import 'app_settings_controller.dart';
 import 'metronome/metronome_music.dart';
+import 'metronome/note_sequence_controller.dart';
 
 // Main home page of the app, with a welcome message and button to start the metronome demo page.
 class MainHomePage extends StatefulWidget {
-  const MainHomePage({super.key, required this.noteSequenceController});
+  const MainHomePage({
+    super.key,
+    required this.noteSequenceController,
+    required this.appSettingsController,
+  });
 
   final NoteSequenceController noteSequenceController;
+  final AppSettingsController appSettingsController;
 
   @override
   State<MainHomePage> createState() => _MainHomePageState();
@@ -73,6 +79,105 @@ class _MainHomePageState extends State<MainHomePage> {
     Navigator.of(context).pushNamed('/metronome');
   }
 
+  // Opens the settings bottom sheet, allowing the user to change
+  // theme and language preferences.
+  void _openSettingsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return AnimatedBuilder(
+          animation: widget.appSettingsController,
+          builder: (context, _) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Settings',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Appearance',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<ThemeMode>(
+                      // Theme mode selection segmented button
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text('System'),
+                          icon: Icon(Icons.brightness_auto_rounded),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text('Light'),
+                          icon: Icon(Icons.light_mode_rounded),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text('Dark'),
+                          icon: Icon(Icons.dark_mode_rounded),
+                        ),
+                      ],
+                      selected: {widget.appSettingsController.themeMode},
+                      onSelectionChanged: (selection) {
+                        widget.appSettingsController.setThemeMode(
+                          selection.first,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Language',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<AppLanguage>(
+                      segments: const [
+                        ButtonSegment(
+                          value: AppLanguage.system,
+                          label: Text('System'),
+                          icon: Icon(Icons.language_rounded),
+                        ),
+                        ButtonSegment(
+                          value: AppLanguage.english,
+                          label: Text('English'),
+                        ),
+                        ButtonSegment(
+                          value: AppLanguage.chinese,
+                          label: Text('中文'),
+                        ),
+                      ],
+                      selected: {widget.appSettingsController.language},
+                      onSelectionChanged: (selection) {
+                        widget.appSettingsController.setLanguage(
+                          selection.first,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     widget.noteSequenceController.removeListener(_syncSequenceText);
@@ -85,15 +190,19 @@ class _MainHomePageState extends State<MainHomePage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final gradientColors = isDark
+        ? const [Color(0xFF111827), Color(0xFF10201D), Color(0xFF1F1B14)]
+        : const [Color(0xFFF2F8FF), Color(0xFFE8F6F2), Color(0xFFFFF8EC)];
 
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             // Background gradient
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFF2F8FF), Color(0xFFE8F6F2), Color(0xFFFFF8EC)],
+            colors: gradientColors,
           ),
         ),
         child: SizedBox.expand(
@@ -103,23 +212,23 @@ class _MainHomePageState extends State<MainHomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    // App title
-                    'Metronome Studio',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Home',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Settings',
+                        onPressed: _openSettingsSheet,
+                        icon: const Icon(Icons.settings_rounded),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    // App description
-                    'Practice with tempo control, meter shaping, and sound layers.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   Container(
                     // Main action card
                     width: double.infinity,
