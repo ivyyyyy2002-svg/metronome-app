@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_settings_controller.dart';
 import 'metronome/metronome_music.dart';
 import 'metronome/note_sequence_controller.dart';
+import 'language/app_text.dart';
 
 // Main home page of the app, with a welcome message and button to start the metronome demo page.
 class MainHomePage extends StatefulWidget {
@@ -55,8 +56,9 @@ class _MainHomePageState extends State<MainHomePage> {
 
     if (parsedSequence.isEmpty) {
       setState(() {
-        _sequenceErrorText =
-            'Enter at least one note from A-G. You can also use sharps (#) and flats (b).';
+        _sequenceErrorText = appTextFor(
+          widget.appSettingsController.language,
+        ).sequenceError;
       });
       return false;
     }
@@ -65,10 +67,22 @@ class _MainHomePageState extends State<MainHomePage> {
       _sequenceTextController.text,
     );
     if (!saved) return false;
+    if (!mounted) return false;
 
     setState(() {
       _sequenceErrorText = null;
     });
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            appTextFor(
+              widget.appSettingsController.language,
+            ).sequenceSavedNotice,
+          ),
+        ),
+      );
     return true;
   }
 
@@ -89,6 +103,8 @@ class _MainHomePageState extends State<MainHomePage> {
         return AnimatedBuilder(
           animation: widget.appSettingsController,
           builder: (context, _) {
+            final text = appTextFor(widget.appSettingsController.language);
+
             return SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -97,14 +113,14 @@ class _MainHomePageState extends State<MainHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Settings',
+                      text.settings,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Appearance',
+                      text.appearance,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -112,21 +128,21 @@ class _MainHomePageState extends State<MainHomePage> {
                     const SizedBox(height: 8),
                     SegmentedButton<ThemeMode>(
                       // Theme mode selection segmented button
-                      segments: const [
+                      segments: [
                         ButtonSegment(
                           value: ThemeMode.system,
-                          label: Text('System'),
-                          icon: Icon(Icons.brightness_auto_rounded),
+                          label: Text(text.system),
+                          icon: const Icon(Icons.brightness_auto_rounded),
                         ),
                         ButtonSegment(
                           value: ThemeMode.light,
-                          label: Text('Light'),
-                          icon: Icon(Icons.light_mode_rounded),
+                          label: Text(text.light),
+                          icon: const Icon(Icons.light_mode_rounded),
                         ),
                         ButtonSegment(
                           value: ThemeMode.dark,
-                          label: Text('Dark'),
-                          icon: Icon(Icons.dark_mode_rounded),
+                          label: Text(text.dark),
+                          icon: const Icon(Icons.dark_mode_rounded),
                         ),
                       ],
                       selected: {widget.appSettingsController.themeMode},
@@ -138,36 +154,51 @@ class _MainHomePageState extends State<MainHomePage> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'Language',
+                      text.language,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    SegmentedButton<AppLanguage>(
-                      segments: const [
-                        ButtonSegment(
-                          value: AppLanguage.system,
-                          label: Text('System'),
-                          icon: Icon(Icons.language_rounded),
-                        ),
-                        ButtonSegment(
+                    DropdownButtonFormField<AppLanguage>(
+                      initialValue: widget.appSettingsController.language,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.language_rounded),
+                      ),
+                      items: [
+                        DropdownMenuItem(
                           value: AppLanguage.english,
-                          label: Text('English'),
+                          child: Text(text.english),
                         ),
-                        ButtonSegment(
+                        DropdownMenuItem(
                           value: AppLanguage.chinese,
-                          label: Text('中文'),
+                          child: Text(text.chinese),
+                        ),
+                        DropdownMenuItem(
+                          value: AppLanguage.french,
+                          child: Text(text.french),
+                        ),
+                        DropdownMenuItem(
+                          value: AppLanguage.hindi,
+                          child: Text(text.hindi),
                         ),
                       ],
-                      selected: {widget.appSettingsController.language},
-                      onSelectionChanged: (selection) {
-                        widget.appSettingsController.setLanguage(
-                          selection.first,
-                        );
+                      onChanged: (language) {
+                        if (language == null) return;
+                        widget.appSettingsController.setLanguage(language);
+                        setState(() {
+                          _sequenceErrorText = null;
+                        });
                       },
                     ),
                     const SizedBox(height: 8),
+                    Text(
+                      text.languageSavedNotice,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -190,6 +221,7 @@ class _MainHomePageState extends State<MainHomePage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final text = appTextFor(widget.appSettingsController.language);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final gradientColors = isDark
         ? const [Color(0xFF111827), Color(0xFF10201D), Color(0xFF1F1B14)]
@@ -213,22 +245,34 @@ class _MainHomePageState extends State<MainHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        child: Text(
-                          'Home',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              text.homeTitle,
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              text.appName,
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Settings',
+                        tooltip: text.settings,
                         onPressed: _openSettingsSheet,
                         icon: const Icon(Icons.settings_rounded),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Container(
                     // Main action card
                     width: double.infinity,
@@ -249,14 +293,14 @@ class _MainHomePageState extends State<MainHomePage> {
                       children: [
                         Text(
                           // Main action card title
-                          'Hello, \nReady to Practice?',
+                          text.readyTitle,
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           // Main action card description
-                          'Tap the button below to start a new metronome session with your last used settings.',
+                          text.readyDescription,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
@@ -268,7 +312,7 @@ class _MainHomePageState extends State<MainHomePage> {
                               child: FilledButton.icon(
                                 onPressed: _startMetronome,
                                 icon: const Icon(Icons.play_arrow_rounded),
-                                label: const Text('Start Metronome'),
+                                label: Text(text.startMetronome),
                               ),
                             ),
                           ],
@@ -297,13 +341,13 @@ class _MainHomePageState extends State<MainHomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Practice Note Pattern',
+                          text.practiceNotePattern,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Choose the order of notes the metronome will play.',
+                          text.notePatternDescription,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
@@ -314,37 +358,21 @@ class _MainHomePageState extends State<MainHomePage> {
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             errorText: _sequenceErrorText,
-                            labelText: 'Notes to play',
+                            labelText: text.notesToPlay,
                             hintText: 'ABCDEFGFEDCBA',
-                            helperText:
-                                'Use A-G, or add sharps/flats like C# and Bb.',
-                            suffixIcon: IconButton(
-                              tooltip: 'Apply sequence',
-                              onPressed: _applyCustomSequence,
-                              icon: Icon(
-                                _sequenceErrorText == null
-                                    ? Icons.check_rounded
-                                    : Icons.error_outline_rounded,
-                                color: _sequenceErrorText == null
-                                    ? scheme.primary
-                                    : scheme.error,
-                              ),
-                            ),
+                            helperText: text.noteInputHelper,
                           ),
                           onChanged: _handleSequenceTextChanged,
-                          onSubmitted: (_) => _applyCustomSequence(),
                         ),
                         const SizedBox(height: 12),
-                        const Chip(
-                          label: Text('Examples: ABCDEFG, C#D#EF#G#, etc.'),
-                        ),
+                        Chip(label: Text(text.sequenceExample)),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton.icon(
                             onPressed: _applyCustomSequence,
                             icon: const Icon(Icons.check_rounded),
-                            label: const Text('Apply Sequence'),
+                            label: Text(text.applySequence),
                           ),
                         ),
                       ],

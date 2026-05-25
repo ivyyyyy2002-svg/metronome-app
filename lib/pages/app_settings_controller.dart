@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Controller class for managing app-wide settings such as theme mode and language
-enum AppLanguage { system, english, chinese }
+enum AppLanguage { system, english, chinese, french, hindi }
 
 class AppSettingsController extends ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
   static const String _languageKey = 'app_language';
 
   ThemeMode _themeMode = ThemeMode.system;
-  AppLanguage _language = AppLanguage.system;
+  AppLanguage _language = AppLanguage.english;
 
   ThemeMode get themeMode => _themeMode;
   AppLanguage get language => _language;
@@ -68,9 +68,13 @@ class AppSettingsController extends ChangeNotifier {
         return AppLanguage.english;
       case 'chinese':
         return AppLanguage.chinese;
+      case 'french':
+        return AppLanguage.french;
+      case 'hindi':
+        return AppLanguage.hindi;
       case 'system':
       default:
-        return AppLanguage.system;
+        return AppLanguage.english;
     }
   }
 }
