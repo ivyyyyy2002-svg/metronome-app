@@ -15,7 +15,16 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
+// The state of the main app widget, responsible for loading the note sequence
 class _MyAppState extends State<MyApp> {
+  static const List<String> _fontFamilyFallback = [
+    // Common Chinese fonts for better character support
+    'PingFang SC',
+    'Noto Sans CJK SC',
+    'Microsoft YaHei',
+    'Arial Unicode MS',
+  ];
+
   final NoteSequenceController noteSequenceController =
       NoteSequenceController();
   final AppSettingsController appSettingsController = AppSettingsController();
@@ -48,6 +57,7 @@ class _MyAppState extends State<MyApp> {
           themeMode: appSettingsController.themeMode,
           theme: ThemeData(
             useMaterial3: true,
+            fontFamilyFallback: _fontFamilyFallback,
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color.fromARGB(255, 146, 215, 222),
               brightness: Brightness.light,
@@ -55,6 +65,7 @@ class _MyAppState extends State<MyApp> {
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
+            fontFamilyFallback: _fontFamilyFallback,
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color.fromARGB(255, 146, 215, 222),
               brightness: Brightness.dark,
@@ -65,8 +76,10 @@ class _MyAppState extends State<MyApp> {
             appSettingsController: appSettingsController,
           ),
           routes: {
-            '/metronome': (context) =>
-                MetronomeDemo(noteSequenceController: noteSequenceController),
+            '/metronome': (context) => MetronomeDemo(
+              noteSequenceController: noteSequenceController,
+              appSettingsController: appSettingsController,
+            ),
           },
         );
       },

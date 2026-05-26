@@ -61,11 +61,16 @@ class HindiText implements AppLanguageText {
   String get notesToPlay => 'बजाने वाले नोट्स';
 
   @override
-  String get noteInputHelper =>
-      'A-G इस्तेमाल करें, या C# और Bb जैसे sharps/flats जोड़ें।';
+  String get noteInputHelper => 'A-G, # और b इस्तेमाल करें, जैसे C# और Bb।';
 
   @override
   String get applySequence => 'पैटर्न लागू करें';
+
+  @override
+  String get deleteNote => 'हटाएँ';
+
+  @override
+  String get clearNotes => 'साफ करें';
 
   @override
   String get sequenceSavedNotice => 'नोट पैटर्न सेव हो गया है।';
@@ -79,4 +84,68 @@ class HindiText implements AppLanguageText {
 
   @override
   String get languageSavedNotice => 'भाषा सेटिंग सेव हो गई है।';
+
+  @override
+  String get metronomeTitle => 'मेट्रोनोम';
+
+  @override
+  String get advanced => 'एडवांस्ड';
+
+  @override
+  String get advancedSettings => 'एडवांस्ड सेटिंग्स';
+
+  @override
+  String get bpm => 'BPM';
+
+  @override
+  String get start => 'शुरू';
+
+  @override
+  String get stop => 'रोकें';
+
+  @override
+  String get reset => 'रीसेट';
+
+  @override
+  String get click => 'क्लिक';
+
+  @override
+  String get sound => 'साउंड';
+
+  @override
+  String get instrument => 'वाद्य';
+
+  @override
+  String get notesLoaded => 'नोट्स लोड हुए';
+
+  @override
+  String get noSequenceLoaded => 'कोई पैटर्न लोड नहीं हुआ';
+
+  @override
+  String get editNoteSequence => 'नोट पैटर्न संपादित करें';
+
+  @override
+  String get cancel => 'रद्द करें';
+
+  @override
+  String get apply => 'लागू करें';
+
+  @override
+  String get close => 'बंद करें';
+
+  @override
+  String get done => 'हो गया';
+
+  @override
+  String get timeSignature => 'टाइम सिग्नेचर';
+
+  @override
+  String get beatUnit => 'बीट यूनिट';
+
+  @override
+  String get missingInstrument => 'नहीं मिला';
+
+  @override
+  String noPlayableAssets(String instrument) =>
+      '$instrument के लिए कोई playable asset नहीं मिला';
 }

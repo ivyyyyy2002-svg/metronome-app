@@ -8,12 +8,18 @@ class TransportBar extends StatelessWidget {
     required this.onStart,
     required this.onStop,
     required this.onReset,
+    required this.startLabel,
+    required this.stopLabel,
+    required this.resetLabel,
   });
 
   final bool isRunning;
   final VoidCallback onStart;
   final VoidCallback onStop;
   final VoidCallback onReset;
+  final String startLabel;
+  final String stopLabel;
+  final String resetLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -27,19 +33,19 @@ class TransportBar extends StatelessWidget {
             FilledButton.icon(
               onPressed: isRunning ? null : onStart,
               icon: const Icon(Icons.play_arrow),
-              label: const Text('Start'),
+              label: Text(startLabel),
             ),
             const SizedBox(width: 10),
             OutlinedButton.icon(
               onPressed: isRunning ? onStop : null,
               icon: const Icon(Icons.stop),
-              label: const Text('Stop'),
+              label: Text(stopLabel),
             ),
             const SizedBox(width: 10),
             TextButton.icon(
               onPressed: onReset,
               icon: const Icon(Icons.refresh),
-              label: const Text('Reset'),
+              label: Text(resetLabel),
             ),
           ],
         ),

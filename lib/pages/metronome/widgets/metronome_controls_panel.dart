@@ -9,6 +9,10 @@ class MetronomeControlsPanel extends StatelessWidget {
     required this.currentSoundListenable,
     required this.sequencePreviewText,
     required this.onSequenceTap,
+    required this.notesLoadedLabel,
+    required this.clickLabel,
+    required this.soundLabel,
+    required this.instrumentLabel,
     required this.bpm,
     required this.enableClick,
     required this.enableSound,
@@ -27,6 +31,10 @@ class MetronomeControlsPanel extends StatelessWidget {
   final ValueListenable<String> currentSoundListenable;
   final String sequencePreviewText;
   final VoidCallback onSequenceTap;
+  final String notesLoadedLabel;
+  final String clickLabel;
+  final String soundLabel;
+  final String instrumentLabel;
   final int bpm;
   final bool enableClick;
   final bool enableSound;
@@ -72,7 +80,7 @@ class MetronomeControlsPanel extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '$noteCount notes loaded',
+                      '$noteCount $notesLoadedLabel',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -134,13 +142,13 @@ class MetronomeControlsPanel extends StatelessWidget {
           alignment: WrapAlignment.center,
           children: [
             FilterChip(
-              label: const Text('Click'),
+              label: Text(clickLabel),
               avatar: const Icon(Icons.volume_up, size: 18),
               selected: enableClick,
               onSelected: onClickToggle,
             ),
             FilterChip(
-              label: const Text('Sound'),
+              label: Text(soundLabel),
               avatar: const Icon(Icons.graphic_eq_rounded, size: 18),
               selected: enableSound,
               onSelected: onSoundToggle,
@@ -173,7 +181,7 @@ class MetronomeControlsPanel extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Instrument: '),
+            Text('$instrumentLabel: '),
             const SizedBox(width: 8),
             DropdownButton<String>(
               value: selectedInstrument,

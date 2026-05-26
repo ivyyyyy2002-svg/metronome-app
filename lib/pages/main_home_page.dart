@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'app_settings_controller.dart';
@@ -37,17 +39,79 @@ class _MainHomePageState extends State<MainHomePage> {
   // note sequence from the controller.
   void _syncSequenceText() {
     final nextText = widget.noteSequenceController.sequenceText;
-    if (_sequenceTextController.text == nextText) return;
+    final currentText = _sequenceTextController.text;
+    if (currentText == nextText) return;
+
+    final currentSequence = parseNoteSequenceText(currentText);
+    final nextSequence = parseNoteSequenceText(nextText);
+    if (currentSequence.join('|') == nextSequence.join('|')) return;
+
     _sequenceTextController.text = nextText;
   }
 
   void _handleSequenceTextChanged(String text) {
-    if (_sequenceErrorText == null) return;
     if (parseNoteSequenceText(text).isEmpty) return;
 
-    setState(() {
-      _sequenceErrorText = null;
-    });
+    unawaited(widget.noteSequenceController.setSequenceFromText(text));
+
+    if (_sequenceErrorText != null) {
+      setState(() {
+        _sequenceErrorText = null;
+      });
+    }
+  }
+
+  // Sets the text in the sequence input field, ensuring the
+  // cursor is placed at the end, and triggers validation of the new text.
+  void _setSequenceInputText(String text) {
+    _sequenceTextController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+
+    _handleSequenceTextChanged(text);
+  }
+
+  // Appends a note to the current sequence input, ensuring proper spacing.
+  void _appendNoteToSequence(String note) {
+    final currentText = _sequenceTextController.text.trim();
+    final nextText = currentText.isEmpty ? note : '$currentText $note';
+
+    _setSequenceInputText(nextText);
+  }
+
+  // Applies an accidental (sharp or flat) to the last note in the sequence input.
+  void _applyAccidentalToLastNote(String accidental) {
+    final tokens = _sequenceTextController.text.trim().split(RegExp(r'\s+'));
+
+    if (tokens.isEmpty || tokens.first.isEmpty) return;
+
+    final lastToken = tokens.last;
+    final parsedNotes = parseNoteSequenceText(lastToken);
+
+    if (parsedNotes.length != 1) return;
+
+    final baseNote = parsedNotes.first.substring(0, 1);
+    tokens[tokens.length - 1] = parsedNotes.first.endsWith(accidental)
+        ? baseNote
+        : '$baseNote$accidental';
+
+    _setSequenceInputText(tokens.join(' '));
+  }
+
+  // Deletes the last note from the sequence input.
+  void _deleteLastNoteInput() {
+    final tokens = _sequenceTextController.text.trim().split(RegExp(r'\s+'));
+
+    if (tokens.isEmpty || tokens.first.isEmpty) return;
+
+    tokens.removeLast();
+
+    _setSequenceInputText(tokens.join(' '));
+  }
+
+  void _clearNoteSequenceInput() {
+    _setSequenceInputText('');
   }
 
   // Applies the custom note sequence entered by the user, validating it first.
@@ -67,22 +131,11 @@ class _MainHomePageState extends State<MainHomePage> {
       _sequenceTextController.text,
     );
     if (!saved) return false;
-    if (!mounted) return false;
-
-    setState(() {
-      _sequenceErrorText = null;
-    });
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            appTextFor(
-              widget.appSettingsController.language,
-            ).sequenceSavedNotice,
-          ),
-        ),
-      );
+    if (mounted) {
+      setState(() {
+        _sequenceErrorText = null;
+      });
+    }
     return true;
   }
 
@@ -353,6 +406,7 @@ class _MainHomePageState extends State<MainHomePage> {
                         ),
                         const SizedBox(height: 12),
                         TextField(
+                          // Note sequence input field
                           controller: _sequenceTextController,
                           textCapitalization: TextCapitalization.none,
                           decoration: InputDecoration(
@@ -361,20 +415,69 @@ class _MainHomePageState extends State<MainHomePage> {
                             labelText: text.notesToPlay,
                             hintText: 'ABCDEFGFEDCBA',
                             helperText: text.noteInputHelper,
+                            helperMaxLines: 2,
+                            errorMaxLines: 2,
                           ),
                           onChanged: _handleSequenceTextChanged,
                         ),
+
+                        // Note input action chips for quick entry of notes and accidentals
                         const SizedBox(height: 12),
-                        Chip(label: Text(text.sequenceExample)),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: _applyCustomSequence,
-                            icon: const Icon(Icons.check_rounded),
-                            label: Text(text.applySequence),
-                          ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final note in const ['A', 'B', 'C', 'D', 'E'])
+                              ActionChip(
+                                label: Text(note),
+                                onPressed: () => _appendNoteToSequence(note),
+                              ),
+                          ],
                         ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final note in const ['F', 'G'])
+                              ActionChip(
+                                label: Text(note),
+                                onPressed: () => _appendNoteToSequence(note),
+                              ),
+                            ActionChip(
+                              label: const Text('#'),
+                              onPressed: () => _applyAccidentalToLastNote('#'),
+                            ),
+                            ActionChip(
+                              label: const Text('b'),
+                              onPressed: () => _applyAccidentalToLastNote('b'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ActionChip(
+                              avatar: const Icon(
+                                Icons.backspace_outlined,
+                                size: 18,
+                              ),
+                              label: Text(text.deleteNote),
+                              onPressed: _deleteLastNoteInput,
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.clear_rounded, size: 18),
+                              label: Text(text.clearNotes),
+                              onPressed: _clearNoteSequenceInput,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Example sequence display
+                        Chip(label: Text(text.sequenceExample)),
                       ],
                     ),
                   ),

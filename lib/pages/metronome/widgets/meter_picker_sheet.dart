@@ -8,6 +8,10 @@ Future<void> showMeterPickerSheet({
   required int initialTimeSignatureIndex,
   required int initialBeatUnitIndex,
   required ValueChanged<(int, int)> onSelectionChanged,
+  required String closeLabel,
+  required String doneLabel,
+  required String timeSignatureLabel,
+  required String beatUnitLabel,
 }) async {
   final tsController = FixedExtentScrollController(
     initialItem: initialTimeSignatureIndex,
@@ -64,12 +68,12 @@ Future<void> showMeterPickerSheet({
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(sheetContext).pop(),
-                        child: const Text('Close'),
+                        child: Text(closeLabel),
                       ),
                       const Spacer(),
                       TextButton(
                         onPressed: () => Navigator.of(sheetContext).pop(),
-                        child: const Text('Done'),
+                        child: Text(doneLabel),
                       ),
                     ],
                   ),
@@ -101,9 +105,9 @@ Future<void> showMeterPickerSheet({
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      pickerLabel('Time Signature'),
+                      pickerLabel(timeSignatureLabel),
                       const SizedBox(width: 1),
-                      pickerLabel('Beat Unit'),
+                      pickerLabel(beatUnitLabel),
                     ],
                   ),
                 ),

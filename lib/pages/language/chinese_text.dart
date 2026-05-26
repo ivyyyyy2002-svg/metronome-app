@@ -59,10 +59,16 @@ class ChineseText implements AppLanguageText {
   String get notesToPlay => '要播放的音符';
 
   @override
-  String get noteInputHelper => '使用 A-G，也可以加入升号/降号，例如 C# 和 Bb。';
+  String get noteInputHelper => '使用 A-G、# 和 b，例如 C# 和 Bb。';
 
   @override
   String get applySequence => '应用音符模式';
+
+  @override
+  String get deleteNote => '删除';
+
+  @override
+  String get clearNotes => '清空';
 
   @override
   String get sequenceSavedNotice => '音符模式已保存。';
@@ -75,4 +81,67 @@ class ChineseText implements AppLanguageText {
 
   @override
   String get languageSavedNotice => '语言设置已保存';
+
+  @override
+  String get metronomeTitle => '节拍器';
+
+  @override
+  String get advanced => '高级设置';
+
+  @override
+  String get advancedSettings => '高级设置';
+
+  @override
+  String get bpm => 'BPM';
+
+  @override
+  String get start => '开始';
+
+  @override
+  String get stop => '停止';
+
+  @override
+  String get reset => '重置';
+
+  @override
+  String get click => '节拍声';
+
+  @override
+  String get sound => '音符声';
+
+  @override
+  String get instrument => '乐器';
+
+  @override
+  String get notesLoaded => '个音符已加载';
+
+  @override
+  String get noSequenceLoaded => '未加载音符模式';
+
+  @override
+  String get editNoteSequence => '编辑音符模式';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get apply => '应用';
+
+  @override
+  String get close => '关闭';
+
+  @override
+  String get done => '完成';
+
+  @override
+  String get timeSignature => '拍号';
+
+  @override
+  String get beatUnit => '拍值';
+
+  @override
+  String get missingInstrument => '缺失';
+
+  @override
+  String noPlayableAssets(String instrument) => '找不到 $instrument 的可播放资源';
 }

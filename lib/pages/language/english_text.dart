@@ -61,10 +61,16 @@ class EnglishText implements AppLanguageText {
   String get notesToPlay => 'Notes to play';
 
   @override
-  String get noteInputHelper => 'Use A-G, or add sharps/flats like C# and Bb.';
+  String get noteInputHelper => 'Use A-G, # and b, e.g. C# and Bb.';
 
   @override
   String get applySequence => 'Apply Sequence';
+
+  @override
+  String get deleteNote => 'Delete';
+
+  @override
+  String get clearNotes => 'Clear';
 
   @override
   String get sequenceSavedNotice => 'Note pattern saved.';
@@ -78,4 +84,68 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get languageSavedNotice => 'Language selection is saved now';
+
+  @override
+  String get metronomeTitle => 'Metronome';
+
+  @override
+  String get advanced => 'Advanced';
+
+  @override
+  String get advancedSettings => 'Advanced Settings';
+
+  @override
+  String get bpm => 'BPM';
+
+  @override
+  String get start => 'Start';
+
+  @override
+  String get stop => 'Stop';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get click => 'Click';
+
+  @override
+  String get sound => 'Sound';
+
+  @override
+  String get instrument => 'Instrument';
+
+  @override
+  String get notesLoaded => 'notes loaded';
+
+  @override
+  String get noSequenceLoaded => 'No sequence loaded';
+
+  @override
+  String get editNoteSequence => 'Edit note sequence';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get timeSignature => 'Time Signature';
+
+  @override
+  String get beatUnit => 'Beat Unit';
+
+  @override
+  String get missingInstrument => 'missing';
+
+  @override
+  String noPlayableAssets(String instrument) =>
+      'No playable assets found for $instrument';
 }

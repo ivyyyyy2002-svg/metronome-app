@@ -9,6 +9,7 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.maxBaseFrequencyHz,
     required this.onBaseFrequencyChanged,
     required this.onBaseFrequencyChangeEnd,
+    required this.titleLabel,
     this.minBaseLabel,
     this.maxBaseLabel,
   });
@@ -18,6 +19,7 @@ class AdvancedSettingsDrawer extends StatelessWidget {
   final double maxBaseFrequencyHz;
   final ValueChanged<double> onBaseFrequencyChanged;
   final ValueChanged<double> onBaseFrequencyChangeEnd;
+  final String titleLabel;
   // Note-name labels rendered at the slider edges (e.g. "A1" and "A6").
   final String? minBaseLabel;
   final String? maxBaseLabel;
@@ -32,10 +34,7 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             children: [
               const Icon(Icons.tune_rounded),
               const SizedBox(width: 8),
-              Text(
-                'Advanced Settings',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text(titleLabel, style: Theme.of(context).textTheme.titleMedium),
             ],
           ),
           const SizedBox(height: 16),

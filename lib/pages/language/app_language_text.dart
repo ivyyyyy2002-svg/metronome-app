@@ -24,9 +24,33 @@ abstract class AppLanguageText {
   String get notesToPlay;
   String get noteInputHelper;
   String get applySequence;
+  String get deleteNote;
+  String get clearNotes;
   String get sequenceSavedNotice;
   String get sequenceExample;
   String get sequenceError;
 
   String get languageSavedNotice;
+
+  String get metronomeTitle;
+  String get advanced;
+  String get advancedSettings;
+  String get bpm;
+  String get start;
+  String get stop;
+  String get reset;
+  String get click;
+  String get sound;
+  String get instrument;
+  String get notesLoaded;
+  String get noSequenceLoaded;
+  String get editNoteSequence;
+  String get cancel;
+  String get apply;
+  String get close;
+  String get done;
+  String get timeSignature;
+  String get beatUnit;
+  String get missingInstrument;
+  String noPlayableAssets(String instrument);
 }

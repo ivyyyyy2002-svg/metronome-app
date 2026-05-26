@@ -61,11 +61,16 @@ class FrenchText implements AppLanguageText {
   String get notesToPlay => 'Notes à jouer';
 
   @override
-  String get noteInputHelper =>
-      'Utilisez A-G, ou ajoutez des dièses/bémols comme C# et Bb.';
+  String get noteInputHelper => 'Utilisez A-G, # et b, ex. C# et Bb.';
 
   @override
   String get applySequence => 'Appliquer le motif';
+
+  @override
+  String get deleteNote => 'Supprimer';
+
+  @override
+  String get clearNotes => 'Effacer';
 
   @override
   String get sequenceSavedNotice => 'Motif de notes enregistré.';
@@ -79,4 +84,68 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get languageSavedNotice => 'La langue a été enregistrée.';
+
+  @override
+  String get metronomeTitle => 'Métronome';
+
+  @override
+  String get advanced => 'Avancé';
+
+  @override
+  String get advancedSettings => 'Paramètres avancés';
+
+  @override
+  String get bpm => 'BPM';
+
+  @override
+  String get start => 'Start';
+
+  @override
+  String get stop => 'Stop';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get click => 'Clic';
+
+  @override
+  String get sound => 'Son';
+
+  @override
+  String get instrument => 'Instrument';
+
+  @override
+  String get notesLoaded => 'notes chargées';
+
+  @override
+  String get noSequenceLoaded => 'Aucun motif chargé';
+
+  @override
+  String get editNoteSequence => 'Modifier le motif de notes';
+
+  @override
+  String get cancel => 'Annuler';
+
+  @override
+  String get apply => 'Appliquer';
+
+  @override
+  String get close => 'Fermer';
+
+  @override
+  String get done => 'Terminé';
+
+  @override
+  String get timeSignature => 'Mesure';
+
+  @override
+  String get beatUnit => 'Unité de temps';
+
+  @override
+  String get missingInstrument => 'manquant';
+
+  @override
+  String noPlayableAssets(String instrument) =>
+      'Aucune ressource jouable trouvée pour $instrument';
 }

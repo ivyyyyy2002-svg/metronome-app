@@ -23,6 +23,7 @@ class PlaybackStatusPanel extends StatelessWidget {
     required this.beatNumerator,
     required this.beatDenominator,
     required this.bpm,
+    required this.bpmLabel,
     required this.beatIndicators,
   });
 
@@ -31,6 +32,7 @@ class PlaybackStatusPanel extends StatelessWidget {
   final int beatNumerator;
   final int beatDenominator;
   final int bpm;
+  final String bpmLabel;
   final List<BeatIndicatorItem> beatIndicators;
 
   @override
@@ -38,11 +40,7 @@ class PlaybackStatusPanel extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        MetronomeSwing(
-          anim: anim,
-          isRunning: isRunning,
-          amplitudeDeg: 18,
-        ),
+        MetronomeSwing(anim: anim, isRunning: isRunning, amplitudeDeg: 18),
         const SizedBox(height: 12),
         Column(
           children: [
@@ -57,34 +55,39 @@ class PlaybackStatusPanel extends StatelessWidget {
               height: 16,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: beatIndicators.map((indicator) {
-                  return SizedBox(
-                    width: 18,
-                    height: 16,
-                    child: Center(
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween<double>(
-                          end: indicator.isActive ? 1.0 : 0.66,
-                        ),
-                        duration: const Duration(milliseconds: 140),
-                        curve: Curves.easeOut,
-                        builder: (context, scale, child) {
-                          return Transform.scale(scale: scale, child: child);
-                        },
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: indicator.isActive
-                                ? indicator.activeColor
-                                : indicator.idleColor,
+                children: beatIndicators
+                    .map((indicator) {
+                      return SizedBox(
+                        width: 18,
+                        height: 16,
+                        child: Center(
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween<double>(
+                              end: indicator.isActive ? 1.0 : 0.66,
+                            ),
+                            duration: const Duration(milliseconds: 140),
+                            curve: Curves.easeOut,
+                            builder: (context, scale, child) {
+                              return Transform.scale(
+                                scale: scale,
+                                child: child,
+                              );
+                            },
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: indicator.isActive
+                                    ? indicator.activeColor
+                                    : indicator.idleColor,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  );
-                }).toList(growable: false),
+                      );
+                    })
+                    .toList(growable: false),
               ),
             ),
             const SizedBox(height: 12),
@@ -98,10 +101,7 @@ class PlaybackStatusPanel extends StatelessWidget {
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'BPM',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
+                Text(bpmLabel, style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
           ],

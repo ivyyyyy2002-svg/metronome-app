@@ -6,6 +6,9 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:math' as math;
 
+import '../app_settings_controller.dart';
+import '../language/app_language_text.dart';
+import '../language/app_text.dart';
 import 'note_sequence_controller.dart';
 import 'metronome_music.dart';
 import 'instrument_sf2_controller.dart';
@@ -19,9 +22,14 @@ enum ClickAccent { strong, secondary, weak }
 
 // The MetronomeDemo widget
 class MetronomeDemo extends StatefulWidget {
-  const MetronomeDemo({super.key, required this.noteSequenceController});
+  const MetronomeDemo({
+    super.key,
+    required this.noteSequenceController,
+    required this.appSettingsController,
+  });
 
   final NoteSequenceController noteSequenceController;
+  final AppSettingsController appSettingsController;
 
   @override
   State<MetronomeDemo> createState() => _MetronomeDemoState();
@@ -647,6 +655,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       beatUnitLabels: [for (final unit in BeatUnit.values) beatUnitLabel(unit)],
       initialTimeSignatureIndex: _timeSignatureIndex(),
       initialBeatUnitIndex: _beatUnitIndex(),
+      closeLabel: _text.close,
+      doneLabel: _text.done,
+      timeSignatureLabel: _text.timeSignature,
+      beatUnitLabel: _text.beatUnit,
       onSelectionChanged: (selection) {
         _applyMeterSelection(selection.$1, selection.$2);
       },
@@ -1092,9 +1104,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         !(instrumentAvailability[newInstrument] ?? false)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No playable assets found for $newInstrument'),
-          ),
+          SnackBar(content: Text(_text.noPlayableAssets(newInstrument))),
         );
       }
       return;
@@ -1273,6 +1283,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // ---------- UI ----------
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  AppLanguageText get _text =>
+      appTextFor(widget.appSettingsController.language);
+
   // Apply a custom note sequence from text input, with parsing,
   // validation, and preparation of audio assets
   Future<void> _applyCustomNoteSequenceText(String text) async {
@@ -1308,7 +1321,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit note sequence'),
+          title: Text(_text.editNoteSequence),
           content: TextField(
             controller: controller,
             autofocus: true,
@@ -1318,11 +1331,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text(_text.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('Apply'),
+              child: Text(_text.apply),
             ),
           ],
         );
@@ -1338,7 +1351,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // Generate a preview string for the loaded note sequence,
   // showing the first few notes and total count
   String _sequencePreviewText() {
-    if (noteSequence.isEmpty) return 'No sequence loaded';
+    if (noteSequence.isEmpty) return _text.noSequenceLoaded;
     const int previewLimit = 24;
     final preview = noteSequence.take(previewLimit).join(' ');
     if (noteSequence.length <= previewLimit) return preview;
@@ -1347,6 +1360,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   @override
   Widget build(BuildContext context) {
+    final text = _text;
     final isRunning = timer != null;
     final int beatsForDisplay = timeSignatureBeats;
     final int beatInBar = (beat == 0) ? 1 : ((beat - 1) % beatsForDisplay) + 1;
@@ -1378,7 +1392,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final instrumentItems = instruments
         .map((ins) {
           final hasAssets = instrumentAvailability[ins] ?? true;
-          final label = hasAssets ? ins : '$ins (missing)';
+          final label = hasAssets ? ins : '$ins (${text.missingInstrument})';
           return DropdownMenuItem(
             value: ins,
             enabled: hasAssets,
@@ -1390,10 +1404,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: const Text('Metronome'),
+        title: Text(text.metronomeTitle),
         actions: [
           IconButton(
-            tooltip: 'Advanced',
+            tooltip: text.advanced,
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
             icon: const Icon(Icons.tune_rounded),
           ),
@@ -1407,6 +1421,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           // Note-name labels for the slider edges.
           minBaseLabel: 'A$_instrumentMinOctave',
           maxBaseLabel: 'A$_instrumentMaxOctave',
+          titleLabel: text.advancedSettings,
           onBaseFrequencyChanged: (v) {
             setState(() => baseFrequencyHz = v);
           },
@@ -1432,6 +1447,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                         beatNumerator: beatNumerator,
                         beatDenominator: beatDenominator,
                         bpm: bpm,
+                        bpmLabel: text.bpm,
                         beatIndicators: beatIndicators,
                       ),
                       const SizedBox(height: 14),
@@ -1443,6 +1459,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                         currentSoundListenable: currentSoundVN,
                         sequencePreviewText: _sequencePreviewText(),
                         onSequenceTap: _openNoteSequenceEditor,
+                        notesLoadedLabel: text.notesLoaded,
+                        clickLabel: text.click,
+                        soundLabel: text.sound,
+                        instrumentLabel: text.instrument,
                         bpm: bpm,
                         enableClick: enableClick,
                         enableSound: enableSound,
@@ -1484,6 +1504,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               onStart: start,
               onStop: () => stop(),
               onReset: reset,
+              startLabel: text.start,
+              stopLabel: text.stop,
+              resetLabel: text.reset,
             ),
           ],
         ),
