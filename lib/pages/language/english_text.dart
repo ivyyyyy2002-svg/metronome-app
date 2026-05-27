@@ -134,10 +134,13 @@ class EnglishText implements AppLanguageText {
   String get searchSequences => 'Search sequences';
 
   @override
-  String get saveSequence => 'Save Sequence';
+  String get saveSequence => 'Save';
 
   @override
   String get loadSequence => 'Load';
+
+  @override
+  String get viewAll => 'View All';
 
   @override
   String get quickEdit => 'Quick Edit';
@@ -152,8 +155,22 @@ class EnglishText implements AppLanguageText {
   String get sequenceNameError => 'Enter a name before saving.';
 
   @override
+  String get alreadySavedNotice => 'Already saved.';
+
+  @override
+  String get replace => 'Replace';
+
+  @override
   String noteSequenceTooLong(int maxNotes) =>
       'Use $maxNotes notes or fewer for one sequence.';
+
+  @override
+  String replaceSequenceQuestion(String name) =>
+      'A sequence named "$name" already exists. Replace it?';
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) =>
+      'Showing $visibleCount of $totalCount';
 
   @override
   String get cancel => 'Cancel';

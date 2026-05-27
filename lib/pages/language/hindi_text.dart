@@ -140,6 +140,9 @@ class HindiText implements AppLanguageText {
   String get loadSequence => 'लोड करें';
 
   @override
+  String get viewAll => 'सभी देखें';
+
+  @override
   String get quickEdit => 'जल्दी संपादित करें';
 
   @override
@@ -152,8 +155,22 @@ class HindiText implements AppLanguageText {
   String get sequenceNameError => 'सेव करने से पहले नाम डालें।';
 
   @override
+  String get alreadySavedNotice => 'पहले से सेव है।';
+
+  @override
+  String get replace => 'बदलें';
+
+  @override
   String noteSequenceTooLong(int maxNotes) =>
       'एक पैटर्न में $maxNotes या उससे कम नोट्स इस्तेमाल करें।';
+
+  @override
+  String replaceSequenceQuestion(String name) =>
+      '"$name" नाम का पैटर्न पहले से है। क्या इसे बदलना है?';
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) =>
+      '$totalCount में से $visibleCount दिख रहे हैं';
 
   @override
   String get cancel => 'रद्द करें';

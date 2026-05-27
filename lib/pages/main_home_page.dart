@@ -25,6 +25,8 @@ class MainHomePage extends StatefulWidget {
 // State class for the main home page, managing the UI
 // and navigation to the metronome demo page.
 class _MainHomePageState extends State<MainHomePage> {
+  static const int _savedSequencePreviewLimit = 3;
+
   final TextEditingController _sequenceTextController = TextEditingController();
   final TextEditingController _sequenceNameController = TextEditingController();
   final TextEditingController _savedSearchController = TextEditingController();
@@ -48,6 +50,59 @@ class _MainHomePageState extends State<MainHomePage> {
   void _refreshSavedSequenceList() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  List<SavedNoteSequence> _filteredSavedSequences([String? query]) {
+    return widget.noteSequenceController.searchSavedSequences(
+      query ?? _savedSearchController.text,
+    );
+  }
+
+  SavedNoteSequence? _savedSequenceByName(String name) {
+    final normalizedName = name.trim().toLowerCase();
+    for (final savedSequence in widget.noteSequenceController.savedSequences) {
+      if (savedSequence.name.toLowerCase() == normalizedName) {
+        return savedSequence;
+      }
+    }
+    return null;
+  }
+
+  // Compares two note sequences for equality, checking if they have the same notes in the same order.
+  bool _hasSameSequence(
+    List<String> firstSequence,
+    List<String> secondSequence,
+  ) {
+    if (firstSequence.length != secondSequence.length) return false;
+
+    for (int index = 0; index < firstSequence.length; index++) {
+      if (firstSequence[index] != secondSequence[index]) return false;
+    }
+    return true;
+  }
+
+  Future<bool> _confirmReplaceSavedSequence(String name) async {
+    final text = appTextFor(widget.appSettingsController.language);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: Text(text.replaceSequenceQuestion(name)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(text.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(text.replace),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed ?? false;
   }
 
   // Synchronizes the text in the sequence input field with the current
@@ -199,6 +254,22 @@ class _MainHomePageState extends State<MainHomePage> {
       return;
     }
 
+    final existingSequence = _savedSequenceByName(name);
+    if (existingSequence != null) {
+      final currentSequence = parseNoteSequenceText(
+        _sequenceTextController.text,
+      );
+      if (_hasSameSequence(currentSequence, existingSequence.sequence)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(text.alreadySavedNotice)));
+        return;
+      }
+
+      final shouldReplace = await _confirmReplaceSavedSequence(name);
+      if (!shouldReplace || !mounted) return;
+    }
+
     final saved = await widget.noteSequenceController.saveCurrentSequence(name);
     if (!saved || !mounted) return;
 
@@ -231,6 +302,94 @@ class _MainHomePageState extends State<MainHomePage> {
 
   Future<void> _deleteSavedSequence(SavedNoteSequence savedSequence) async {
     await widget.noteSequenceController.deleteSavedSequence(savedSequence.name);
+  }
+
+  // Opens the saved sequences bottom sheet, allowing the user to
+  // load or delete saved sequences, with a search function to filter
+  // sequences by name.
+  Future<void> _openSavedSequencesSheet() async {
+    final text = appTextFor(widget.appSettingsController.language);
+    final searchController = TextEditingController(
+      text: _savedSearchController.text,
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        var filteredSequences = _filteredSavedSequences(searchController.text);
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            void refreshSheet() {
+              setSheetState(() {
+                filteredSequences = _filteredSavedSequences(
+                  searchController.text,
+                );
+              });
+            }
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  0,
+                  20,
+                  MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.72,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        text.savedSequences,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          labelText: text.searchSequences,
+                        ),
+                        onChanged: (_) => refreshSheet(),
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: _SavedSequencesList(
+                            savedSequences: filteredSequences,
+                            emptyLabel: text.noSavedSequences,
+                            loadLabel: text.loadSequence,
+                            deleteLabel: text.deleteNote,
+                            onLoad: (savedSequence) async {
+                              await _loadSavedSequence(savedSequence);
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            onDelete: (savedSequence) async {
+                              await _deleteSavedSequence(savedSequence);
+                              refreshSheet();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    searchController.dispose();
   }
 
   Future<void> _startMetronome() async {
@@ -515,14 +674,32 @@ class _MainHomePageState extends State<MainHomePage> {
                             errorText: _sequenceErrorText,
                             labelText: text.notesToPlay,
                             hintText: 'A B C D E F G F E D C B A',
-                            helperText:
-                                '${text.noteInputHelper} ${text.noteSequenceTooLong(maxNoteSequenceLength)}',
-                            helperMaxLines: 2,
                             errorMaxLines: 2,
                           ),
                           onChanged: _handleSequenceTextChanged,
                           onEditingComplete: _normalizeSequenceInputSpacing,
                           onTapOutside: (_) => _normalizeSequenceInputSpacing(),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${text.noteInputHelper} ${text.noteSequenceTooLong(maxNoteSequenceLength)}',
+                                textAlign: TextAlign.left,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: scheme.onSurfaceVariant),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${parseNoteSequenceText(_sequenceTextController.text).length} / $maxNoteSequenceLength',
+                              textAlign: TextAlign.right,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         // Sequence name input field, with validation
@@ -580,56 +757,96 @@ class _MainHomePageState extends State<MainHomePage> {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            ActionChip(
-                              avatar: const Icon(
-                                Icons.backspace_outlined,
-                                size: 18,
-                              ),
-                              label: Text(text.deleteNote),
+                            TextButton(
                               onPressed: _deleteLastNoteInput,
+                              child: Text(text.deleteNote),
                             ),
-                            ActionChip(
-                              avatar: const Icon(Icons.clear_rounded, size: 18),
-                              label: Text(text.clearNotes),
+                            TextButton(
                               onPressed: _clearNoteSequenceInput,
+                              child: Text(text.clearNotes),
                             ),
-                            ActionChip(
-                              label: Text(text.saveSequence),
+                            FilledButton(
                               onPressed: _saveNamedSequence,
+                              child: Text(text.saveSequence),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-
-                        // Example note sequence chip and saved sequences list, 
-                        // allowing quick loading of saved sequences and displaying the 
-                        // current example format
-                        Chip(label: Text(text.sequenceExample)),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
                         Text(
-                          text.savedSequences,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          text.sequenceExample,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _savedSearchController,
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(),
-                            labelText: text.searchSequences,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SavedSequencesList(
-                          savedSequences: widget.noteSequenceController
-                              .searchSavedSequences(
-                                _savedSearchController.text,
-                              ),
-                          emptyLabel: text.noSavedSequences,
-                          loadLabel: text.loadSequence,
-                          deleteLabel: text.deleteNote,
-                          onLoad: _loadSavedSequence,
-                          onDelete: _deleteSavedSequence,
+                        const SizedBox(height: 16),
+                        Builder(
+                          builder: (context) {
+                            final filteredSequences = _filteredSavedSequences();
+                            final previewSequences = filteredSequences
+                                .take(_savedSequencePreviewLimit)
+                                .toList(growable: false);
+
+                            return Column(// Saved sequences section, with search and list of saved sequences
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        text.savedSequences,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ),
+                                    if (filteredSequences.isNotEmpty)
+                                      Text(
+                                        text.savedSequenceSummary(
+                                          previewSequences.length,
+                                          filteredSequences.length,
+                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _savedSearchController,
+                                  decoration: InputDecoration(
+                                    border: const OutlineInputBorder(),
+                                    labelText: text.searchSequences,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _SavedSequencesList(
+                                  savedSequences: previewSequences,
+                                  emptyLabel: text.noSavedSequences,
+                                  loadLabel: text.loadSequence,
+                                  deleteLabel: text.deleteNote,
+                                  onLoad: _loadSavedSequence,
+                                  onDelete: _deleteSavedSequence,
+                                ),
+                                if (filteredSequences.length >
+                                    _savedSequencePreviewLimit) ...[
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: _openSavedSequencesSheet,
+                                      child: Text(text.viewAll),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -645,8 +862,8 @@ class _MainHomePageState extends State<MainHomePage> {
   }
 }
 
-// Widget for displaying the list of saved note sequences, 
-// with options to load or delete each sequence, 
+// Widget for displaying the list of saved note sequences,
+// with options to load or delete each sequence,
 // and a message when there are no saved sequences.
 class _SavedSequencesList extends StatelessWidget {
   const _SavedSequencesList({
@@ -692,10 +909,12 @@ class _SavedSequencesList extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (int index = 0; index < savedSequences.length; index++) ...[
             if (index > 0) Divider(height: 1, color: scheme.outlineVariant),
-            Padding(
+            Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

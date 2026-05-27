@@ -131,10 +131,13 @@ class ChineseText implements AppLanguageText {
   String get searchSequences => '搜索音符模式';
 
   @override
-  String get saveSequence => '保存音符模式';
+  String get saveSequence => '保存';
 
   @override
   String get loadSequence => '加载';
+
+  @override
+  String get viewAll => '查看全部';
 
   @override
   String get quickEdit => '快速修改';
@@ -149,7 +152,20 @@ class ChineseText implements AppLanguageText {
   String get sequenceNameError => '保存前请输入名称。';
 
   @override
+  String get alreadySavedNotice => '已经保存。';
+
+  @override
+  String get replace => '替换';
+
+  @override
   String noteSequenceTooLong(int maxNotes) => '每个音符模式最多可以输入 $maxNotes 个音符。';
+
+  @override
+  String replaceSequenceQuestion(String name) => '名为 "$name" 的音符模式已存在。要替换它吗？';
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) =>
+      '显示 $totalCount 个中的 $visibleCount 个';
 
   @override
   String get cancel => '取消';

@@ -140,6 +140,9 @@ class FrenchText implements AppLanguageText {
   String get loadSequence => 'Charger';
 
   @override
+  String get viewAll => 'Tout afficher';
+
+  @override
   String get quickEdit => 'Modification rapide';
 
   @override
@@ -152,8 +155,22 @@ class FrenchText implements AppLanguageText {
   String get sequenceNameError => 'Entrez un nom avant d’enregistrer.';
 
   @override
+  String get alreadySavedNotice => 'Déjà enregistré.';
+
+  @override
+  String get replace => 'Remplacer';
+
+  @override
   String noteSequenceTooLong(int maxNotes) =>
       'Utilisez $maxNotes notes ou moins pour un motif.';
+
+  @override
+  String replaceSequenceQuestion(String name) =>
+      'Un motif nommé "$name" existe déjà. Le remplacer ?';
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) =>
+      '$visibleCount sur $totalCount affichés';
 
   @override
   String get cancel => 'Annuler';
