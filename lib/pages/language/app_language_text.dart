@@ -45,6 +45,16 @@ abstract class AppLanguageText {
   String get notesLoaded;
   String get noSequenceLoaded;
   String get editNoteSequence;
+  String get savedSequences;
+  String get sequenceName;
+  String get searchSequences;
+  String get saveSequence;
+  String get loadSequence;
+  String get quickEdit;
+  String get importSequence;
+  String get noSavedSequences;
+  String get sequenceNameError;
+  String noteSequenceTooLong(int maxNotes);
   String get cancel;
   String get apply;
   String get close;

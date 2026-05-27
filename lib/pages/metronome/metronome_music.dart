@@ -34,6 +34,8 @@ const Map<String, int> noteToSemitone = {
   'B#': 12,
 };
 
+const int maxNoteSequenceLength = 128;
+
 const List<String> timeSignatureOptions = [
   '1/4',
   '2/4',
@@ -201,4 +203,8 @@ List<String> parseNoteSequenceText(String text) {
   }
 
   return notes.toList(growable: false);
+}
+
+String formatNoteSequenceText(String text) {
+  return parseNoteSequenceText(text).join(' ');
 }

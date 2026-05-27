@@ -26,13 +26,28 @@ class MainHomePage extends StatefulWidget {
 // and navigation to the metronome demo page.
 class _MainHomePageState extends State<MainHomePage> {
   final TextEditingController _sequenceTextController = TextEditingController();
+  final TextEditingController _sequenceNameController = TextEditingController();
+  final TextEditingController _savedSearchController = TextEditingController();
   String? _sequenceErrorText;
+  String? _sequenceNameErrorText;
 
   @override
   void initState() {
     super.initState();
-    widget.noteSequenceController.addListener(_syncSequenceText);
+    widget.noteSequenceController.addListener(_handleSequenceControllerChanged);
+    _savedSearchController.addListener(_refreshSavedSequenceList);
     _syncSequenceText();
+  }
+
+  void _handleSequenceControllerChanged() {
+    _syncSequenceText();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _refreshSavedSequenceList() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   // Synchronizes the text in the sequence input field with the current
@@ -50,7 +65,11 @@ class _MainHomePageState extends State<MainHomePage> {
   }
 
   void _handleSequenceTextChanged(String text) {
-    if (parseNoteSequenceText(text).isEmpty) return;
+    final parsedSequence = parseNoteSequenceText(text);
+    if (parsedSequence.isEmpty ||
+        parsedSequence.length > maxNoteSequenceLength) {
+      return;
+    }
 
     unawaited(widget.noteSequenceController.setSequenceFromText(text));
 
@@ -70,6 +89,21 @@ class _MainHomePageState extends State<MainHomePage> {
     );
 
     _handleSequenceTextChanged(text);
+  }
+
+  // Normalizes the spacing in the sequence input field, ensuring there is
+  // only a single space between notes and no leading/trailing spaces.
+  void _normalizeSequenceInputSpacing() {
+    final formattedText = formatNoteSequenceText(_sequenceTextController.text);
+    if (formattedText.isEmpty ||
+        formattedText == _sequenceTextController.text) {
+      return;
+    }
+
+    _sequenceTextController.value = TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: formattedText.length),
+    );
   }
 
   // Appends a note to the current sequence input, ensuring proper spacing.
@@ -117,18 +151,30 @@ class _MainHomePageState extends State<MainHomePage> {
   // Applies the custom note sequence entered by the user, validating it first.
   Future<bool> _applyCustomSequence() async {
     final parsedSequence = parseNoteSequenceText(_sequenceTextController.text);
+    final text = appTextFor(widget.appSettingsController.language);
 
     if (parsedSequence.isEmpty) {
       setState(() {
-        _sequenceErrorText = appTextFor(
-          widget.appSettingsController.language,
-        ).sequenceError;
+        _sequenceErrorText = text.sequenceError;
       });
       return false;
     }
 
+    if (parsedSequence.length > maxNoteSequenceLength) {
+      setState(() {
+        _sequenceErrorText = text.noteSequenceTooLong(maxNoteSequenceLength);
+      });
+      return false;
+    }
+
+    final formattedText = parsedSequence.join(' ');
+    _sequenceTextController.value = TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: formattedText.length),
+    );
+
     final saved = await widget.noteSequenceController.setSequenceFromText(
-      _sequenceTextController.text,
+      formattedText,
     );
     if (!saved) return false;
     if (mounted) {
@@ -137,6 +183,54 @@ class _MainHomePageState extends State<MainHomePage> {
       });
     }
     return true;
+  }
+
+  // Saves the current note sequence with a user-provided name, validating the name first.
+  Future<void> _saveNamedSequence() async {
+    final text = appTextFor(widget.appSettingsController.language);
+    final applied = await _applyCustomSequence();
+    if (!applied || !mounted) return;
+
+    final name = _sequenceNameController.text.trim();
+    if (name.isEmpty) {
+      setState(() {
+        _sequenceNameErrorText = text.sequenceNameError;
+      });
+      return;
+    }
+
+    final saved = await widget.noteSequenceController.saveCurrentSequence(name);
+    if (!saved || !mounted) return;
+
+    setState(() {
+      _sequenceNameErrorText = null;
+    });
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(text.sequenceSavedNotice)));
+  }
+
+  Future<void> _loadSavedSequence(SavedNoteSequence savedSequence) async {
+    final imported = await widget.noteSequenceController.importSavedSequence(
+      savedSequence,
+    );
+    if (!imported || !mounted) return;
+
+    _sequenceTextController.value = TextEditingValue(
+      text: savedSequence.sequenceText,
+      selection: TextSelection.collapsed(
+        offset: savedSequence.sequenceText.length,
+      ),
+    );
+    _sequenceNameController.value = TextEditingValue(
+      text: savedSequence.name,
+      selection: TextSelection.collapsed(offset: savedSequence.name.length),
+    );
+  }
+
+  Future<void> _deleteSavedSequence(SavedNoteSequence savedSequence) async {
+    await widget.noteSequenceController.deleteSavedSequence(savedSequence.name);
   }
 
   Future<void> _startMetronome() async {
@@ -264,8 +358,13 @@ class _MainHomePageState extends State<MainHomePage> {
 
   @override
   void dispose() {
-    widget.noteSequenceController.removeListener(_syncSequenceText);
+    widget.noteSequenceController.removeListener(
+      _handleSequenceControllerChanged,
+    );
+    _savedSearchController.removeListener(_refreshSavedSequenceList);
     _sequenceTextController.dispose();
+    _sequenceNameController.dispose();
+    _savedSearchController.dispose();
     super.dispose();
   }
 
@@ -406,19 +505,41 @@ class _MainHomePageState extends State<MainHomePage> {
                         ),
                         const SizedBox(height: 12),
                         TextField(
-                          // Note sequence input field
+                          // Note sequence input field, with validation and helper text
                           controller: _sequenceTextController,
                           textCapitalization: TextCapitalization.none,
+                          minLines: 1,
+                          maxLines: 4,
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             errorText: _sequenceErrorText,
                             labelText: text.notesToPlay,
-                            hintText: 'ABCDEFGFEDCBA',
-                            helperText: text.noteInputHelper,
+                            hintText: 'A B C D E F G F E D C B A',
+                            helperText:
+                                '${text.noteInputHelper} ${text.noteSequenceTooLong(maxNoteSequenceLength)}',
                             helperMaxLines: 2,
                             errorMaxLines: 2,
                           ),
                           onChanged: _handleSequenceTextChanged,
+                          onEditingComplete: _normalizeSequenceInputSpacing,
+                          onTapOutside: (_) => _normalizeSequenceInputSpacing(),
+                        ),
+                        const SizedBox(height: 12),
+                        // Sequence name input field, with validation
+                        TextField(
+                          controller: _sequenceNameController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            errorText: _sequenceNameErrorText,
+                            labelText: text.sequenceName,
+                          ),
+                          onChanged: (_) {
+                            if (_sequenceNameErrorText == null) return;
+                            setState(() {
+                              _sequenceNameErrorText = null;
+                            });
+                          },
                         ),
 
                         // Note input action chips for quick entry of notes and accidentals
@@ -472,12 +593,44 @@ class _MainHomePageState extends State<MainHomePage> {
                               label: Text(text.clearNotes),
                               onPressed: _clearNoteSequenceInput,
                             ),
+                            ActionChip(
+                              label: Text(text.saveSequence),
+                              onPressed: _saveNamedSequence,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 12),
 
-                        // Example sequence display
+                        // Example note sequence chip and saved sequences list, 
+                        // allowing quick loading of saved sequences and displaying the 
+                        // current example format
                         Chip(label: Text(text.sequenceExample)),
+                        const SizedBox(height: 16),
+                        Text(
+                          text.savedSequences,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _savedSearchController,
+                          decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            labelText: text.searchSequences,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _SavedSequencesList(
+                          savedSequences: widget.noteSequenceController
+                              .searchSavedSequences(
+                                _savedSearchController.text,
+                              ),
+                          emptyLabel: text.noSavedSequences,
+                          loadLabel: text.loadSequence,
+                          deleteLabel: text.deleteNote,
+                          onLoad: _loadSavedSequence,
+                          onDelete: _deleteSavedSequence,
+                        ),
                       ],
                     ),
                   ),
@@ -487,6 +640,100 @@ class _MainHomePageState extends State<MainHomePage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Widget for displaying the list of saved note sequences, 
+// with options to load or delete each sequence, 
+// and a message when there are no saved sequences.
+class _SavedSequencesList extends StatelessWidget {
+  const _SavedSequencesList({
+    required this.savedSequences,
+    required this.emptyLabel,
+    required this.loadLabel,
+    required this.deleteLabel,
+    required this.onLoad,
+    required this.onDelete,
+  });
+
+  final List<SavedNoteSequence> savedSequences;
+  final String emptyLabel;
+  final String loadLabel;
+  final String deleteLabel;
+  final ValueChanged<SavedNoteSequence> onLoad;
+  final ValueChanged<SavedNoteSequence> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (savedSequences.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          emptyLabel,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          for (int index = 0; index < savedSequences.length; index++) ...[
+            if (index > 0) Divider(height: 1, color: scheme.outlineVariant),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    savedSequences[index].name,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    savedSequences[index].sequenceText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      TextButton(
+                        onPressed: () => onLoad(savedSequences[index]),
+                        child: Text(loadLabel),
+                      ),
+                      TextButton(
+                        onPressed: () => onDelete(savedSequences[index]),
+                        child: Text(deleteLabel),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

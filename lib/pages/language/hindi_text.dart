@@ -125,6 +125,37 @@ class HindiText implements AppLanguageText {
   String get editNoteSequence => 'नोट पैटर्न संपादित करें';
 
   @override
+  String get savedSequences => 'सेव किए गए पैटर्न';
+
+  @override
+  String get sequenceName => 'पैटर्न का नाम';
+
+  @override
+  String get searchSequences => 'पैटर्न खोजें';
+
+  @override
+  String get saveSequence => 'पैटर्न सेव करें';
+
+  @override
+  String get loadSequence => 'लोड करें';
+
+  @override
+  String get quickEdit => 'जल्दी संपादित करें';
+
+  @override
+  String get importSequence => 'पैटर्न इम्पोर्ट करें';
+
+  @override
+  String get noSavedSequences => 'कोई सेव किया गया पैटर्न नहीं';
+
+  @override
+  String get sequenceNameError => 'सेव करने से पहले नाम डालें।';
+
+  @override
+  String noteSequenceTooLong(int maxNotes) =>
+      'एक पैटर्न में $maxNotes या उससे कम नोट्स इस्तेमाल करें।';
+
+  @override
   String get cancel => 'रद्द करें';
 
   @override

@@ -125,6 +125,37 @@ class FrenchText implements AppLanguageText {
   String get editNoteSequence => 'Modifier le motif de notes';
 
   @override
+  String get savedSequences => 'Motifs enregistrés';
+
+  @override
+  String get sequenceName => 'Nom du motif';
+
+  @override
+  String get searchSequences => 'Rechercher des motifs';
+
+  @override
+  String get saveSequence => 'Enregistrer';
+
+  @override
+  String get loadSequence => 'Charger';
+
+  @override
+  String get quickEdit => 'Modification rapide';
+
+  @override
+  String get importSequence => 'Importer';
+
+  @override
+  String get noSavedSequences => 'Aucun motif enregistré';
+
+  @override
+  String get sequenceNameError => 'Entrez un nom avant d’enregistrer.';
+
+  @override
+  String noteSequenceTooLong(int maxNotes) =>
+      'Utilisez $maxNotes notes ou moins pour un motif.';
+
+  @override
   String get cancel => 'Annuler';
 
   @override

@@ -20,6 +20,20 @@ import 'widgets/transport_bar.dart';
 
 enum ClickAccent { strong, secondary, weak }
 
+enum _NoteSequenceEditorAction { applyText, importSaved }
+
+class _NoteSequenceEditorResult {
+  const _NoteSequenceEditorResult({
+    required this.action,
+    this.text,
+    this.savedSequence,
+  });
+
+  final _NoteSequenceEditorAction action;
+  final String? text;
+  final SavedNoteSequence? savedSequence;
+}
+
 // The MetronomeDemo widget
 class MetronomeDemo extends StatefulWidget {
   const MetronomeDemo({
@@ -1292,6 +1306,19 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final saved = await widget.noteSequenceController.setSequenceFromText(text);
     if (!saved) return;
 
+    await _refreshAppliedNoteSequence();
+  }
+
+  Future<void> _applySavedNoteSequence(SavedNoteSequence savedSequence) async {
+    final imported = await widget.noteSequenceController.importSavedSequence(
+      savedSequence,
+    );
+    if (!imported) return;
+
+    await _refreshAppliedNoteSequence();
+  }
+
+  Future<void> _refreshAppliedNoteSequence() async {
     await stop();
 
     setState(() {
@@ -1312,40 +1339,221 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
-  // Open a dialog with a TextField for editing the note sequence,
-  // pre-filled with the current sequence, and apply changes on confirmation
+  // Open the note sequence editor bottom sheet, allowing quick text edits 
+  // or importing from saved sequences, with validation and preparation of audio assets for the new sequence
   Future<void> _openNoteSequenceEditor() async {
-    final controller = TextEditingController(text: noteSequence.join());
+    final sequenceController = TextEditingController(
+      text: noteSequence.join(' '),
+    );
+    final searchController = TextEditingController();
 
-    final result = await showDialog<String>(
+    final result = await showModalBottomSheet<_NoteSequenceEditorResult>(
       context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
       builder: (context) {
-        return AlertDialog(
-          title: Text(_text.editNoteSequence),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.none,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(_text.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: Text(_text.apply),
-            ),
-          ],
+        var filteredSequences = widget.noteSequenceController
+            .searchSavedSequences(searchController.text);
+        String? sequenceErrorText;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            void refreshSearchResults() {
+              setDialogState(() {
+                filteredSequences = widget.noteSequenceController
+                    .searchSavedSequences(searchController.text);
+              });
+            }
+
+            return DefaultTabController(
+              length: 2,
+              child: SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    0,
+                    20,
+                    MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.72,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          _text.editNoteSequence,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 10),
+                        TabBar(
+                          tabs: [
+                            Tab(text: _text.quickEdit),
+                            Tab(text: _text.importSequence),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  TextField(
+                                    controller: sequenceController,
+                                    autofocus: true,
+                                    textCapitalization: TextCapitalization.none,
+                                    minLines: 4,
+                                    maxLines: 8,
+                                    decoration: InputDecoration(
+                                      labelText: _text.notesToPlay,
+                                      helperText: _text.noteInputHelper,
+                                      errorText: sequenceErrorText,
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                    onChanged: (_) {
+                                      if (sequenceErrorText == null) return;
+                                      setDialogState(() {
+                                        sequenceErrorText = null;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${parseNoteSequenceText(sequenceController.text).length} / $maxNoteSequenceLength',
+                                    textAlign: TextAlign.end,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                  const Spacer(),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: Text(_text.cancel),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      FilledButton(
+                                        onPressed: () {
+                                          final parsedSequence =
+                                              parseNoteSequenceText(
+                                                sequenceController.text,
+                                              );
+                                          if (parsedSequence.isEmpty) {
+                                            setDialogState(() {
+                                              sequenceErrorText =
+                                                  _text.sequenceError;
+                                            });
+                                            return;
+                                          }
+                                          if (parsedSequence.length >
+                                              maxNoteSequenceLength) {
+                                            setDialogState(() {
+                                              sequenceErrorText = _text
+                                                  .noteSequenceTooLong(
+                                                    maxNoteSequenceLength,
+                                                  );
+                                            });
+                                            return;
+                                          }
+                                          Navigator.of(context).pop(
+                                            _NoteSequenceEditorResult(
+                                              action: _NoteSequenceEditorAction
+                                                  .applyText,
+                                              text: parsedSequence.join(' '),
+                                            ),
+                                          );
+                                        },
+                                        child: Text(_text.apply),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  TextField(
+                                    controller: searchController,
+                                    onChanged: (_) => refreshSearchResults(),
+                                    decoration: InputDecoration(
+                                      labelText: _text.searchSequences,
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: filteredSequences.isEmpty
+                                        ? Center(
+                                            child: Text(_text.noSavedSequences),
+                                          )
+                                        : ListView.separated(
+                                            itemCount: filteredSequences.length,
+                                            separatorBuilder: (_, _) =>
+                                                const Divider(height: 1),
+                                            itemBuilder: (context, index) {
+                                              final item =
+                                                  filteredSequences[index];
+                                              return ListTile(
+                                                title: Text(item.name),
+                                                subtitle: Text(
+                                                  item.sequenceText,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                onTap: () {
+                                                  Navigator.of(context).pop(
+                                                    _NoteSequenceEditorResult(
+                                                      action:
+                                                          _NoteSequenceEditorAction
+                                                              .importSaved,
+                                                      savedSequence: item,
+                                                    ),
+                                                  );
+                                                },
+                                              );
+                                            },
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
 
-    controller.dispose();
+    sequenceController.dispose();
+    searchController.dispose();
 
     if (result == null) return;
-    await _applyCustomNoteSequenceText(result);
+    switch (result.action) {
+      case _NoteSequenceEditorAction.applyText:
+        final text = result.text;
+        if (text == null) return;
+        await _applyCustomNoteSequenceText(text);
+        break;
+      case _NoteSequenceEditorAction.importSaved:
+        final savedSequence = result.savedSequence;
+        if (savedSequence == null) return;
+        await _applySavedNoteSequence(savedSequence);
+        break;
+    }
   }
 
   // Generate a preview string for the loaded note sequence,

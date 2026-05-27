@@ -122,6 +122,36 @@ class ChineseText implements AppLanguageText {
   String get editNoteSequence => '编辑音符模式';
 
   @override
+  String get savedSequences => '已保存的音符模式';
+
+  @override
+  String get sequenceName => '音符模式名称';
+
+  @override
+  String get searchSequences => '搜索音符模式';
+
+  @override
+  String get saveSequence => '保存音符模式';
+
+  @override
+  String get loadSequence => '加载';
+
+  @override
+  String get quickEdit => '快速修改';
+
+  @override
+  String get importSequence => '导入音符模式';
+
+  @override
+  String get noSavedSequences => '没有已保存的音符模式';
+
+  @override
+  String get sequenceNameError => '保存前请输入名称。';
+
+  @override
+  String noteSequenceTooLong(int maxNotes) => '每个音符模式最多可以输入 $maxNotes 个音符。';
+
+  @override
   String get cancel => '取消';
 
   @override

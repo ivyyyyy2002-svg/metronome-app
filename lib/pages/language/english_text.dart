@@ -125,6 +125,37 @@ class EnglishText implements AppLanguageText {
   String get editNoteSequence => 'Edit note sequence';
 
   @override
+  String get savedSequences => 'Saved sequences';
+
+  @override
+  String get sequenceName => 'Sequence name';
+
+  @override
+  String get searchSequences => 'Search sequences';
+
+  @override
+  String get saveSequence => 'Save Sequence';
+
+  @override
+  String get loadSequence => 'Load';
+
+  @override
+  String get quickEdit => 'Quick Edit';
+
+  @override
+  String get importSequence => 'Import Sequence';
+
+  @override
+  String get noSavedSequences => 'No saved sequences';
+
+  @override
+  String get sequenceNameError => 'Enter a name before saving.';
+
+  @override
+  String noteSequenceTooLong(int maxNotes) =>
+      'Use $maxNotes notes or fewer for one sequence.';
+
+  @override
   String get cancel => 'Cancel';
 
   @override
