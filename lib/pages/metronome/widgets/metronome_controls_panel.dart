@@ -52,6 +52,8 @@ class MetronomeControlsPanel extends StatelessWidget {
   // including BPM slider, click/sound toggles, meter picker, and instrument selector.
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         // Sequence display and tap area
@@ -145,12 +147,32 @@ class MetronomeControlsPanel extends StatelessWidget {
               label: Text(clickLabel),
               avatar: const Icon(Icons.volume_up, size: 18),
               selected: enableClick,
+              showCheckmark: false,
+              selectedColor: null,
+              backgroundColor: scheme.surfaceContainerHighest,
+              labelStyle: TextStyle(
+                color: enableClick ? null : scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+              side: BorderSide(
+                color: enableClick ? Colors.transparent : scheme.outlineVariant,
+              ),
               onSelected: onClickToggle,
             ),
             FilterChip(
               label: Text(soundLabel),
               avatar: const Icon(Icons.graphic_eq_rounded, size: 18),
               selected: enableSound,
+              showCheckmark: false,
+              selectedColor: null,
+              backgroundColor: scheme.surfaceContainerHighest,
+              labelStyle: TextStyle(
+                color: enableSound ? null : scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+              side: BorderSide(
+                color: enableSound ? Colors.transparent : scheme.outlineVariant,
+              ),
               onSelected: onSoundToggle,
             ),
           ],

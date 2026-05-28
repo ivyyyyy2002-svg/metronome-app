@@ -1339,7 +1339,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
-  // Open the note sequence editor bottom sheet, allowing quick text edits 
+  // Open the note sequence editor bottom sheet, allowing quick text edits
   // or importing from saved sequences, with validation and preparation of audio assets for the new sequence
   Future<void> _openNoteSequenceEditor() async {
     final sequenceController = TextEditingController(
@@ -1358,6 +1358,54 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            void setSequenceEditorText(String text) {
+              sequenceController.value = TextEditingValue(
+                text: text,
+                selection: TextSelection.collapsed(offset: text.length),
+              );
+              setDialogState(() {
+                sequenceErrorText = null;
+              });
+            }
+
+            void appendQuickEditNote(String note) {
+              final currentText = sequenceController.text.trim();
+              final nextText = currentText.isEmpty
+                  ? note
+                  : '$currentText $note';
+              setSequenceEditorText(nextText);
+            }
+
+            void applyQuickEditAccidental(String accidental) {
+              final tokens = sequenceController.text.trim().split(
+                RegExp(r'\s+'),
+              );
+              if (tokens.isEmpty || tokens.first.isEmpty) return;
+
+              final parsedNotes = parseNoteSequenceText(tokens.last);
+              if (parsedNotes.length != 1) return;
+
+              final baseNote = parsedNotes.first.substring(0, 1);
+              tokens[tokens.length - 1] = parsedNotes.first.endsWith(accidental)
+                  ? baseNote
+                  : '$baseNote$accidental';
+              setSequenceEditorText(tokens.join(' '));
+            }
+
+            void deleteQuickEditNote() {
+              final tokens = sequenceController.text.trim().split(
+                RegExp(r'\s+'),
+              );
+              if (tokens.isEmpty || tokens.first.isEmpty) return;
+
+              tokens.removeLast();
+              setSequenceEditorText(tokens.join(' '));
+            }
+
+            void clearQuickEditNotes() {
+              setSequenceEditorText('');
+            }
+
             void refreshSearchResults() {
               setDialogState(() {
                 filteredSequences = widget.noteSequenceController
@@ -1412,11 +1460,51 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                       border: const OutlineInputBorder(),
                                     ),
                                     onChanged: (_) {
-                                      if (sequenceErrorText == null) return;
                                       setDialogState(() {
                                         sequenceErrorText = null;
                                       });
                                     },
+                                  ),
+
+                                  // Quick edit chips for notes, accidentals, and small edit actions.
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final note in const [
+                                        'A',
+                                        'B',
+                                        'C',
+                                        'D',
+                                        'E',
+                                        'F',
+                                        'G',
+                                      ])
+                                        ActionChip(
+                                          label: Text(note),
+                                          onPressed: () =>
+                                              appendQuickEditNote(note),
+                                        ),
+                                      ActionChip(
+                                        label: const Text('#'),
+                                        onPressed: () =>
+                                            applyQuickEditAccidental('#'),
+                                      ),
+                                      ActionChip(
+                                        label: const Text('b'),
+                                        onPressed: () =>
+                                            applyQuickEditAccidental('b'),
+                                      ),
+                                      TextButton(
+                                        onPressed: deleteQuickEditNote,
+                                        child: Text(_text.deleteNote),
+                                      ),
+                                      TextButton(
+                                        onPressed: clearQuickEditNotes,
+                                        child: Text(_text.clearNotes),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 8),
                                   Text(

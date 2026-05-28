@@ -61,7 +61,7 @@ class EnglishText implements AppLanguageText {
   String get notesToPlay => 'Notes to play';
 
   @override
-  String get noteInputHelper => 'Use A-G, # and b, e.g. C# and Bb.';
+  String get noteInputHelper => 'Use A-G, # and b. Example: A B C# Bb.';
 
   @override
   String get applySequence => 'Apply Sequence';

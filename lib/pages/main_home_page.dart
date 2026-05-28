@@ -686,18 +686,31 @@ class _MainHomePageState extends State<MainHomePage> {
                           children: [
                             Expanded(
                               child: Text(
-                                '${text.noteInputHelper} ${text.noteSequenceTooLong(maxNoteSequenceLength)}',
+                                text.noteInputHelper,
                                 textAlign: TextAlign.left,
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: scheme.onSurfaceVariant),
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Text(
-                              '${parseNoteSequenceText(_sequenceTextController.text).length} / $maxNoteSequenceLength',
-                              textAlign: TextAlign.right,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: scheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '${parseNoteSequenceText(_sequenceTextController.text).length} / $maxNoteSequenceLength',
+                                textAlign: TextAlign.right,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
                             ),
                           ],
                         ),
@@ -772,12 +785,7 @@ class _MainHomePageState extends State<MainHomePage> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          text.sequenceExample,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 8),
                         Builder(
                           builder: (context) {
                             final filteredSequences = _filteredSavedSequences();
@@ -785,7 +793,8 @@ class _MainHomePageState extends State<MainHomePage> {
                                 .take(_savedSequencePreviewLimit)
                                 .toList(growable: false);
 
-                            return Column(// Saved sequences section, with search and list of saved sequences
+                            return Column(
+                              // Saved sequences section, with search and list of saved sequences
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Row(

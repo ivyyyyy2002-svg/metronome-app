@@ -59,7 +59,7 @@ class ChineseText implements AppLanguageText {
   String get notesToPlay => '要播放的音符';
 
   @override
-  String get noteInputHelper => '使用 A-G、# 和 b，例如 C# 和 Bb。';
+  String get noteInputHelper => '使用 A-G、# 和 b。例如：A B C# Bb。';
 
   @override
   String get applySequence => '应用音符模式';

@@ -61,7 +61,7 @@ class FrenchText implements AppLanguageText {
   String get notesToPlay => 'Notes à jouer';
 
   @override
-  String get noteInputHelper => 'Utilisez A-G, # et b, ex. C# et Bb.';
+  String get noteInputHelper => 'Utilisez A-G, # et b. Exemple : A B C# Bb.';
 
   @override
   String get applySequence => 'Appliquer le motif';

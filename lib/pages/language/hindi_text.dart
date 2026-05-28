@@ -61,7 +61,7 @@ class HindiText implements AppLanguageText {
   String get notesToPlay => 'बजाने वाले नोट्स';
 
   @override
-  String get noteInputHelper => 'A-G, # और b इस्तेमाल करें, जैसे C# और Bb।';
+  String get noteInputHelper => 'A-G, # और b इस्तेमाल करें। उदाहरण: A B C# Bb।';
 
   @override
   String get applySequence => 'पैटर्न लागू करें';
