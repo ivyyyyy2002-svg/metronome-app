@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:math' as math;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_settings_controller.dart';
 import '../language/app_language_text.dart';
@@ -20,17 +21,19 @@ import 'widgets/transport_bar.dart';
 
 enum ClickAccent { strong, secondary, weak }
 
-enum _NoteSequenceEditorAction { applyText, importSaved }
+enum _NoteSequenceEditorAction { applyText, saveText, importSaved }
 
 class _NoteSequenceEditorResult {
   const _NoteSequenceEditorResult({
     required this.action,
     this.text,
+    this.name,
     this.savedSequence,
   });
 
   final _NoteSequenceEditorAction action;
   final String? text;
+  final String? name;
   final SavedNoteSequence? savedSequence;
 }
 
@@ -52,6 +55,13 @@ class MetronomeDemo extends StatefulWidget {
 // The state for the MetronomeDemo widget
 class _MetronomeDemoState extends State<MetronomeDemo>
     with SingleTickerProviderStateMixin {
+  static const String _savedBpmKey = 'metronome_bpm';
+  static const String _savedInstrumentKey = 'metronome_instrument';
+  static const String _savedTimeSignatureBeatsKey =
+      'metronome_time_signature_beats';
+  static const String _savedTimeSignatureNoteKey =
+      'metronome_time_signature_note';
+  static const String _savedBeatUnitKey = 'metronome_beat_unit';
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
   // Lower-bound floor for any instrument (A0). Each instrument's actual usable
@@ -279,7 +289,50 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   Future<void> _loadStartupData() async {
     await loadConfig();
+    await _loadSavedMetronomeSettings();
     await loadNoteSequence();
+  }
+
+  Future<void> _loadSavedMetronomeSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedBpm = prefs.getInt(_savedBpmKey);
+    final savedInstrument = prefs.getString(_savedInstrumentKey);
+    final savedBeats = prefs.getInt(_savedTimeSignatureBeatsKey);
+    final savedNote = prefs.getInt(_savedTimeSignatureNoteKey);
+    final savedBeatUnit = prefs.getString(_savedBeatUnitKey);
+
+    setState(() {
+      if (savedBpm != null) {
+        bpm = savedBpm.clamp(30, 240);
+      }
+      if (savedInstrument != null && instruments.contains(savedInstrument)) {
+        selectedInstrument = savedInstrument;
+      }
+      if (savedBeats != null && savedNote != null) {
+        final savedTimeSignature = '$savedBeats/$savedNote';
+        if (timeSignatureOptions.contains(savedTimeSignature)) {
+          timeSignatureBeats = savedBeats;
+          timeSignatureNote = savedNote;
+        }
+      }
+      if (savedBeatUnit != null) {
+        beatUnit = parseBeatUnit(
+          savedBeatUnit,
+          fallbackBeats: timeSignatureBeats,
+          fallbackNote: timeSignatureNote,
+        );
+      }
+    });
+    swingController.duration = Duration(milliseconds: _computeTickIntervalMs());
+  }
+
+  Future<void> _saveMetronomeSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_savedBpmKey, bpm);
+    await prefs.setString(_savedInstrumentKey, selectedInstrument);
+    await prefs.setInt(_savedTimeSignatureBeatsKey, timeSignatureBeats);
+    await prefs.setInt(_savedTimeSignatureNoteKey, timeSignatureNote);
+    await prefs.setString(_savedBeatUnitKey, beatUnitConfigValue(beatUnit));
   }
 
   // ---------- Audio Session ----------
@@ -641,6 +694,25 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return idx >= 0 ? idx : BeatUnit.values.indexOf(BeatUnit.quarter);
   }
 
+  String _localizedBeatUnitLabel(BeatUnit unit) {
+    switch (unit) {
+      case BeatUnit.half:
+        return _text.subdivisionHalf;
+      case BeatUnit.quarter:
+        return _text.subdivisionQuarter;
+      case BeatUnit.eighth:
+        return _text.subdivisionEighth;
+      case BeatUnit.sixteenth:
+        return _text.subdivisionSixteenth;
+      case BeatUnit.dottedHalf:
+        return _text.subdivisionDottedHalf;
+      case BeatUnit.dottedQuarter:
+        return _text.subdivisionDottedQuarter;
+      case BeatUnit.dottedEighth:
+        return _text.subdivisionDottedEighth;
+    }
+  }
+
   void _applyMeterSelection(int tsIndex, int unitIndex) {
     final selectedTimeSignature = timeSignatureOptions[tsIndex];
     final parts = selectedTimeSignature.split('/');
@@ -658,6 +730,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       beatUnit = BeatUnit.values[unitIndex];
       beat = 0;
     });
+    unawaited(_saveMetronomeSettings());
     _restartIfRunning();
   }
 
@@ -666,7 +739,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await showMeterPickerSheet(
       context: context,
       timeSignatureOptions: timeSignatureOptions,
-      beatUnitLabels: [for (final unit in BeatUnit.values) beatUnitLabel(unit)],
+      beatUnitLabels: [
+        for (final unit in BeatUnit.values) _localizedBeatUnitLabel(unit),
+      ],
       initialTimeSignatureIndex: _timeSignatureIndex(),
       initialBeatUnitIndex: _beatUnitIndex(),
       closeLabel: _text.close,
@@ -1144,6 +1219,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         _maxBaseFrequencyHz,
       );
     });
+    unawaited(_saveMetronomeSettings());
 
     _noteReady = false;
     _noteSourceCache.clear();
@@ -1179,6 +1255,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       if (bpm < 30) bpm = 30;
       if (bpm > 240) bpm = 240;
     });
+    unawaited(_saveMetronomeSettings());
 
     _restartIfRunning();
   }
@@ -1188,6 +1265,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     setState(() {
       bpm = newBpm.clamp(30, 240);
     });
+    unawaited(_saveMetronomeSettings());
 
     // Update swing animation duration
     swingController.duration = Duration(milliseconds: _computeTickIntervalMs());
@@ -1339,12 +1417,91 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
+  SavedNoteSequence? _savedSequenceByName(String name) {
+    final normalizedName = name.trim().toLowerCase();
+    for (final savedSequence in widget.noteSequenceController.savedSequences) {
+      if (savedSequence.name.toLowerCase() == normalizedName) {
+        return savedSequence;
+      }
+    }
+    return null;
+  }
+
+  bool _hasSameSequence(
+    List<String> firstSequence,
+    List<String> secondSequence,
+  ) {
+    if (firstSequence.length != secondSequence.length) return false;
+
+    for (int index = 0; index < firstSequence.length; index++) {
+      if (firstSequence[index] != secondSequence[index]) return false;
+    }
+    return true;
+  }
+
+  Future<bool> _confirmReplaceSavedSequence(String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: Text(_text.replaceSequenceQuestion(name)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(_text.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(_text.replace),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed ?? false;
+  }
+
+  Future<void> _saveEditedNoteSequence({
+    required String text,
+    required String name,
+  }) async {
+    final parsedSequence = parseNoteSequenceText(text);
+    if (parsedSequence.isEmpty ||
+        parsedSequence.length > maxNoteSequenceLength) {
+      return;
+    }
+
+    final existingSequence = _savedSequenceByName(name);
+    if (existingSequence != null) {
+      if (_hasSameSequence(parsedSequence, existingSequence.sequence)) {
+        await _applyCustomNoteSequenceText(parsedSequence.join(' '));
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_text.alreadySavedNotice)));
+        return;
+      }
+
+      final shouldReplace = await _confirmReplaceSavedSequence(name);
+      if (!shouldReplace || !mounted) return;
+    }
+
+    await _applyCustomNoteSequenceText(parsedSequence.join(' '));
+    final saved = await widget.noteSequenceController.saveCurrentSequence(name);
+    if (!saved || !mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(_text.sequenceSavedNotice)));
+  }
+
   // Open the note sequence editor bottom sheet, allowing quick text edits
   // or importing from saved sequences, with validation and preparation of audio assets for the new sequence
   Future<void> _openNoteSequenceEditor() async {
     final sequenceController = TextEditingController(
       text: noteSequence.join(' '),
     );
+    final nameController = TextEditingController();
     final searchController = TextEditingController();
 
     final result = await showModalBottomSheet<_NoteSequenceEditorResult>(
@@ -1355,6 +1512,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         var filteredSequences = widget.noteSequenceController
             .searchSavedSequences(searchController.text);
         String? sequenceErrorText;
+        String? sequenceNameErrorText;
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -1365,6 +1523,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               );
               setDialogState(() {
                 sequenceErrorText = null;
+                sequenceNameErrorText = null;
               });
             }
 
@@ -1517,6 +1676,77 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                           ).colorScheme.onSurfaceVariant,
                                         ),
                                   ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: nameController,
+                                          textCapitalization:
+                                              TextCapitalization.words,
+                                          decoration: InputDecoration(
+                                            border: const OutlineInputBorder(),
+                                            errorText: sequenceNameErrorText,
+                                            labelText: _text.sequenceName,
+                                          ),
+                                          onChanged: (_) {
+                                            if (sequenceNameErrorText == null) {
+                                              return;
+                                            }
+                                            setDialogState(() {
+                                              sequenceNameErrorText = null;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      FilledButton(
+                                        onPressed: () {
+                                          final parsedSequence =
+                                              parseNoteSequenceText(
+                                                sequenceController.text,
+                                              );
+                                          final name = nameController.text
+                                              .trim();
+                                          if (parsedSequence.isEmpty) {
+                                            setDialogState(() {
+                                              sequenceErrorText =
+                                                  _text.sequenceError;
+                                            });
+                                            return;
+                                          }
+                                          if (parsedSequence.length >
+                                              maxNoteSequenceLength) {
+                                            setDialogState(() {
+                                              sequenceErrorText = _text
+                                                  .noteSequenceTooLong(
+                                                    maxNoteSequenceLength,
+                                                  );
+                                            });
+                                            return;
+                                          }
+                                          if (name.isEmpty) {
+                                            setDialogState(() {
+                                              sequenceNameErrorText =
+                                                  _text.sequenceNameError;
+                                            });
+                                            return;
+                                          }
+                                          Navigator.of(context).pop(
+                                            _NoteSequenceEditorResult(
+                                              action: _NoteSequenceEditorAction
+                                                  .saveText,
+                                              text: parsedSequence.join(' '),
+                                              name: name,
+                                            ),
+                                          );
+                                        },
+                                        child: Text(_text.saveSequence),
+                                      ),
+                                    ],
+                                  ),
                                   const Spacer(),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.end,
@@ -1627,6 +1857,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     );
 
     sequenceController.dispose();
+    nameController.dispose();
     searchController.dispose();
 
     if (result == null) return;
@@ -1635,6 +1866,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         final text = result.text;
         if (text == null) return;
         await _applyCustomNoteSequenceText(text);
+        break;
+      case _NoteSequenceEditorAction.saveText:
+        final text = result.text;
+        final name = result.name;
+        if (text == null || name == null) return;
+        await _saveEditedNoteSequence(text: text, name: name);
         break;
       case _NoteSequenceEditorAction.importSaved:
         final savedSequence = result.savedSequence;
@@ -1782,7 +2019,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                         },
                         onMeterTap: _openMeterPickerSheet,
                         meterLabel:
-                            '$timeSignatureBeats/$timeSignatureNote · ${beatUnitLabel(beatUnit)}',
+                            '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
                         selectedInstrument: selectedInstrument,
                         instrumentItems: instrumentItems,
                         onInstrumentChanged: (v) {

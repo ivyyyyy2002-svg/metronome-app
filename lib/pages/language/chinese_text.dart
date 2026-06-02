@@ -50,6 +50,42 @@ class ChineseText implements AppLanguageText {
   String get startMetronome => '开始节拍器';
 
   @override
+  String get musicBasics => '音乐基础';
+
+  @override
+  String get basicsIntro => '节奏、拍号和记谱的简短参考。';
+
+  @override
+  String get bpmBasicsTitle => 'BPM';
+
+  @override
+  String get bpmBasicsBody => 'BPM 表示每分钟多少拍。练新节奏时可以先用慢速，稳定后再一点点加快。';
+
+  @override
+  String get timeSignatureBasicsTitle => '拍号';
+
+  @override
+  String get timeSignatureBasicsBody => '上面的数字表示每小节有几拍。4/4 很常见，适合多数练习；3/4 通常会有圆舞曲一样的律动。';
+
+  @override
+  String get subdivisionBasicsTitle => '细分';
+
+  @override
+  String get subdivisionBasicsBody => '细分控制一拍如何被拆开。四分更简单稳定；八分、十六分会让节拍提示更密。';
+
+  @override
+  String get downbeatBasicsTitle => '强拍';
+
+  @override
+  String get downbeatBasicsBody => '强拍通常是一小节的第一拍。更明显的第一拍可以帮助你听出小节结构，而不是每一拍都一样。';
+
+  @override
+  String get jianpuBasicsTitle => '简谱';
+
+  @override
+  String get jianpuBasicsBody => '简谱用数字表示音级，例如 1 2 3 5 6。它在中国乐器学习中很常见，选择调后可以对应到音名。';
+
+  @override
   String get practiceNotePattern => '练习音符模式';
 
   @override
@@ -183,7 +219,28 @@ class ChineseText implements AppLanguageText {
   String get timeSignature => '拍号';
 
   @override
-  String get beatUnit => '拍值';
+  String get beatUnit => '细分';
+
+  @override
+  String get subdivisionHalf => '二分';
+
+  @override
+  String get subdivisionQuarter => '四分';
+
+  @override
+  String get subdivisionEighth => '八分';
+
+  @override
+  String get subdivisionSixteenth => '十六分';
+
+  @override
+  String get subdivisionDottedHalf => '附点二分';
+
+  @override
+  String get subdivisionDottedQuarter => '附点四分';
+
+  @override
+  String get subdivisionDottedEighth => '附点八分';
 
   @override
   String get missingInstrument => '缺失';

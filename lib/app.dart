@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'pages/app_settings_controller.dart';
 import 'pages/metronome/note_sequence_controller.dart';
 import 'pages/main_home_page.dart';
+import 'pages/music_basics_page.dart';
 import 'pages/metronome/metronome_music.dart';
 import 'pages/metronome/metronome_demo_page.dart';
 
@@ -80,6 +81,8 @@ class _MyAppState extends State<MyApp> {
               noteSequenceController: noteSequenceController,
               appSettingsController: appSettingsController,
             ),
+            '/music-basics': (context) =>
+                MusicBasicsPage(appSettingsController: appSettingsController),
           },
         );
       },

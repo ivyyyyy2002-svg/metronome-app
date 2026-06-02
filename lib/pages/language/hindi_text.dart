@@ -51,6 +51,48 @@ class HindiText implements AppLanguageText {
   String get startMetronome => 'मेट्रोनोम शुरू करें';
 
   @override
+  String get musicBasics => 'Music Basics';
+
+  @override
+  String get basicsIntro =>
+      'Rhythm, meter और notation के छोटे reference cards.';
+
+  @override
+  String get bpmBasicsTitle => 'BPM';
+
+  @override
+  String get bpmBasicsBody =>
+      'BPM का मतलब beats per minute है। नया pattern सीखते समय slow BPM रखें, फिर timing steady होने पर धीरे-धीरे बढ़ाएँ।';
+
+  @override
+  String get timeSignatureBasicsTitle => 'Time Signature';
+
+  @override
+  String get timeSignatureBasicsBody =>
+      'ऊपर वाला नंबर बताता है कि हर bar में कितने beats हैं। 4/4 बहुत common है, और 3/4 में अक्सर waltz जैसा feel आता है।';
+
+  @override
+  String get subdivisionBasicsTitle => 'Subdivision';
+
+  @override
+  String get subdivisionBasicsBody =>
+      'Subdivision बताता है कि beat कैसे split होता है। Quarter simple रहता है; eighth और sixteenth click को ज्यादा detailed बनाते हैं।';
+
+  @override
+  String get downbeatBasicsTitle => 'Downbeat';
+
+  @override
+  String get downbeatBasicsBody =>
+      'Downbeat bar का पहला beat होता है। Strong first click से measure की shape साफ सुनाई देती है।';
+
+  @override
+  String get jianpuBasicsTitle => 'Jianpu';
+
+  @override
+  String get jianpuBasicsBody =>
+      'Jianpu scale degrees के लिए numbers इस्तेमाल करता है, जैसे 1 2 3 5 6। Key चुनकर इसे note names से जोड़ा जा सकता है।';
+
+  @override
   String get practiceNotePattern => 'नोट पैटर्न';
 
   @override
@@ -188,7 +230,28 @@ class HindiText implements AppLanguageText {
   String get timeSignature => 'टाइम सिग्नेचर';
 
   @override
-  String get beatUnit => 'बीट यूनिट';
+  String get beatUnit => 'सबडिवीजन';
+
+  @override
+  String get subdivisionHalf => 'Half';
+
+  @override
+  String get subdivisionQuarter => 'Quarter';
+
+  @override
+  String get subdivisionEighth => 'Eighth';
+
+  @override
+  String get subdivisionSixteenth => 'Sixteenth';
+
+  @override
+  String get subdivisionDottedHalf => 'Dotted Half';
+
+  @override
+  String get subdivisionDottedQuarter => 'Dotted Quarter';
+
+  @override
+  String get subdivisionDottedEighth => 'Dotted Eighth';
 
   @override
   String get missingInstrument => 'नहीं मिला';

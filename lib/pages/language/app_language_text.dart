@@ -18,6 +18,18 @@ abstract class AppLanguageText {
   String get readyTitle;
   String get readyDescription;
   String get startMetronome;
+  String get musicBasics;
+  String get basicsIntro;
+  String get bpmBasicsTitle;
+  String get bpmBasicsBody;
+  String get timeSignatureBasicsTitle;
+  String get timeSignatureBasicsBody;
+  String get subdivisionBasicsTitle;
+  String get subdivisionBasicsBody;
+  String get downbeatBasicsTitle;
+  String get downbeatBasicsBody;
+  String get jianpuBasicsTitle;
+  String get jianpuBasicsBody;
 
   String get practiceNotePattern;
   String get notePatternDescription;
@@ -66,6 +78,13 @@ abstract class AppLanguageText {
   String get done;
   String get timeSignature;
   String get beatUnit;
+  String get subdivisionHalf;
+  String get subdivisionQuarter;
+  String get subdivisionEighth;
+  String get subdivisionSixteenth;
+  String get subdivisionDottedHalf;
+  String get subdivisionDottedQuarter;
+  String get subdivisionDottedEighth;
   String get missingInstrument;
   String noPlayableAssets(String instrument);
 }

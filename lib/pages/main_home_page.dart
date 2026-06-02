@@ -399,6 +399,10 @@ class _MainHomePageState extends State<MainHomePage> {
     Navigator.of(context).pushNamed('/metronome');
   }
 
+  void _openMusicBasics() {
+    Navigator.of(context).pushNamed('/music-basics');
+  }
+
   // Opens the settings bottom sheet, allowing the user to change
   // theme and language preferences.
   void _openSettingsSheet() {
@@ -627,6 +631,14 @@ class _MainHomePageState extends State<MainHomePage> {
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _openMusicBasics,
+                            child: Text(text.musicBasics),
+                          ),
                         ),
                       ],
                     ),

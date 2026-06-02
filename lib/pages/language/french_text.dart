@@ -51,6 +51,48 @@ class FrenchText implements AppLanguageText {
   String get startMetronome => 'Démarrer le métronome';
 
   @override
+  String get musicBasics => 'Bases musicales';
+
+  @override
+  String get basicsIntro =>
+      'Repères rapides pour le rythme, la mesure et la notation.';
+
+  @override
+  String get bpmBasicsTitle => 'BPM';
+
+  @override
+  String get bpmBasicsBody =>
+      'BPM signifie battements par minute. Travaillez lentement au début, puis augmentez le tempo quand le rythme devient stable.';
+
+  @override
+  String get timeSignatureBasicsTitle => 'Mesure';
+
+  @override
+  String get timeSignatureBasicsBody =>
+      'Le nombre du haut indique combien de temps il y a dans chaque mesure. 4/4 est très courant; 3/4 donne souvent une sensation de valse.';
+
+  @override
+  String get subdivisionBasicsTitle => 'Subdivision';
+
+  @override
+  String get subdivisionBasicsBody =>
+      'La subdivision indique comment le temps est divisé. La noire reste simple; les croches et doubles croches donnent un repère plus détaillé.';
+
+  @override
+  String get downbeatBasicsTitle => 'Premier temps';
+
+  @override
+  String get downbeatBasicsBody =>
+      'Le premier temps commence la mesure. Un accent plus fort aide à sentir la forme de la mesure au lieu de compter tous les temps pareil.';
+
+  @override
+  String get jianpuBasicsTitle => 'Jianpu';
+
+  @override
+  String get jianpuBasicsBody =>
+      'Le jianpu utilise des chiffres pour les degrés de la gamme, comme 1 2 3 5 6. Il peut être relié aux noms de notes en choisissant une tonalité.';
+
+  @override
   String get practiceNotePattern => 'Motif de notes';
 
   @override
@@ -188,7 +230,28 @@ class FrenchText implements AppLanguageText {
   String get timeSignature => 'Mesure';
 
   @override
-  String get beatUnit => 'Unité de temps';
+  String get beatUnit => 'Subdivision';
+
+  @override
+  String get subdivisionHalf => 'Blanche';
+
+  @override
+  String get subdivisionQuarter => 'Noire';
+
+  @override
+  String get subdivisionEighth => 'Croche';
+
+  @override
+  String get subdivisionSixteenth => 'Double croche';
+
+  @override
+  String get subdivisionDottedHalf => 'Blanche pointée';
+
+  @override
+  String get subdivisionDottedQuarter => 'Noire pointée';
+
+  @override
+  String get subdivisionDottedEighth => 'Croche pointée';
 
   @override
   String get missingInstrument => 'manquant';

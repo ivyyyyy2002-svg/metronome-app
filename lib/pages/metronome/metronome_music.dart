@@ -112,23 +112,23 @@ BeatUnit defaultBeatUnitForSignature(int beats, int note) {
   return BeatUnit.quarter;
 }
 
-// Returns a user-friendly label for the given beat unit, e.g. "1/4" for quarter notes.
+// Returns a compact label for the given subdivision.
 String beatUnitLabel(BeatUnit unit) {
   switch (unit) {
     case BeatUnit.half:
-      return '1/2';
+      return 'Half';
     case BeatUnit.quarter:
-      return '1/4';
+      return 'Quarter';
     case BeatUnit.eighth:
-      return '1/8';
+      return 'Eighth';
     case BeatUnit.sixteenth:
-      return '1/16';
+      return 'Sixteenth';
     case BeatUnit.dottedHalf:
-      return '1/2.';
+      return 'Dotted Half';
     case BeatUnit.dottedQuarter:
-      return '1/4.';
+      return 'Dotted Quarter';
     case BeatUnit.dottedEighth:
-      return '1/8.';
+      return 'Dotted Eighth';
   }
 }
 

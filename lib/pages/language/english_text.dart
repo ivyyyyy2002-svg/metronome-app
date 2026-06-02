@@ -51,6 +51,47 @@ class EnglishText implements AppLanguageText {
   String get startMetronome => 'Start Metronome';
 
   @override
+  String get musicBasics => 'Music Basics';
+
+  @override
+  String get basicsIntro => 'Quick references for rhythm, meter, and notation.';
+
+  @override
+  String get bpmBasicsTitle => 'BPM';
+
+  @override
+  String get bpmBasicsBody =>
+      'BPM means beats per minute. Use a slower BPM when learning a new pattern, then raise it gradually when your timing feels steady.';
+
+  @override
+  String get timeSignatureBasicsTitle => 'Time Signature';
+
+  @override
+  String get timeSignatureBasicsBody =>
+      'The top number tells how many beats are in each bar. 4/4 is common for pop and practice exercises, while 3/4 often feels like a waltz.';
+
+  @override
+  String get subdivisionBasicsTitle => 'Subdivision';
+
+  @override
+  String get subdivisionBasicsBody =>
+      'Subdivision controls how the beat is split. Quarter is simple and steady; eighth and sixteenth make the click feel more detailed.';
+
+  @override
+  String get downbeatBasicsTitle => 'Downbeat';
+
+  @override
+  String get downbeatBasicsBody =>
+      'The downbeat is the first beat of a bar. A stronger first click helps you hear the shape of the measure instead of counting every beat equally.';
+
+  @override
+  String get jianpuBasicsTitle => 'Jianpu';
+
+  @override
+  String get jianpuBasicsBody =>
+      'Jianpu uses numbers for scale degrees, such as 1 2 3 5 6. It is common in Chinese instrument learning and can be mapped to note names by choosing a key.';
+
+  @override
   String get practiceNotePattern => 'Practice Note Pattern';
 
   @override
@@ -188,7 +229,28 @@ class EnglishText implements AppLanguageText {
   String get timeSignature => 'Time Signature';
 
   @override
-  String get beatUnit => 'Beat Unit';
+  String get beatUnit => 'Subdivision';
+
+  @override
+  String get subdivisionHalf => 'Half';
+
+  @override
+  String get subdivisionQuarter => 'Quarter';
+
+  @override
+  String get subdivisionEighth => 'Eighth';
+
+  @override
+  String get subdivisionSixteenth => 'Sixteenth';
+
+  @override
+  String get subdivisionDottedHalf => 'Dotted Half';
+
+  @override
+  String get subdivisionDottedQuarter => 'Dotted Quarter';
+
+  @override
+  String get subdivisionDottedEighth => 'Dotted Eighth';
 
   @override
   String get missingInstrument => 'missing';
