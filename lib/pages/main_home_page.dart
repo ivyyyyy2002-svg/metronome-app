@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 import 'app_settings_controller.dart';
 import 'metronome/metronome_music.dart';
 import 'metronome/note_sequence_controller.dart';
+import 'music_basics_page.dart';
+import 'practice_history_controller.dart';
 import 'language/app_text.dart';
 
 // Main home page of the app, with a welcome message and button to start the metronome demo page.
@@ -13,10 +16,12 @@ class MainHomePage extends StatefulWidget {
     super.key,
     required this.noteSequenceController,
     required this.appSettingsController,
+    required this.practiceHistoryController,
   });
 
   final NoteSequenceController noteSequenceController;
   final AppSettingsController appSettingsController;
+  final PracticeHistoryController practiceHistoryController;
 
   @override
   State<MainHomePage> createState() => _MainHomePageState();
@@ -32,13 +37,20 @@ class _MainHomePageState extends State<MainHomePage> {
   final TextEditingController _savedSearchController = TextEditingController();
   String? _sequenceErrorText;
   String? _sequenceNameErrorText;
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     widget.noteSequenceController.addListener(_handleSequenceControllerChanged);
+    widget.practiceHistoryController.addListener(_refreshPracticeHistory);
     _savedSearchController.addListener(_refreshSavedSequenceList);
     _syncSequenceText();
+  }
+
+  void _refreshPracticeHistory() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _handleSequenceControllerChanged() {
@@ -399,10 +411,6 @@ class _MainHomePageState extends State<MainHomePage> {
     Navigator.of(context).pushNamed('/metronome');
   }
 
-  void _openMusicBasics() {
-    Navigator.of(context).pushNamed('/music-basics');
-  }
-
   // Opens the settings bottom sheet, allowing the user to change
   // theme and language preferences.
   void _openSettingsSheet() {
@@ -524,6 +532,7 @@ class _MainHomePageState extends State<MainHomePage> {
     widget.noteSequenceController.removeListener(
       _handleSequenceControllerChanged,
     );
+    widget.practiceHistoryController.removeListener(_refreshPracticeHistory);
     _savedSearchController.removeListener(_refreshSavedSequenceList);
     _sequenceTextController.dispose();
     _sequenceNameController.dispose();
@@ -543,6 +552,21 @@ class _MainHomePageState extends State<MainHomePage> {
         : const [Color(0xFFF2F8FF), Color(0xFFE8F6F2), Color(0xFFFFF8EC)];
 
     return Scaffold(
+      extendBody: true,
+      bottomNavigationBar: _HomeTabBar(
+        selectedIndex: _selectedTabIndex,
+        labels: [text.practiceTab, text.sequencesTab, text.basicsTab],
+        icons: const [
+          Icons.play_arrow_rounded,
+          Icons.library_music_rounded,
+          Icons.school_rounded,
+        ],
+        onSelected: (index) {
+          setState(() {
+            _selectedTabIndex = index;
+          });
+        },
+      ),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -555,7 +579,7 @@ class _MainHomePageState extends State<MainHomePage> {
         child: SizedBox.expand(
           child: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -587,297 +611,605 @@ class _MainHomePageState extends State<MainHomePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    // Main action card
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: scheme.shadow.withValues(alpha: 0.08),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          // Main action card title
-                          text.readyTitle,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          // Main action card description
-                          text.readyDescription,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          // Action buttons
-                          children: [
-                            Expanded(
-                              child: FilledButton.icon(
-                                onPressed: _startMetronome,
-                                icon: const Icon(Icons.play_arrow_rounded),
-                                label: Text(text.startMetronome),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _openMusicBasics,
-                            child: Text(text.musicBasics),
+                  if (_selectedTabIndex == 0) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      // Main action card
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                      decoration: BoxDecoration(
+                        color: scheme.surface,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: scheme.shadow.withValues(alpha: 0.08),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            // Main action card title
+                            text.readyTitle,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            // Main action card description
+                            text.readyDescription,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 14),
+                          Row(
+                            // Action buttons
+                            children: [
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: _startMetronome,
+                                  icon: const Icon(Icons.play_arrow_rounded),
+                                  label: Text(text.startMetronome),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 18),
+                    const SizedBox(height: 18),
+                    _PracticeHistoryCard(
+                      title: text.practiceHistory,
+                      todayLabel: text.todayPractice,
+                      lastSessionLabel: text.lastSession,
+                      mostUsedBpmLabel: text.mostUsedBpm,
+                      emptyLabel: text.noPracticeYet,
+                      controller: widget.practiceHistoryController,
+                    ),
+                    const SizedBox(height: 18),
+                  ],
 
                   // Custom note sequence input card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: scheme.shadow.withValues(alpha: 0.08),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          text.practiceNotePattern,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          text.notePatternDescription,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          // Note sequence input field, with validation and helper text
-                          controller: _sequenceTextController,
-                          textCapitalization: TextCapitalization.none,
-                          minLines: 1,
-                          maxLines: 4,
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(),
-                            errorText: _sequenceErrorText,
-                            labelText: text.notesToPlay,
-                            hintText: 'A B C D E F G F E D C B A',
-                            errorMaxLines: 2,
+                  if (_selectedTabIndex == 1)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      decoration: BoxDecoration(
+                        color: scheme.surface,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: scheme.shadow.withValues(alpha: 0.08),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
                           ),
-                          onChanged: _handleSequenceTextChanged,
-                          onEditingComplete: _normalizeSequenceInputSpacing,
-                          onTapOutside: (_) => _normalizeSequenceInputSpacing(),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                text.noteInputHelper,
-                                textAlign: TextAlign.left,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: scheme.onSurfaceVariant),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: scheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '${parseNoteSequenceText(_sequenceTextController.text).length} / $maxNoteSequenceLength',
-                                textAlign: TextAlign.right,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        // Sequence name input field, with validation
-                        TextField(
-                          controller: _sequenceNameController,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(),
-                            errorText: _sequenceNameErrorText,
-                            labelText: text.sequenceName,
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            text.practiceNotePattern,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                          onChanged: (_) {
-                            if (_sequenceNameErrorText == null) return;
-                            setState(() {
-                              _sequenceNameErrorText = null;
-                            });
-                          },
-                        ),
-
-                        // Note input action chips for quick entry of notes and accidentals
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final note in const ['A', 'B', 'C', 'D', 'E'])
-                              ActionChip(
-                                label: Text(note),
-                                onPressed: () => _appendNoteToSequence(note),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final note in const ['F', 'G'])
-                              ActionChip(
-                                label: Text(note),
-                                onPressed: () => _appendNoteToSequence(note),
-                              ),
-                            ActionChip(
-                              label: const Text('#'),
-                              onPressed: () => _applyAccidentalToLastNote('#'),
+                          const SizedBox(height: 4),
+                          Text(
+                            text.notePatternDescription,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            // Note sequence input field, with validation and helper text
+                            controller: _sequenceTextController,
+                            textCapitalization: TextCapitalization.none,
+                            minLines: 1,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              errorText: _sequenceErrorText,
+                              labelText: text.notesToPlay,
+                              hintText: 'A B C D E F G F E D C B A',
+                              errorMaxLines: 2,
                             ),
-                            ActionChip(
-                              label: const Text('b'),
-                              onPressed: () => _applyAccidentalToLastNote('b'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            TextButton(
-                              onPressed: _deleteLastNoteInput,
-                              child: Text(text.deleteNote),
-                            ),
-                            TextButton(
-                              onPressed: _clearNoteSequenceInput,
-                              child: Text(text.clearNotes),
-                            ),
-                            FilledButton(
-                              onPressed: _saveNamedSequence,
-                              child: Text(text.saveSequence),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        const SizedBox(height: 8),
-                        Builder(
-                          builder: (context) {
-                            final filteredSequences = _filteredSavedSequences();
-                            final previewSequences = filteredSequences
-                                .take(_savedSequencePreviewLimit)
-                                .toList(growable: false);
-
-                            return Column(
-                              // Saved sequences section, with search and list of saved sequences
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        text.savedSequences,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                            onChanged: _handleSequenceTextChanged,
+                            onEditingComplete: _normalizeSequenceInputSpacing,
+                            onTapOutside: (_) =>
+                                _normalizeSequenceInputSpacing(),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  text.noteInputHelper,
+                                  textAlign: TextAlign.left,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
                                       ),
-                                    ),
-                                    if (filteredSequences.isNotEmpty)
-                                      Text(
-                                        text.savedSequenceSummary(
-                                          previewSequences.length,
-                                          filteredSequences.length,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: scheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${parseNoteSequenceText(_sequenceTextController.text).length} / $maxNoteSequenceLength',
+                                  textAlign: TextAlign.right,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Sequence name input field, with validation
+                          TextField(
+                            controller: _sequenceNameController,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              errorText: _sequenceNameErrorText,
+                              labelText: text.sequenceName,
+                            ),
+                            onChanged: (_) {
+                              if (_sequenceNameErrorText == null) return;
+                              setState(() {
+                                _sequenceNameErrorText = null;
+                              });
+                            },
+                          ),
+
+                          // Note input action chips for quick entry of notes and accidentals
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final note in const [
+                                'A',
+                                'B',
+                                'C',
+                                'D',
+                                'E',
+                              ])
+                                ActionChip(
+                                  label: Text(note),
+                                  onPressed: () => _appendNoteToSequence(note),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final note in const ['F', 'G'])
+                                ActionChip(
+                                  label: Text(note),
+                                  onPressed: () => _appendNoteToSequence(note),
+                                ),
+                              ActionChip(
+                                label: const Text('#'),
+                                onPressed: () =>
+                                    _applyAccidentalToLastNote('#'),
+                              ),
+                              ActionChip(
+                                label: const Text('b'),
+                                onPressed: () =>
+                                    _applyAccidentalToLastNote('b'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              TextButton(
+                                onPressed: _deleteLastNoteInput,
+                                child: Text(text.deleteNote),
+                              ),
+                              TextButton(
+                                onPressed: _clearNoteSequenceInput,
+                                child: Text(text.clearNotes),
+                              ),
+                              FilledButton(
+                                onPressed: _saveNamedSequence,
+                                child: Text(text.saveSequence),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const SizedBox(height: 8),
+                          Builder(
+                            builder: (context) {
+                              final filteredSequences =
+                                  _filteredSavedSequences();
+                              final previewSequences = filteredSequences
+                                  .take(_savedSequencePreviewLimit)
+                                  .toList(growable: false);
+
+                              return Column(
+                                // Saved sequences section, with search and list of saved sequences
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          text.savedSequences,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
                                         ),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: scheme.onSurfaceVariant,
-                                            ),
                                       ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: _savedSearchController,
-                                  decoration: InputDecoration(
-                                    border: const OutlineInputBorder(),
-                                    labelText: text.searchSequences,
+                                      if (filteredSequences.isNotEmpty)
+                                        Text(
+                                          text.savedSequenceSummary(
+                                            previewSequences.length,
+                                            filteredSequences.length,
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: scheme.onSurfaceVariant,
+                                              ),
+                                        ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                _SavedSequencesList(
-                                  savedSequences: previewSequences,
-                                  emptyLabel: text.noSavedSequences,
-                                  loadLabel: text.loadSequence,
-                                  deleteLabel: text.deleteNote,
-                                  onLoad: _loadSavedSequence,
-                                  onDelete: _deleteSavedSequence,
-                                ),
-                                if (filteredSequences.length >
-                                    _savedSequencePreviewLimit) ...[
                                   const SizedBox(height: 8),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton(
-                                      onPressed: _openSavedSequencesSheet,
-                                      child: Text(text.viewAll),
+                                  TextField(
+                                    controller: _savedSearchController,
+                                    decoration: InputDecoration(
+                                      border: const OutlineInputBorder(),
+                                      labelText: text.searchSequences,
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
+                                  _SavedSequencesList(
+                                    savedSequences: previewSequences,
+                                    emptyLabel: text.noSavedSequences,
+                                    loadLabel: text.loadSequence,
+                                    deleteLabel: text.deleteNote,
+                                    onLoad: _loadSavedSequence,
+                                    onDelete: _deleteSavedSequence,
+                                  ),
+                                  if (filteredSequences.length >
+                                      _savedSequencePreviewLimit) ...[
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed: _openSavedSequencesSheet,
+                                        child: Text(text.viewAll),
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
-                            );
-                          },
-                        ),
-                      ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  if (_selectedTabIndex == 2) ...[
+                    const SizedBox(height: 16),
+                    MusicBasicsContent(
+                      appSettingsController: widget.appSettingsController,
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// A custom bottom tab bar for the home page, allowing the user 
+// to switch between the Practice, Sequences, and Basics tabs.
+class _HomeTabBar extends StatelessWidget {
+  const _HomeTabBar({
+    required this.selectedIndex,
+    required this.labels,
+    required this.icons,
+    required this.onSelected,
+  });
+
+  final int selectedIndex;
+  final List<String> labels;
+  final List<IconData> icons;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: SizedBox(
+        height: 64,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: scheme.onSurface.withValues(alpha: 0.10),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.shadow.withValues(alpha: 0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final segmentWidth = constraints.maxWidth / labels.length;
+                  return Stack(
+                    children: [
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        left: 6 + (segmentWidth * selectedIndex),
+                        top: 6,
+                        bottom: 6,
+                        width: segmentWidth - 12,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: scheme.primaryContainer.withValues(
+                              alpha: 0.34,
+                            ),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: scheme.onPrimaryContainer.withValues(
+                                alpha: 0.10,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Row(
+                          children: [
+                            for (int index = 0; index < labels.length; index++)
+                              Expanded(
+                                child: _HomeTabButton(
+                                  label: labels[index],
+                                  icon: icons[index],
+                                  selected: selectedIndex == index,
+                                  onTap: () => onSelected(index),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeTabButton extends StatelessWidget {
+  const _HomeTabButton({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 19,
+                color: selected
+                    ? scheme.onPrimaryContainer
+                    : scheme.onSurfaceVariant.withValues(alpha: 0.78),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: selected
+                      ? scheme.onPrimaryContainer
+                      : scheme.onSurfaceVariant.withValues(alpha: 0.82),
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Widget for displaying the user's practice history, including 
+// today's practice time, the most used BPM, and details of the last practice session.
+class _PracticeHistoryCard extends StatelessWidget {
+  const _PracticeHistoryCard({
+    required this.title,
+    required this.todayLabel,
+    required this.lastSessionLabel,
+    required this.mostUsedBpmLabel,
+    required this.emptyLabel,
+    required this.controller,
+  });
+
+  final String title;
+  final String todayLabel;
+  final String lastSessionLabel;
+  final String mostUsedBpmLabel;
+  final String emptyLabel;
+  final PracticeHistoryController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final lastSession = controller.lastSession;
+    final mostUsedBpm = controller.mostUsedBpm;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _PracticeStatPill(
+                label: todayLabel,
+                value: controller.formatDuration(
+                  controller.todayPracticeSeconds,
+                ),
+              ),
+              _PracticeStatPill(
+                label: mostUsedBpmLabel,
+                value: mostUsedBpm == null ? '--' : '$mostUsedBpm',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            lastSessionLabel,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            lastSession == null
+                ? emptyLabel
+                : '${controller.formatDuration(lastSession.durationSeconds)} · ${lastSession.bpm} BPM · ${lastSession.sequenceText}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PracticeStatPill extends StatelessWidget {
+  const _PracticeStatPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }

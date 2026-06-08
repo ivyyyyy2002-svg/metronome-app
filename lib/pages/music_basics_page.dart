@@ -12,6 +12,31 @@ class MusicBasicsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = appTextFor(appSettingsController.language);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(text.musicBasics)),
+      body: MusicBasicsContent(appSettingsController: appSettingsController),
+    );
+  }
+}
+
+class MusicBasicsContent extends StatelessWidget {
+  const MusicBasicsContent({
+    super.key,
+    required this.appSettingsController,
+    this.padding = const EdgeInsets.fromLTRB(20, 12, 20, 24),
+    this.shrinkWrap = false,
+    this.physics,
+  });
+
+  final AppSettingsController appSettingsController;
+  final EdgeInsetsGeometry padding;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = appTextFor(appSettingsController.language);
     final scheme = Theme.of(context).colorScheme;
     final cards = [
       (text.bpmBasicsTitle, text.bpmBasicsBody),
@@ -21,52 +46,51 @@ class MusicBasicsPage extends StatelessWidget {
       (text.jianpuBasicsTitle, text.jianpuBasicsBody),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: Text(text.musicBasics)),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        itemCount: cards.length + 1,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Text(
-              text.basicsIntro,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            );
-          }
-
-          final card = cards[index - 1];
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  card.$1,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  card.$2,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
+    return ListView.separated(
+      padding: padding,
+      shrinkWrap: shrinkWrap,
+      physics: physics,
+      itemCount: cards.length + 1,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Text(
+            text.basicsIntro,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           );
-        },
-      ),
+        }
+
+        final card = cards[index - 1];
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                card.$1,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                card.$2,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

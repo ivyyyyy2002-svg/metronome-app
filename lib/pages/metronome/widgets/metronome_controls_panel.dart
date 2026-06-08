@@ -12,7 +12,6 @@ class MetronomeControlsPanel extends StatelessWidget {
     required this.notesLoadedLabel,
     required this.clickLabel,
     required this.soundLabel,
-    required this.instrumentLabel,
     required this.bpm,
     required this.enableClick,
     required this.enableSound,
@@ -22,9 +21,6 @@ class MetronomeControlsPanel extends StatelessWidget {
     required this.onSoundToggle,
     required this.onMeterTap,
     required this.meterLabel,
-    required this.selectedInstrument,
-    required this.instrumentItems,
-    required this.onInstrumentChanged,
   });
 
   final int noteCount;
@@ -34,7 +30,6 @@ class MetronomeControlsPanel extends StatelessWidget {
   final String notesLoadedLabel;
   final String clickLabel;
   final String soundLabel;
-  final String instrumentLabel;
   final int bpm;
   final bool enableClick;
   final bool enableSound;
@@ -44,9 +39,6 @@ class MetronomeControlsPanel extends StatelessWidget {
   final ValueChanged<bool> onSoundToggle;
   final VoidCallback onMeterTap;
   final String meterLabel;
-  final String selectedInstrument;
-  final List<DropdownMenuItem<String>> instrumentItems;
-  final ValueChanged<String?> onInstrumentChanged;
 
   // Builds the UI for the metronome controls panel,
   // including BPM slider, click/sound toggles, meter picker, and instrument selector.
@@ -198,19 +190,6 @@ class MetronomeControlsPanel extends StatelessWidget {
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('$instrumentLabel: '),
-            const SizedBox(width: 8),
-            DropdownButton<String>(
-              value: selectedInstrument,
-              items: instrumentItems,
-              onChanged: onInstrumentChanged,
-            ),
-          ],
         ),
       ],
     );

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import 'pages/app_settings_controller.dart';
 import 'pages/metronome/note_sequence_controller.dart';
+import 'pages/practice_history_controller.dart';
 import 'pages/main_home_page.dart';
 import 'pages/music_basics_page.dart';
 import 'pages/metronome/metronome_music.dart';
@@ -29,12 +30,15 @@ class _MyAppState extends State<MyApp> {
   final NoteSequenceController noteSequenceController =
       NoteSequenceController();
   final AppSettingsController appSettingsController = AppSettingsController();
+  final PracticeHistoryController practiceHistoryController =
+      PracticeHistoryController();
 
   @override
   void initState() {
     super.initState();
     _loadSavedNoteSequence();
     appSettingsController.load();
+    practiceHistoryController.load();
   }
 
   Future<void> _loadSavedNoteSequence() async {
@@ -75,11 +79,13 @@ class _MyAppState extends State<MyApp> {
           home: MainHomePage(
             noteSequenceController: noteSequenceController,
             appSettingsController: appSettingsController,
+            practiceHistoryController: practiceHistoryController,
           ),
           routes: {
             '/metronome': (context) => MetronomeDemo(
               noteSequenceController: noteSequenceController,
               appSettingsController: appSettingsController,
+              practiceHistoryController: practiceHistoryController,
             ),
             '/music-basics': (context) =>
                 MusicBasicsPage(appSettingsController: appSettingsController),
@@ -93,6 +99,7 @@ class _MyAppState extends State<MyApp> {
   void dispose() {
     noteSequenceController.dispose();
     appSettingsController.dispose();
+    practiceHistoryController.dispose();
     super.dispose();
   }
 }

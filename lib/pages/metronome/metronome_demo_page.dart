@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../app_settings_controller.dart';
 import '../language/app_language_text.dart';
 import '../language/app_text.dart';
+import '../practice_history_controller.dart';
 import 'note_sequence_controller.dart';
 import 'metronome_music.dart';
 import 'instrument_sf2_controller.dart';
@@ -43,10 +44,12 @@ class MetronomeDemo extends StatefulWidget {
     super.key,
     required this.noteSequenceController,
     required this.appSettingsController,
+    required this.practiceHistoryController,
   });
 
   final NoteSequenceController noteSequenceController;
   final AppSettingsController appSettingsController;
+  final PracticeHistoryController practiceHistoryController;
 
   @override
   State<MetronomeDemo> createState() => _MetronomeDemoState();
@@ -78,6 +81,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   int beat = 0;
   int bpm = 90; // Beats per minute
   Timer? timer;
+  DateTime? practiceStartedAt;
 
   // just_audio players
   final AudioPlayer clickStrongPlayer = AudioPlayer();
@@ -1316,6 +1320,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     // Start the swing animation
     swingController.duration = Duration(milliseconds: _intervalMs);
     swingController.repeat(reverse: true);
+    practiceStartedAt = DateTime.now();
 
     // Stable tick scheduling (avoids Timer.periodic jitter)
     final sw = Stopwatch()..start();
@@ -1342,6 +1347,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // Stop the metronome
   Future<void> stop() async {
     final oldTimer = timer;
+    final startedAt = practiceStartedAt;
+    practiceStartedAt = null;
 
     setState(() {
       timer = null;
@@ -1353,6 +1360,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     await _pauseClickPlayers();
     await _releaseAllNotePlayers(releaseMs: 60);
+
+    if (oldTimer != null && startedAt != null) {
+      await widget.practiceHistoryController.recordSession(
+        duration: DateTime.now().difference(startedAt),
+        bpm: bpm,
+        sequenceText: noteSequence.join(' '),
+        startedAt: startedAt,
+      );
+    }
   }
 
   // Reset to initial state
@@ -1922,18 +1938,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         idleColor: idleColor,
       );
     });
-    final instrumentItems = instruments
-        .map((ins) {
-          final hasAssets = instrumentAvailability[ins] ?? true;
-          final label = hasAssets ? ins : '$ins (${text.missingInstrument})';
-          return DropdownMenuItem(
-            value: ins,
-            enabled: hasAssets,
-            child: Text(label),
-          );
-        })
-        .toList(growable: false);
-
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
@@ -1955,6 +1959,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           minBaseLabel: 'A$_instrumentMinOctave',
           maxBaseLabel: 'A$_instrumentMaxOctave',
           titleLabel: text.advancedSettings,
+          instrumentLabel: text.instrument,
+          instruments: instruments,
+          instrumentAvailability: instrumentAvailability,
+          selectedInstrument: selectedInstrument,
+          missingInstrumentLabel: text.missingInstrument,
+          onInstrumentChanged: _onInstrumentChanged,
           onBaseFrequencyChanged: (v) {
             setState(() => baseFrequencyHz = v);
           },
@@ -1995,7 +2005,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                         notesLoadedLabel: text.notesLoaded,
                         clickLabel: text.click,
                         soundLabel: text.sound,
-                        instrumentLabel: text.instrument,
                         bpm: bpm,
                         enableClick: enableClick,
                         enableSound: enableSound,
@@ -2020,12 +2029,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                         onMeterTap: _openMeterPickerSheet,
                         meterLabel:
                             '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
-                        selectedInstrument: selectedInstrument,
-                        instrumentItems: instrumentItems,
-                        onInstrumentChanged: (v) {
-                          if (v == null) return;
-                          _onInstrumentChanged(v);
-                        },
                       ),
                     ],
                   ),

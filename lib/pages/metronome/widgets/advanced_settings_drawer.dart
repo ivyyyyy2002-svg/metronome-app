@@ -10,6 +10,12 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.onBaseFrequencyChanged,
     required this.onBaseFrequencyChangeEnd,
     required this.titleLabel,
+    required this.instrumentLabel,
+    required this.instruments,
+    required this.instrumentAvailability,
+    required this.selectedInstrument,
+    required this.onInstrumentChanged,
+    required this.missingInstrumentLabel,
     this.minBaseLabel,
     this.maxBaseLabel,
   });
@@ -20,6 +26,12 @@ class AdvancedSettingsDrawer extends StatelessWidget {
   final ValueChanged<double> onBaseFrequencyChanged;
   final ValueChanged<double> onBaseFrequencyChangeEnd;
   final String titleLabel;
+  final String instrumentLabel;
+  final List<String> instruments;
+  final Map<String, bool> instrumentAvailability;
+  final String selectedInstrument;
+  final ValueChanged<String> onInstrumentChanged;
+  final String missingInstrumentLabel;
   // Note-name labels rendered at the slider edges (e.g. "A1" and "A6").
   final String? minBaseLabel;
   final String? maxBaseLabel;
@@ -76,8 +88,91 @@ class AdvancedSettingsDrawer extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 18),
+          Text(
+            instrumentLabel,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          _InstrumentChipSelector(
+            instruments: instruments,
+            instrumentAvailability: instrumentAvailability,
+            selectedInstrument: selectedInstrument,
+            onInstrumentChanged: onInstrumentChanged,
+            missingInstrumentLabel: missingInstrumentLabel,
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _InstrumentChipSelector extends StatelessWidget {
+  const _InstrumentChipSelector({
+    required this.instruments,
+    required this.instrumentAvailability,
+    required this.selectedInstrument,
+    required this.onInstrumentChanged,
+    required this.missingInstrumentLabel,
+  });
+
+  final List<String> instruments;
+  final Map<String, bool> instrumentAvailability;
+  final String selectedInstrument;
+  final ValueChanged<String> onInstrumentChanged;
+  final String missingInstrumentLabel;
+
+  String _displayName(String instrument) {
+    if (instrument.isEmpty) return instrument;
+    return '${instrument[0].toUpperCase()}${instrument.substring(1)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final instrument in instruments)
+          Builder(
+            builder: (context) {
+              final selected = instrument == selectedInstrument;
+              final available = instrumentAvailability[instrument] ?? true;
+              final label = available
+                  ? _displayName(instrument)
+                  : '${_displayName(instrument)} ($missingInstrumentLabel)';
+
+              return ChoiceChip(
+                label: Text(label),
+                selected: selected,
+                showCheckmark: false,
+                onSelected: available
+                    ? (_) => onInstrumentChanged(instrument)
+                    : null,
+                selectedColor: null,
+                backgroundColor: scheme.surfaceContainerLow,
+                disabledColor: scheme.surfaceContainerLow.withValues(
+                  alpha: 0.55,
+                ),
+                labelStyle: TextStyle(
+                  color: !available
+                      ? scheme.onSurfaceVariant.withValues(alpha: 0.45)
+                      : selected
+                      ? null
+                      : scheme.onSurfaceVariant,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+                side: BorderSide(
+                  color: selected ? Colors.transparent : scheme.outlineVariant,
+                ),
+              );
+            },
+          ),
+      ],
     );
   }
 }
