@@ -8,6 +8,7 @@ import 'metronome/metronome_music.dart';
 import 'metronome/note_sequence_controller.dart';
 import 'music_basics_page.dart';
 import 'practice_history_controller.dart';
+import 'language/app_language_text.dart';
 import 'language/app_text.dart';
 
 // Main home page of the app, with a welcome message and button to start the metronome demo page.
@@ -31,6 +32,8 @@ class MainHomePage extends StatefulWidget {
 // and navigation to the metronome demo page.
 class _MainHomePageState extends State<MainHomePage> {
   static const int _savedSequencePreviewLimit = 3;
+  static const double _sectionTopSpacing = 18;
+  static const double _cardSpacing = 18;
 
   final TextEditingController _sequenceTextController = TextEditingController();
   final TextEditingController _sequenceNameController = TextEditingController();
@@ -250,6 +253,23 @@ class _MainHomePageState extends State<MainHomePage> {
       });
     }
     return true;
+  }
+
+  Future<void> _applyGeneratedPattern(String patternText) async {
+    final text = appTextFor(widget.appSettingsController.language);
+    final saved = await widget.noteSequenceController.setSequenceFromText(
+      patternText,
+    );
+    if (!saved || !mounted) return;
+
+    setState(() {
+      _selectedTabIndex = 1;
+      _sequenceErrorText = null;
+    });
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(text.patternAppliedNotice)));
   }
 
   // Saves the current note sequence with a user-provided name, validating the name first.
@@ -548,17 +568,23 @@ class _MainHomePageState extends State<MainHomePage> {
     final text = appTextFor(widget.appSettingsController.language);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final gradientColors = isDark
-        ? const [Color(0xFF111827), Color(0xFF10201D), Color(0xFF1F1B14)]
-        : const [Color(0xFFF2F8FF), Color(0xFFE8F6F2), Color(0xFFFFF8EC)];
+        ? const [Color(0xFF111827), Color(0xFF0F1E1B), Color(0xFF1C1914)]
+        : const [Color(0xFFE7F0F5), Color(0xFFDCEDE7), Color(0xFFF5EAD8)];
 
     return Scaffold(
       extendBody: true,
       bottomNavigationBar: _HomeTabBar(
         selectedIndex: _selectedTabIndex,
-        labels: [text.practiceTab, text.sequencesTab, text.basicsTab],
+        labels: [
+          text.practiceTab,
+          text.sequencesTab,
+          text.toolsTab,
+          text.basicsTab,
+        ],
         icons: const [
           Icons.play_arrow_rounded,
           Icons.library_music_rounded,
+          Icons.apps_rounded,
           Icons.school_rounded,
         ],
         onSelected: (index) {
@@ -612,22 +638,12 @@ class _MainHomePageState extends State<MainHomePage> {
                     ],
                   ),
                   if (_selectedTabIndex == 0) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: _sectionTopSpacing),
                     Container(
                       // Main action card
                       width: double.infinity,
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-                      decoration: BoxDecoration(
-                        color: scheme.surface,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: scheme.shadow.withValues(alpha: 0.08),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
+                      decoration: _homeCardDecoration(scheme),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -660,34 +676,26 @@ class _MainHomePageState extends State<MainHomePage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: _cardSpacing),
                     _PracticeHistoryCard(
                       title: text.practiceHistory,
                       todayLabel: text.todayPractice,
+                      last7DaysLabel: text.last7Days,
                       lastSessionLabel: text.lastSession,
                       mostUsedBpmLabel: text.mostUsedBpm,
                       emptyLabel: text.noPracticeYet,
                       controller: widget.practiceHistoryController,
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: _cardSpacing),
                   ],
 
-                  // Custom note sequence input card
-                  if (_selectedTabIndex == 1)
+                  // Custom note sequence input cards
+                  if (_selectedTabIndex == 1) ...[
+                    const SizedBox(height: _sectionTopSpacing),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                      decoration: BoxDecoration(
-                        color: scheme.surface,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: scheme.shadow.withValues(alpha: 0.08),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
+                      decoration: _homeCardDecoration(scheme),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -835,85 +843,96 @@ class _MainHomePageState extends State<MainHomePage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          const SizedBox(height: 8),
-                          Builder(
-                            builder: (context) {
-                              final filteredSequences =
-                                  _filteredSavedSequences();
-                              final previewSequences = filteredSequences
-                                  .take(_savedSequencePreviewLimit)
-                                  .toList(growable: false);
-
-                              return Column(
-                                // Saved sequences section, with search and list of saved sequences
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          text.savedSequences,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                        ),
-                                      ),
-                                      if (filteredSequences.isNotEmpty)
-                                        Text(
-                                          text.savedSequenceSummary(
-                                            previewSequences.length,
-                                            filteredSequences.length,
-                                          ),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: scheme.onSurfaceVariant,
-                                              ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _savedSearchController,
-                                    decoration: InputDecoration(
-                                      border: const OutlineInputBorder(),
-                                      labelText: text.searchSequences,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _SavedSequencesList(
-                                    savedSequences: previewSequences,
-                                    emptyLabel: text.noSavedSequences,
-                                    loadLabel: text.loadSequence,
-                                    deleteLabel: text.deleteNote,
-                                    onLoad: _loadSavedSequence,
-                                    onDelete: _deleteSavedSequence,
-                                  ),
-                                  if (filteredSequences.length >
-                                      _savedSequencePreviewLimit) ...[
-                                    const SizedBox(height: 8),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton(
-                                        onPressed: _openSavedSequencesSheet,
-                                        child: Text(text.viewAll),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              );
-                            },
-                          ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: _cardSpacing),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      decoration: _homeCardDecoration(scheme),
+                      child: Builder(
+                        builder: (context) {
+                          final filteredSequences = _filteredSavedSequences();
+                          final previewSequences = filteredSequences
+                              .take(_savedSequencePreviewLimit)
+                              .toList(growable: false);
+
+                          return Column(
+                            // Saved sequences section, with search and list of saved sequences
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      text.savedSequences,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                  if (filteredSequences.isNotEmpty)
+                                    Text(
+                                      text.savedSequenceSummary(
+                                        previewSequences.length,
+                                        filteredSequences.length,
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _savedSearchController,
+                                decoration: InputDecoration(
+                                  border: const OutlineInputBorder(),
+                                  labelText: text.searchSequences,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _SavedSequencesList(
+                                savedSequences: previewSequences,
+                                emptyLabel: text.noSavedSequences,
+                                loadLabel: text.loadSequence,
+                                deleteLabel: text.deleteNote,
+                                onLoad: _loadSavedSequence,
+                                onDelete: _deleteSavedSequence,
+                              ),
+                              if (filteredSequences.length >
+                                  _savedSequencePreviewLimit) ...[
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _openSavedSequencesSheet,
+                                    child: Text(text.viewAll),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                   if (_selectedTabIndex == 2) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: _sectionTopSpacing),
+                    _ScalePatternGeneratorCard(
+                      text: text,
+                      onUsePattern: _applyGeneratedPattern,
+                    ),
+                  ],
+                  if (_selectedTabIndex == 3) ...[
+                    const SizedBox(height: _sectionTopSpacing),
                     MusicBasicsContent(
                       appSettingsController: widget.appSettingsController,
                       padding: EdgeInsets.zero,
@@ -932,8 +951,280 @@ class _MainHomePageState extends State<MainHomePage> {
   }
 }
 
-// A custom bottom tab bar for the home page, allowing the user 
-// to switch between the Practice, Sequences, and Basics tabs.
+BoxDecoration _homeCardDecoration(ColorScheme scheme) {
+  return BoxDecoration(
+    color: scheme.surface,
+    border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+    borderRadius: BorderRadius.circular(18),
+    boxShadow: [
+      BoxShadow(
+        color: scheme.shadow.withValues(alpha: 0.09),
+        blurRadius: 18,
+        offset: const Offset(0, 8),
+      ),
+    ],
+  );
+}
+
+// A simple data class representing a musical scale pattern,
+// defined by a list of intervals from the root note.
+class _ScalePattern {
+  const _ScalePattern({required this.id, required this.intervals});
+
+  final String id;
+  final List<int> intervals;
+}
+
+enum _ScalePatternDirection { ascending, descending, upAndDown }
+
+class _ScalePatternGeneratorCard extends StatefulWidget {
+  const _ScalePatternGeneratorCard({
+    required this.text,
+    required this.onUsePattern,
+  });
+
+  final AppLanguageText text;
+  final ValueChanged<String> onUsePattern;
+
+  @override
+  State<_ScalePatternGeneratorCard> createState() =>
+      _ScalePatternGeneratorCardState();
+}
+
+class _ScalePatternGeneratorCardState
+    extends State<_ScalePatternGeneratorCard> {
+  static const List<String> _rootKeys = [
+    'C',
+    'Db',
+    'D',
+    'Eb',
+    'E',
+    'F',
+    'Gb',
+    'G',
+    'Ab',
+    'A',
+    'Bb',
+    'B',
+  ];
+
+  static const List<String> _sharpNoteNames = [
+    'C',
+    'C#',
+    'D',
+    'D#',
+    'E',
+    'F',
+    'F#',
+    'G',
+    'G#',
+    'A',
+    'A#',
+    'B',
+  ];
+
+  static const List<String> _flatNoteNames = [
+    'C',
+    'Db',
+    'D',
+    'Eb',
+    'E',
+    'F',
+    'Gb',
+    'G',
+    'Ab',
+    'A',
+    'Bb',
+    'B',
+  ];
+
+  // Predefined scale patterns with their corresponding intervals from the root note
+  static const List<_ScalePattern> _scalePatterns = [
+    _ScalePattern(id: 'majorPentatonic', intervals: [0, 2, 4, 7, 9]),
+    _ScalePattern(id: 'minorPentatonic', intervals: [0, 3, 5, 7, 10]),
+    _ScalePattern(id: 'majorScale', intervals: [0, 2, 4, 5, 7, 9, 11]),
+    _ScalePattern(id: 'minorScale', intervals: [0, 2, 3, 5, 7, 8, 10]),
+  ];
+
+  String _selectedRootKey = 'C';
+  _ScalePattern _selectedScalePattern = _scalePatterns.first;
+  _ScalePatternDirection _selectedDirection = _ScalePatternDirection.upAndDown;
+
+  List<String> get _generatedNotes {
+    final rootSemitone = noteToSemitone[_selectedRootKey] ?? 0;
+    final noteNames = _usesFlatNames(_selectedRootKey)
+        ? _flatNoteNames
+        : _sharpNoteNames;
+    final scaleNotes = _selectedScalePattern.intervals
+        .map((interval) {
+          return noteNames[(rootSemitone + interval) % noteNames.length];
+        })
+        .toList(growable: false);
+
+    switch (_selectedDirection) {
+      case _ScalePatternDirection.ascending:
+        return scaleNotes;
+      case _ScalePatternDirection.descending:
+        return scaleNotes.reversed.toList(growable: false);
+      case _ScalePatternDirection.upAndDown:
+        return [...scaleNotes, ...scaleNotes.reversed.skip(1)];
+    }
+  }
+
+  String get _generatedPatternText => _generatedNotes.join(' ');
+
+  bool _usesFlatNames(String rootKey) {
+    return rootKey.contains('b') || rootKey == 'F';
+  }
+
+  String _scalePatternLabel(_ScalePattern pattern) {
+    switch (pattern.id) {
+      case 'majorPentatonic':
+        return widget.text.majorPentatonic;
+      case 'minorPentatonic':
+        return widget.text.minorPentatonic;
+      case 'majorScale':
+        return widget.text.majorScale;
+      case 'minorScale':
+        return widget.text.minorScale;
+      default:
+        return pattern.id;
+    }
+  }
+
+  String _directionLabel(_ScalePatternDirection direction) {
+    switch (direction) {
+      case _ScalePatternDirection.ascending:
+        return widget.text.ascending;
+      case _ScalePatternDirection.descending:
+        return widget.text.descending;
+      case _ScalePatternDirection.upAndDown:
+        return widget.text.upAndDown;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: _homeCardDecoration(scheme),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.text.scalePatternGenerator,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.text.scalePatternDescription,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedRootKey,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: widget.text.rootKey,
+            ),
+            items: [
+              for (final rootKey in _rootKeys)
+                DropdownMenuItem(value: rootKey, child: Text(rootKey)),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedRootKey = value;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<_ScalePattern>(
+            initialValue: _selectedScalePattern,
+            isExpanded: true,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: widget.text.scale,
+            ),
+            items: [
+              for (final pattern in _scalePatterns)
+                DropdownMenuItem(
+                  value: pattern,
+                  child: Text(_scalePatternLabel(pattern)),
+                ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedScalePattern = value;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<_ScalePatternDirection>(
+            initialValue: _selectedDirection,
+            isExpanded: true,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: widget.text.direction,
+            ),
+            items: [
+              for (final direction in _ScalePatternDirection.values)
+                DropdownMenuItem(
+                  value: direction,
+                  child: Text(_directionLabel(direction)),
+                ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedDirection = value;
+              });
+            },
+          ),
+          const SizedBox(height: 14),
+          Text(
+            widget.text.generatedPattern,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _generatedPatternText,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton(
+              onPressed: () => widget.onUsePattern(_generatedPatternText),
+              child: Text(widget.text.useAsSequence),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// A custom bottom tab bar for the home page, allowing the user
+// to switch between the Practice, Sequences, Tools, and Basics tabs.
 class _HomeTabBar extends StatelessWidget {
   const _HomeTabBar({
     required this.selectedIndex,
@@ -1086,12 +1377,14 @@ class _HomeTabButton extends StatelessWidget {
   }
 }
 
-// Widget for displaying the user's practice history, including 
-// today's practice time, the most used BPM, and details of the last practice session.
+// A card widget displaying the user's recent practice history,
+// including today's practice time, most used BPM, last session details,
+// and a chart of practice time over the last 7 days.
 class _PracticeHistoryCard extends StatelessWidget {
   const _PracticeHistoryCard({
     required this.title,
     required this.todayLabel,
+    required this.last7DaysLabel,
     required this.lastSessionLabel,
     required this.mostUsedBpmLabel,
     required this.emptyLabel,
@@ -1100,31 +1393,45 @@ class _PracticeHistoryCard extends StatelessWidget {
 
   final String title;
   final String todayLabel;
+  final String last7DaysLabel;
   final String lastSessionLabel;
   final String mostUsedBpmLabel;
   final String emptyLabel;
   final PracticeHistoryController controller;
+
+  List<_DailyPracticeTotal> _lastSevenDailyTotals() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    return List.generate(7, (index) {
+      final date = today.subtract(Duration(days: 6 - index));
+      final seconds = controller.sessions
+          .where((session) => _isSameLocalDay(session.startedAt, date))
+          .fold<int>(0, (total, session) => total + session.durationSeconds);
+
+      return _DailyPracticeTotal(date: date, seconds: seconds);
+    });
+  }
+
+  bool _isSameLocalDay(DateTime first, DateTime second) {
+    final firstLocal = first.toLocal();
+    final secondLocal = second.toLocal();
+    return firstLocal.year == secondLocal.year &&
+        firstLocal.month == secondLocal.month &&
+        firstLocal.day == secondLocal.day;
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lastSession = controller.lastSession;
     final mostUsedBpm = controller.mostUsedBpm;
+    final dailyTotals = _lastSevenDailyTotals();
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: _homeCardDecoration(scheme),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1170,9 +1477,206 @@ class _PracticeHistoryCard extends StatelessWidget {
               context,
             ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  last7DaysLabel,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                controller.formatDuration(
+                  dailyTotals.fold<int>(0, (total, day) => total + day.seconds),
+                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 132,
+            width: double.infinity,
+            child: CustomPaint(
+              painter: _PracticeHistoryChartPainter(
+                dailyTotals: dailyTotals,
+                lineColor: scheme.primary,
+                axisColor: scheme.outlineVariant,
+                labelColor: scheme.onSurfaceVariant,
+                emptyLabel: emptyLabel,
+                textStyle: Theme.of(context).textTheme.labelSmall,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+}
+
+// Simple data class representing the total practice time for a single day,
+// including the date and total seconds practiced.
+class _DailyPracticeTotal {
+  const _DailyPracticeTotal({required this.date, required this.seconds});
+
+  final DateTime date;
+  final int seconds;
+
+  double get minutes => seconds / 60;
+}
+
+// Custom painter for drawing the practice history chart, which visualizes
+// the user's practice time over the last 7 days, including axes, labels, and data points.
+class _PracticeHistoryChartPainter extends CustomPainter {
+  const _PracticeHistoryChartPainter({
+    required this.dailyTotals,
+    required this.lineColor,
+    required this.axisColor,
+    required this.labelColor,
+    required this.emptyLabel,
+    required this.textStyle,
+  });
+
+  final List<_DailyPracticeTotal> dailyTotals;
+  final Color lineColor;
+  final Color axisColor;
+  final Color labelColor;
+  final String emptyLabel;
+  final TextStyle? textStyle;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const leftPadding = 32.0;
+    const rightPadding = 10.0;
+    const topPadding = 12.0;
+    const bottomPadding = 24.0;
+    final chartRect = Rect.fromLTRB(
+      leftPadding,
+      topPadding,
+      size.width - rightPadding,
+      size.height - bottomPadding,
+    );
+
+    final axisPaint = Paint()
+      ..color = axisColor
+      ..strokeWidth = 1;
+    canvas.drawLine(chartRect.bottomLeft, chartRect.bottomRight, axisPaint);
+    canvas.drawLine(chartRect.bottomLeft, chartRect.topLeft, axisPaint);
+
+    final hasPractice = dailyTotals.any((day) => day.seconds > 0);
+    final maxMinutes = _maxMinutes();
+    _drawText(
+      canvas,
+      hasPractice ? '${maxMinutes.ceil()}m' : '0',
+      Offset(0, chartRect.top - 6),
+    );
+    _drawText(canvas, '0', Offset(16, chartRect.bottom - 8));
+
+    for (int index = 0; index < dailyTotals.length; index++) {
+      final pointX = _pointX(chartRect, index);
+      _drawCenteredText(
+        canvas,
+        '${dailyTotals[index].date.month}/${dailyTotals[index].date.day}',
+        Offset(pointX, chartRect.bottom + 8),
+      );
+    }
+
+    if (!hasPractice) {
+      _drawText(
+        canvas,
+        emptyLabel,
+        Offset(chartRect.left + 12, chartRect.center.dy - 8),
+      );
+      return;
+    }
+
+    final points = <Offset>[
+      for (int index = 0; index < dailyTotals.length; index++)
+        Offset(
+          _pointX(chartRect, index),
+          _pointY(chartRect, dailyTotals[index].minutes, maxMinutes),
+        ),
+    ];
+
+    final linePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    canvas.drawPath(path, linePaint);
+
+    final pointPaint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.fill;
+    for (final point in points) {
+      canvas.drawCircle(point, 3.5, pointPaint);
+    }
+  }
+
+  double _maxMinutes() {
+    var maxMinutes = 0.0;
+    for (final day in dailyTotals) {
+      if (day.minutes > maxMinutes) maxMinutes = day.minutes;
+    }
+    return maxMinutes == 0 ? 1 : maxMinutes;
+  }
+
+  double _pointX(Rect rect, int index) {
+    if (dailyTotals.length <= 1) return rect.left;
+    return rect.left + rect.width * index / (dailyTotals.length - 1);
+  }
+
+  double _pointY(Rect rect, double minutes, double maxMinutes) {
+    final normalized = maxMinutes == 0 ? 0.0 : minutes / maxMinutes;
+    return rect.bottom - rect.height * normalized;
+  }
+
+  void _drawText(Canvas canvas, String text, Offset offset) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: (textStyle ?? const TextStyle(fontSize: 11)).copyWith(
+          color: labelColor,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, offset);
+  }
+
+  void _drawCenteredText(Canvas canvas, String text, Offset offset) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: (textStyle ?? const TextStyle(fontSize: 11)).copyWith(
+          color: labelColor,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, Offset(offset.dx - painter.width / 2, offset.dy));
+  }
+
+  @override
+  bool shouldRepaint(covariant _PracticeHistoryChartPainter oldDelegate) {
+    return oldDelegate.dailyTotals != dailyTotals ||
+        oldDelegate.lineColor != lineColor ||
+        oldDelegate.axisColor != axisColor ||
+        oldDelegate.labelColor != labelColor ||
+        oldDelegate.emptyLabel != emptyLabel ||
+        oldDelegate.textStyle != textStyle;
   }
 }
 
