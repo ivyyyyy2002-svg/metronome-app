@@ -1017,6 +1017,11 @@ class _MainHomePageState extends State<MainHomePage> {
                       text: text,
                       onUsePattern: _applyGeneratedPattern,
                     ),
+                    const SizedBox(height: _cardSpacing),
+                    _JianpuConverterCard(
+                      text: text,
+                      onUsePattern: _applyGeneratedPattern,
+                    ),
                   ],
                   if (_selectedTabIndex == 3) ...[
                     const SizedBox(height: _sectionTopSpacing),
@@ -1053,6 +1058,55 @@ BoxDecoration _homeCardDecoration(ColorScheme scheme) {
   );
 }
 
+const List<String> _westernRootKeys = [
+  'C',
+  'Db',
+  'D',
+  'Eb',
+  'E',
+  'F',
+  'Gb',
+  'G',
+  'Ab',
+  'A',
+  'Bb',
+  'B',
+];
+
+const List<String> _sharpNoteNames = [
+  'C',
+  'C#',
+  'D',
+  'D#',
+  'E',
+  'F',
+  'F#',
+  'G',
+  'G#',
+  'A',
+  'A#',
+  'B',
+];
+
+const List<String> _flatNoteNames = [
+  'C',
+  'Db',
+  'D',
+  'Eb',
+  'E',
+  'F',
+  'Gb',
+  'G',
+  'Ab',
+  'A',
+  'Bb',
+  'B',
+];
+
+bool _usesFlatNames(String rootKey) {
+  return rootKey.contains('b') || rootKey == 'F';
+}
+
 // A simple data class representing a musical scale pattern,
 // defined by a list of intervals from the root note.
 class _ScalePattern {
@@ -1063,6 +1117,8 @@ class _ScalePattern {
 }
 
 enum _ScalePatternDirection { ascending, descending, upAndDown }
+
+enum _ScaleNotation { western, eastern }
 
 class _ScalePatternGeneratorCard extends StatefulWidget {
   const _ScalePatternGeneratorCard({
@@ -1080,50 +1136,50 @@ class _ScalePatternGeneratorCard extends StatefulWidget {
 
 class _ScalePatternGeneratorCardState
     extends State<_ScalePatternGeneratorCard> {
-  static const List<String> _rootKeys = [
-    'C',
-    'Db',
-    'D',
-    'Eb',
-    'E',
-    'F',
+  static const List<String> _easternRootKeys = [
+    'S',
+    'Rb',
+    'R',
     'Gb',
     'G',
-    'Ab',
-    'A',
-    'Bb',
-    'B',
-  ];
-
-  static const List<String> _sharpNoteNames = [
-    'C',
-    'C#',
-    'D',
-    'D#',
-    'E',
-    'F',
-    'F#',
-    'G',
-    'G#',
-    'A',
-    'A#',
-    'B',
-  ];
-
-  static const List<String> _flatNoteNames = [
-    'C',
+    'M',
+    'M#',
+    'P',
     'Db',
     'D',
-    'Eb',
-    'E',
-    'F',
+    'Nb',
+    'N',
+  ];
+
+  static const List<String> _easternNoteNames = [
+    'S',
+    'Rb',
+    'R',
     'Gb',
     'G',
-    'Ab',
-    'A',
-    'Bb',
-    'B',
+    'M',
+    'M#',
+    'P',
+    'Db',
+    'D',
+    'Nb',
+    'N',
   ];
+
+  static const Map<String, int> _easternNoteToSemitone = {
+    'S': 0,
+    'Rb': 1,
+    'R': 2,
+    'Gb': 3,
+    'G': 4,
+    'M': 5,
+    'M#': 6,
+    'P': 7,
+    'Db': 8,
+    'D': 9,
+    'Nb': 10,
+    'N': 11,
+  };
 
   // Predefined scale patterns with their corresponding intervals from the root note
   static const List<_ScalePattern> _scalePatterns = [
@@ -1133,15 +1189,16 @@ class _ScalePatternGeneratorCardState
     _ScalePattern(id: 'minorScale', intervals: [0, 2, 3, 5, 7, 8, 10]),
   ];
 
+  _ScaleNotation _selectedNotation = _ScaleNotation.western;
   String _selectedRootKey = 'C';
   _ScalePattern _selectedScalePattern = _scalePatterns.first;
   _ScalePatternDirection _selectedDirection = _ScalePatternDirection.upAndDown;
 
   List<String> get _generatedNotes {
-    final rootSemitone = noteToSemitone[_selectedRootKey] ?? 0;
-    final noteNames = _usesFlatNames(_selectedRootKey)
-        ? _flatNoteNames
-        : _sharpNoteNames;
+    final rootSemitone = _selectedNotation == _ScaleNotation.eastern
+        ? _easternNoteToSemitone[_selectedRootKey] ?? 0
+        : noteToSemitone[_selectedRootKey] ?? 0;
+    final noteNames = _noteNamesForSelectedNotation();
     final scaleNotes = _selectedScalePattern.intervals
         .map((interval) {
           return noteNames[(rootSemitone + interval) % noteNames.length];
@@ -1160,8 +1217,27 @@ class _ScalePatternGeneratorCardState
 
   String get _generatedPatternText => _generatedNotes.join(' ');
 
-  bool _usesFlatNames(String rootKey) {
-    return rootKey.contains('b') || rootKey == 'F';
+  List<String> get _currentRootKeys {
+    return _selectedNotation == _ScaleNotation.eastern
+        ? _easternRootKeys
+        : _westernRootKeys;
+  }
+
+  List<String> _noteNamesForSelectedNotation() {
+    if (_selectedNotation == _ScaleNotation.eastern) {
+      return _easternNoteNames;
+    }
+
+    return _usesFlatNames(_selectedRootKey) ? _flatNoteNames : _sharpNoteNames;
+  }
+
+  String _notationLabel(_ScaleNotation notation) {
+    switch (notation) {
+      case _ScaleNotation.western:
+        return widget.text.westernNotation;
+      case _ScaleNotation.eastern:
+        return widget.text.easternNotation;
+    }
   }
 
   String _scalePatternLabel(_ScalePattern pattern) {
@@ -1193,6 +1269,9 @@ class _ScalePatternGeneratorCardState
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dropdownTextStyle = Theme.of(
+      context,
+    ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400);
 
     return Container(
       width: double.infinity,
@@ -1215,15 +1294,46 @@ class _ScalePatternGeneratorCardState
             ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
+          DropdownButtonFormField<_ScaleNotation>(
+            initialValue: _selectedNotation,
+            isExpanded: true,
+            style: dropdownTextStyle,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: widget.text.notation,
+            ),
+            items: [
+              for (final notation in _ScaleNotation.values)
+                DropdownMenuItem(
+                  value: notation,
+                  child: Text(
+                    _notationLabel(notation),
+                    style: dropdownTextStyle,
+                  ),
+                ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedNotation = value;
+                _selectedRootKey = value == _ScaleNotation.eastern ? 'S' : 'C';
+              });
+            },
+          ),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: _selectedRootKey,
+            style: dropdownTextStyle,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               labelText: widget.text.rootKey,
             ),
             items: [
-              for (final rootKey in _rootKeys)
-                DropdownMenuItem(value: rootKey, child: Text(rootKey)),
+              for (final rootKey in _currentRootKeys)
+                DropdownMenuItem(
+                  value: rootKey,
+                  child: Text(rootKey, style: dropdownTextStyle),
+                ),
             ],
             onChanged: (value) {
               if (value == null) return;
@@ -1236,6 +1346,7 @@ class _ScalePatternGeneratorCardState
           DropdownButtonFormField<_ScalePattern>(
             initialValue: _selectedScalePattern,
             isExpanded: true,
+            style: dropdownTextStyle,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               labelText: widget.text.scale,
@@ -1244,7 +1355,10 @@ class _ScalePatternGeneratorCardState
               for (final pattern in _scalePatterns)
                 DropdownMenuItem(
                   value: pattern,
-                  child: Text(_scalePatternLabel(pattern)),
+                  child: Text(
+                    _scalePatternLabel(pattern),
+                    style: dropdownTextStyle,
+                  ),
                 ),
             ],
             onChanged: (value) {
@@ -1258,6 +1372,7 @@ class _ScalePatternGeneratorCardState
           DropdownButtonFormField<_ScalePatternDirection>(
             initialValue: _selectedDirection,
             isExpanded: true,
+            style: dropdownTextStyle,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
               labelText: widget.text.direction,
@@ -1266,7 +1381,10 @@ class _ScalePatternGeneratorCardState
               for (final direction in _ScalePatternDirection.values)
                 DropdownMenuItem(
                   value: direction,
-                  child: Text(_directionLabel(direction)),
+                  child: Text(
+                    _directionLabel(direction),
+                    style: dropdownTextStyle,
+                  ),
                 ),
             ],
             onChanged: (value) {
@@ -1301,6 +1419,158 @@ class _ScalePatternGeneratorCardState
             alignment: Alignment.centerRight,
             child: FilledButton(
               onPressed: () => widget.onUsePattern(_generatedPatternText),
+              child: Text(widget.text.useAsSequence),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JianpuConverterCard extends StatefulWidget {
+  const _JianpuConverterCard({required this.text, required this.onUsePattern});
+
+  final AppLanguageText text;
+  final ValueChanged<String> onUsePattern;
+
+  @override
+  State<_JianpuConverterCard> createState() => _JianpuConverterCardState();
+}
+
+class _JianpuConverterCardState extends State<_JianpuConverterCard> {
+  static const List<int> _majorScaleIntervals = [0, 2, 4, 5, 7, 9, 11];
+
+  final TextEditingController _jianpuController = TextEditingController(
+    text: '1 2 3 5 6 5 3 2 1',
+  );
+  String _selectedRootKey = 'C';
+
+  @override
+  void dispose() {
+    _jianpuController.dispose();
+    super.dispose();
+  }
+
+  List<String> get _convertedNotes {
+    final noteNames = _usesFlatNames(_selectedRootKey)
+        ? _flatNoteNames
+        : _sharpNoteNames;
+    final rootSemitone = noteToSemitone[_selectedRootKey] ?? 0;
+    final scaleNotes = _majorScaleIntervals
+        .map((interval) => noteNames[(rootSemitone + interval) % 12])
+        .toList(growable: false);
+    final converted = <String>[];
+
+    for (final token in _jianpuController.text.trim().split(RegExp(r'\s+'))) {
+      if (token.isEmpty) continue;
+      if (token == '-') {
+        converted.add(token);
+        continue;
+      }
+
+      final notesInBeat = <String>[];
+      for (final char in token.characters) {
+        final degree = int.tryParse(char);
+        if (degree == null || degree < 1 || degree > 7) continue;
+        notesInBeat.add(scaleNotes[degree - 1]);
+      }
+
+      if (notesInBeat.isNotEmpty) {
+        converted.add(notesInBeat.join('/'));
+      }
+    }
+
+    return converted.toList(growable: false);
+  }
+
+  String get _convertedPatternText => _convertedNotes.join(' ');
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dropdownTextStyle = Theme.of(
+      context,
+    ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: _homeCardDecoration(scheme),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.text.jianpuConverter,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.text.jianpuConverterDescription,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedRootKey,
+            style: dropdownTextStyle,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: widget.text.rootKey,
+            ),
+            items: [
+              for (final rootKey in _westernRootKeys)
+                DropdownMenuItem(
+                  value: rootKey,
+                  child: Text(rootKey, style: dropdownTextStyle),
+                ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedRootKey = value;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _jianpuController,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: widget.text.jianpuInput,
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            widget.text.convertedSequence,
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _convertedPatternText,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton(
+              onPressed: _convertedNotes.isEmpty
+                  ? null
+                  : () => widget.onUsePattern(_convertedPatternText),
               child: Text(widget.text.useAsSequence),
             ),
           ),
