@@ -4,24 +4,31 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Controller class for managing app-wide settings such as theme mode and language
 enum AppLanguage { system, english, chinese, french, hindi }
 
+enum AppThemeColor { defaultColor, rose, purple }
+
 class AppSettingsController extends ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
   static const String _languageKey = 'app_language';
+  static const String _themeColorKey = 'theme_color';
 
   ThemeMode _themeMode = ThemeMode.system;
   AppLanguage _language = AppLanguage.english;
+  AppThemeColor _themeColor = AppThemeColor.defaultColor;
 
   ThemeMode get themeMode => _themeMode;
   AppLanguage get language => _language;
+  AppThemeColor get themeColor => _themeColor;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
 
     final savedThemeMode = prefs.getString(_themeModeKey);
     final savedLanguage = prefs.getString(_languageKey);
+    final savedThemeColor = prefs.getString(_themeColorKey);
 
     _themeMode = _parseThemeMode(savedThemeMode);
     _language = _parseLanguage(savedLanguage);
+    _themeColor = _parseThemeColor(savedThemeColor);
 
     notifyListeners();
   }
@@ -32,6 +39,16 @@ class AppSettingsController extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_themeModeKey, themeMode.name);
+
+    notifyListeners();
+  }
+
+  // Sets the theme color and saves it to persistent storage.
+  Future<void> setThemeColor(AppThemeColor themeColor) async {
+    _themeColor = themeColor;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeColorKey, themeColor.name);
 
     notifyListeners();
   }
@@ -75,6 +92,24 @@ class AppSettingsController extends ChangeNotifier {
       case 'system':
       default:
         return AppLanguage.english;
+    }
+  }
+
+  // Parses a string value to determine the corresponding theme color,
+  // defaulting to the original app color if unrecognized.
+  AppThemeColor _parseThemeColor(String? value) {
+    switch (value) {
+      case 'pink':
+      case 'rose':
+        return AppThemeColor.rose;
+      case 'blue':
+      case 'indigo':
+        return AppThemeColor.purple;
+      case 'purple':
+        return AppThemeColor.purple;
+      case 'defaultColor':
+      default:
+        return AppThemeColor.defaultColor;
     }
   }
 }

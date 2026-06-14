@@ -38,6 +38,9 @@ class MusicBasicsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = appTextFor(appSettingsController.language);
     final scheme = Theme.of(context).colorScheme;
+    final cardColor = scheme.brightness == Brightness.dark
+        ? const Color(0xFF171A20)
+        : Colors.white;
     final cards = [
       (text.bpmBasicsTitle, text.bpmBasicsBody),
       (text.timeSignatureBasicsTitle, text.timeSignatureBasicsBody),
@@ -72,7 +75,7 @@ class MusicBasicsContent extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(
-            color: scheme.surface,
+            color: cardColor,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: scheme.outlineVariant),
           ),

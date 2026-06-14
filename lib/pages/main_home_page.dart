@@ -292,6 +292,28 @@ class _MainHomePageState extends State<MainHomePage> {
     _setSequenceInputText('');
   }
 
+  Color _colorForThemeChoice(AppThemeColor themeColor) {
+    switch (themeColor) {
+      case AppThemeColor.defaultColor:
+        return const Color.fromARGB(255, 146, 215, 222);
+      case AppThemeColor.rose:
+        return const Color(0xFFE879A3);
+      case AppThemeColor.purple:
+        return const Color(0xFF7C3AED);
+    }
+  }
+
+  String _labelForThemeChoice(AppLanguageText text, AppThemeColor themeColor) {
+    switch (themeColor) {
+      case AppThemeColor.defaultColor:
+        return text.defaultThemeColor;
+      case AppThemeColor.rose:
+        return text.roseThemeColor;
+      case AppThemeColor.purple:
+        return text.purpleThemeColor;
+    }
+  }
+
   // Applies the custom note sequence entered by the user, validating it first.
   Future<bool> _applyCustomSequence() async {
     final parsedSequence = parseNoteSequenceText(_sequenceTextController.text);
@@ -566,6 +588,56 @@ class _MainHomePageState extends State<MainHomePage> {
                     ),
                     const SizedBox(height: 18),
                     Text(
+                      text.themeColor,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final themeColor in AppThemeColor.values)
+                          FilterChip(
+                            selected:
+                                widget.appSettingsController.themeColor ==
+                                themeColor,
+                            selectedColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF20242A)
+                                : Colors.white,
+                            backgroundColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF20242A)
+                                : Colors.white,
+                            checkmarkColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface,
+                            side: BorderSide(
+                              color:
+                                  widget.appSettingsController.themeColor ==
+                                      themeColor
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.outlineVariant,
+                            ),
+                            avatar: CircleAvatar(
+                              radius: 8,
+                              backgroundColor: _colorForThemeChoice(themeColor),
+                            ),
+                            label: Text(_labelForThemeChoice(text, themeColor)),
+                            onSelected: (_) {
+                              widget.appSettingsController.setThemeColor(
+                                themeColor,
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
                       text.language,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
@@ -641,9 +713,22 @@ class _MainHomePageState extends State<MainHomePage> {
     final scheme = Theme.of(context).colorScheme;
     final text = appTextFor(widget.appSettingsController.language);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final gradientColors = isDark
-        ? const [Color(0xFF111827), Color(0xFF0F1E1B), Color(0xFF1C1914)]
-        : const [Color(0xFFE7F0F5), Color(0xFFDCEDE7), Color(0xFFF5EAD8)];
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final gradientTint = isDark ? 0.18 : 0.12;
+    final gradientColors = [
+      Color.alphaBlend(
+        scheme.primary.withValues(alpha: gradientTint),
+        backgroundColor,
+      ),
+      Color.alphaBlend(
+        scheme.secondary.withValues(alpha: gradientTint * 0.85),
+        backgroundColor,
+      ),
+      Color.alphaBlend(
+        scheme.tertiary.withValues(alpha: gradientTint * 0.75),
+        backgroundColor,
+      ),
+    ];
 
     return Scaffold(
       extendBody: true,
@@ -1044,8 +1129,10 @@ class _MainHomePageState extends State<MainHomePage> {
 }
 
 BoxDecoration _homeCardDecoration(ColorScheme scheme) {
+  final isDark = scheme.brightness == Brightness.dark;
+
   return BoxDecoration(
-    color: scheme.surface,
+    color: isDark ? const Color(0xFF171A20) : Colors.white,
     border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
     borderRadius: BorderRadius.circular(18),
     boxShadow: [
@@ -1598,6 +1685,14 @@ class _HomeTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final barColor = isDark
+        ? Colors.black.withValues(alpha: 0.22)
+        : Colors.white.withValues(alpha: 0.34);
+    final selectedColor = Color.alphaBlend(
+      scheme.primary.withValues(alpha: isDark ? 0.28 : 0.18),
+      Colors.white.withValues(alpha: isDark ? 0.10 : 0.46),
+    );
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(20, 0, 20, 14),
@@ -1609,16 +1704,20 @@ class _HomeTabBar extends StatelessWidget {
             filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: scheme.surface.withValues(alpha: 0.14),
+                color: barColor,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                  color: scheme.onSurface.withValues(alpha: 0.10),
+                  color: scheme.onSurface.withValues(
+                    alpha: isDark ? 0.16 : 0.18,
+                  ),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: scheme.shadow.withValues(alpha: 0.08),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
+                    color: scheme.shadow.withValues(
+                      alpha: isDark ? 0.28 : 0.16,
+                    ),
+                    blurRadius: 30,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
@@ -1636,15 +1735,22 @@ class _HomeTabBar extends StatelessWidget {
                         width: segmentWidth - 12,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: scheme.primaryContainer.withValues(
-                              alpha: 0.34,
-                            ),
+                            color: selectedColor,
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color: scheme.onPrimaryContainer.withValues(
-                                alpha: 0.10,
+                              color: scheme.primary.withValues(
+                                alpha: isDark ? 0.38 : 0.26,
                               ),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: scheme.primary.withValues(
+                                  alpha: isDark ? 0.18 : 0.10,
+                                ),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1711,7 +1817,7 @@ class _HomeTabButton extends StatelessWidget {
                 icon,
                 size: 19,
                 color: selected
-                    ? scheme.onPrimaryContainer
+                    ? scheme.primary
                     : scheme.onSurfaceVariant.withValues(alpha: 0.78),
               ),
               const SizedBox(height: 2),
@@ -1721,7 +1827,7 @@ class _HomeTabButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: selected
-                      ? scheme.onPrimaryContainer
+                      ? scheme.primary
                       : scheme.onSurfaceVariant.withValues(alpha: 0.82),
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),

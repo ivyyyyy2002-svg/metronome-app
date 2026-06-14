@@ -33,6 +33,55 @@ class _MyAppState extends State<MyApp> {
   final PracticeHistoryController practiceHistoryController =
       PracticeHistoryController();
 
+  Color _seedColorForTheme(AppThemeColor themeColor) {
+    switch (themeColor) {
+      case AppThemeColor.defaultColor:
+        return const Color.fromARGB(255, 146, 215, 222);
+      case AppThemeColor.rose:
+        return const Color(0xFFE879A3);
+      case AppThemeColor.purple:
+        return const Color(0xFF7C3AED);
+    }
+  }
+
+  Color _scaffoldBackgroundForTheme(Color seedColor, Brightness brightness) {
+    final baseColor = brightness == Brightness.dark
+        ? const Color(0xFF101214)
+        : const Color(0xFFFAFBFC);
+    final tintOpacity = brightness == Brightness.dark ? 0.20 : 0.11;
+
+    return Color.alphaBlend(
+      seedColor.withValues(alpha: tintOpacity),
+      baseColor,
+    );
+  }
+
+  ThemeData _themeDataFor(Color seedColor, Brightness brightness) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: brightness,
+    );
+    final scaffoldBackground = _scaffoldBackgroundForTheme(
+      seedColor,
+      brightness,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      fontFamilyFallback: _fontFamilyFallback,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: scaffoldBackground,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scaffoldBackground,
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -56,26 +105,14 @@ class _MyAppState extends State<MyApp> {
     return AnimatedBuilder(
       animation: appSettingsController,
       builder: (context, _) {
+        final seedColor = _seedColorForTheme(appSettingsController.themeColor);
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Metronome Studio',
           themeMode: appSettingsController.themeMode,
-          theme: ThemeData(
-            useMaterial3: true,
-            fontFamilyFallback: _fontFamilyFallback,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color.fromARGB(255, 146, 215, 222),
-              brightness: Brightness.light,
-            ),
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            fontFamilyFallback: _fontFamilyFallback,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color.fromARGB(255, 146, 215, 222),
-              brightness: Brightness.dark,
-            ),
-          ),
+          theme: _themeDataFor(seedColor, Brightness.light),
+          darkTheme: _themeDataFor(seedColor, Brightness.dark),
           home: MainHomePage(
             noteSequenceController: noteSequenceController,
             appSettingsController: appSettingsController,
