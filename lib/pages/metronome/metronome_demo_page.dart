@@ -500,11 +500,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   String _anchorNoteToken() {
     if (noteSequence.isEmpty) return 'A';
-    return noteSequence.first;
+    for (final token in noteSequence) {
+      final atoms = notesInBeatToken(token);
+      if (atoms.isNotEmpty) return atoms.first;
+    }
+    return 'A';
   }
 
   String _noteNameFromToken(String token) {
-    final parsed = _parseNoteWithOctave(token);
+    final parsed = resolveSequenceNoteAtom(token, baseOctave);
     return parsed?.note ?? token.trim();
   }
 
@@ -552,7 +556,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     if (noteSequence.isEmpty) return;
     final anchorToken = _anchorNoteToken();
     final anchorNote = _noteNameFromToken(anchorToken);
-    final parsedAnchor = _parseNoteWithOctave(anchorToken);
+    final parsedAnchor = resolveSequenceNoteAtom(anchorToken, baseOctave);
     final targetBase = _nearestBaseOctaveForFrequency(
       anchorNote,
       targetHz,
@@ -585,7 +589,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       return;
     }
 
-    currentSound = _resolveFullNoteName(noteSequence.first, baseOctave);
+    currentSound = _resolveFullNoteName(_anchorNoteToken(), baseOctave);
     currentSoundVN.value = currentSound;
   }
 
@@ -961,14 +965,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Resolve a note token to a full note name like "Bb2".
   String _resolveFullNoteName(String token, int octaveFallback) {
-    final parsed = _parseNoteWithOctave(token);
-    if (parsed != null) {
-      final adjustedOctave = _clampPlayableOctave(parsed.octave + octaveShift);
-      return '${parsed.note}$adjustedOctave';
-    }
+    final parsed = resolveSequenceNoteAtom(token, octaveFallback);
+    if (parsed == null) return '';
 
-    final resolvedOctave = _clampPlayableOctave(octaveFallback + octaveShift);
-    return '$token$resolvedOctave';
+    final adjustedOctave = _clampPlayableOctave(parsed.octave + octaveShift);
+    return '${parsed.note}$adjustedOctave';
   }
 
   // Ensure a per-note AudioPlayer is ready for the given full note name.
@@ -997,7 +998,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     final unique = <String>{};
     for (final token in noteSequence) {
-      unique.add(_resolveFullNoteName(token, baseOctave));
+      for (final atom in notesInBeatToken(token)) {
+        final full = _resolveFullNoteName(atom, baseOctave);
+        if (full.isNotEmpty) unique.add(full);
+      }
     }
 
     for (final full in unique) {
@@ -1022,8 +1026,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     final uniquePaths = <String>{};
     for (final token in noteSequence) {
-      final full = _resolveFullNoteName(token, baseOctave);
-      uniquePaths.add('assets/notes/$selectedInstrument/$full.wav');
+      for (final atom in notesInBeatToken(token)) {
+        final full = _resolveFullNoteName(atom, baseOctave);
+        if (full.isNotEmpty) {
+          uniquePaths.add('assets/notes/$selectedInstrument/$full.wav');
+        }
+      }
     }
 
     for (final path in uniquePaths) {
@@ -1043,7 +1051,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   // Play note by name and octave
-  Future<void> playNoteByName(String note, int octave) async {
+  Future<void> playNoteByName(
+    String note,
+    int octave, {
+    double durationBeats = 1.0,
+  }) async {
     if (_useSf2ForCurrentInstrument()) {
       final midiNote = instrumentSf2Controller.midiNoteFor(
         note,
@@ -1096,11 +1108,18 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         }
 
         final int beatMs = _intervalMs;
+        final int maxGateMs = durationBeats > 1
+            ? math.max(
+                sf2Spec?.maxGateMs ?? 320,
+                (_intervalMs * durationBeats).round(),
+              )
+            : sf2Spec?.maxGateMs ?? 320;
         final int gateMs = math.max(
           sf2Spec?.minGateMs ?? 80,
           math.min(
-            sf2Spec?.maxGateMs ?? 320,
-            (beatMs * noteGate * (sf2Spec?.gateScale ?? 1.0)).round(),
+            maxGateMs,
+            (beatMs * durationBeats * noteGate * (sf2Spec?.gateScale ?? 1.0))
+                .round(),
           ),
         );
         final int totalGateMs = gateMs + latencyOffsetMs;
@@ -1140,9 +1159,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
         // Schedule stop after gate duration
         final int beatMs = _intervalMs;
+        final int maxGateMs = durationBeats > 1
+            ? math.max(220, (_intervalMs * durationBeats).round())
+            : 220;
         final int gateMs = math.max(
           80,
-          math.min(220, (beatMs * noteGate).round()),
+          math.min(maxGateMs, (beatMs * durationBeats * noteGate).round()),
         );
 
         Timer(Duration(milliseconds: gateMs), () {
@@ -1174,9 +1196,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
       // Schedule stop after gate duration
       final int beatMs = _intervalMs;
+      final int maxGateMs = durationBeats > 1
+          ? math.max(220, (_intervalMs * durationBeats).round())
+          : 220;
       final int gateMs = math.max(
         80,
-        math.min(220, (beatMs * noteGate).round()),
+        math.min(maxGateMs, (beatMs * durationBeats * noteGate).round()),
       );
 
       Timer(Duration(milliseconds: gateMs), () {
@@ -1188,6 +1213,47 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       final path = 'assets/notes/$selectedInstrument/$note$octave.wav';
       debugPrint('Failed to play note $note$octave ($path): $e');
       debugPrintStack(stackTrace: st);
+    }
+  }
+
+  int _heldBeatsAfterIndex(int index) {
+    var heldBeats = 0;
+    var nextIndex = (index + 1) % noteSequence.length;
+
+    while (heldBeats < noteSequence.length - 1 &&
+        isHoldBeatToken(noteSequence[nextIndex])) {
+      heldBeats++;
+      nextIndex = (nextIndex + 1) % noteSequence.length;
+    }
+
+    return heldBeats;
+  }
+
+  // Play all notes inside one beat token, spacing grouped notes evenly.
+  void _playBeatToken(String token, {required double durationBeats}) {
+    final atoms = notesInBeatToken(token);
+    if (atoms.isEmpty) return;
+
+    final stepMs = atoms.length <= 1 ? 0 : (_intervalMs / atoms.length).round();
+
+    for (int i = 0; i < atoms.length; i++) {
+      void playAtom() {
+        final resolved = resolveSequenceNoteAtom(atoms[i], baseOctave);
+        if (resolved == null) return;
+
+        final noteToPlay = resolved.note;
+        final octaveToPlay = _clampPlayableOctave(
+          resolved.octave + octaveShift,
+        );
+
+        playNoteByName(noteToPlay, octaveToPlay, durationBeats: durationBeats);
+      }
+
+      if (i == 0) {
+        playAtom();
+      } else {
+        Timer(Duration(milliseconds: stepMs * i), playAtom);
+      }
     }
   }
 
@@ -1282,18 +1348,17 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     if (noteSequence.isEmpty) return;
 
     final token = noteSequence[noteIndex];
-    final resolvedFull = _resolveFullNoteName(token, baseOctave);
-    final resolvedParsed = _parseNoteWithOctave(resolvedFull);
-    if (resolvedParsed == null) return;
-
-    final String noteToPlay = resolvedParsed.note;
-    final int octaveToPlay = resolvedParsed.octave;
+    final heldBeats = _heldBeatsAfterIndex(noteIndex);
+    final atoms = notesInBeatToken(token);
+    final currentFullNames = [
+      for (final atom in atoms) _resolveFullNoteName(atom, baseOctave),
+    ].where((fullName) => fullName.isNotEmpty).toList(growable: false);
 
     beat++;
     noteIndex = (noteIndex + 1) % noteSequence.length;
     final beatInBar = ((beat - 1) % timeSignatureBeats) + 1;
 
-    currentSound = '$noteToPlay$octaveToPlay';
+    currentSound = isHoldBeatToken(token) ? '-' : currentFullNames.join('/');
     currentSoundVN.value = currentSound;
 
     if (beat % uiUpdateEvery == 0) {
@@ -1303,8 +1368,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     if (enableClick) {
       playClickForBeat(beatInBar);
     }
-    if (enableSound) {
-      playNoteByName(noteToPlay, octaveToPlay);
+    if (enableSound && !isHoldBeatToken(token)) {
+      _playBeatToken(token, durationBeats: 1.0 + heldBeats);
     }
   }
 
@@ -1547,8 +1612,76 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               final currentText = sequenceController.text.trim();
               final nextText = currentText.isEmpty
                   ? note
+                  : currentText.endsWith('/')
+                  ? '$currentText$note'
                   : '$currentText $note';
               setSequenceEditorText(nextText);
+            }
+
+            void appendQuickEditHold() {
+              final currentText = sequenceController.text.trim();
+              if (currentText.isEmpty || currentText.endsWith('/')) return;
+
+              setSequenceEditorText('$currentText -');
+            }
+
+            void appendQuickEditGroupSeparator() {
+              final currentText = sequenceController.text.trim();
+              if (currentText.isEmpty ||
+                  currentText.endsWith('/') ||
+                  currentText.endsWith('-')) {
+                return;
+              }
+
+              setSequenceEditorText('$currentText/');
+            }
+
+            void applyQuickEditOctaveMark(String mark) {
+              final tokens = sequenceController.text.trim().split(
+                RegExp(r'\s+'),
+              );
+              if (tokens.isEmpty || tokens.first.isEmpty) return;
+
+              final lastToken = tokens.last;
+              if (lastToken == '-' || lastToken.endsWith('/')) return;
+
+              final baseToken = lastToken.replaceFirst(RegExp(r"[,']+$"), '');
+              tokens[tokens.length - 1] = lastToken.endsWith(mark)
+                  ? baseToken
+                  : '$baseToken$mark';
+
+              setSequenceEditorText(tokens.join(' '));
+            }
+
+            String? toggleEasternAccidentalToken(
+              String token,
+              String accidental,
+            ) {
+              final octaveSuffix =
+                  RegExp(r"[,']+$").firstMatch(token)?.group(0) ?? '';
+              final baseToken = token.replaceFirst(RegExp(r"[,']+$"), '');
+
+              const flatNotes = {'R': 'Rb', 'G': 'Gb', 'D': 'Db', 'N': 'Nb'};
+              if (accidental == 'b') {
+                String? natural;
+                for (final entry in flatNotes.entries) {
+                  if (entry.value == baseToken) {
+                    natural = entry.key;
+                    break;
+                  }
+                }
+                if (natural != null) return '$natural$octaveSuffix';
+
+                final flat = flatNotes[baseToken];
+                if (flat != null) return '$flat$octaveSuffix';
+              }
+
+              if (accidental == '#') {
+                if (baseToken == 'M#') return 'M$octaveSuffix';
+                if (baseToken == 'M') return 'M#$octaveSuffix';
+              }
+
+              return null;
             }
 
             void applyQuickEditAccidental(String accidental) {
@@ -1557,8 +1690,20 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               );
               if (tokens.isEmpty || tokens.first.isEmpty) return;
 
+              final easternAccidentalToken = toggleEasternAccidentalToken(
+                tokens.last,
+                accidental,
+              );
+              if (easternAccidentalToken != null) {
+                tokens[tokens.length - 1] = easternAccidentalToken;
+                setSequenceEditorText(tokens.join(' '));
+                return;
+              }
+
               final parsedNotes = parseNoteSequenceText(tokens.last);
-              if (parsedNotes.length != 1) return;
+              if (parsedNotes.length != 1 || parsedNotes.first.contains('/')) {
+                return;
+              }
 
               final baseNote = parsedNotes.first.substring(0, 1);
               tokens[tokens.length - 1] = parsedNotes.first.endsWith(accidental)
@@ -1655,6 +1800,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                         'E',
                                         'F',
                                         'G',
+                                        'S',
+                                        'R',
+                                        'M',
+                                        'P',
+                                        'N',
                                       ])
                                         ActionChip(
                                           label: Text(note),
@@ -1670,6 +1820,25 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                         label: const Text('b'),
                                         onPressed: () =>
                                             applyQuickEditAccidental('b'),
+                                      ),
+                                      ActionChip(
+                                        label: const Text("'"),
+                                        onPressed: () =>
+                                            applyQuickEditOctaveMark("'"),
+                                      ),
+                                      ActionChip(
+                                        label: const Text(','),
+                                        onPressed: () =>
+                                            applyQuickEditOctaveMark(','),
+                                      ),
+                                      ActionChip(
+                                        label: const Text('/'),
+                                        onPressed:
+                                            appendQuickEditGroupSeparator,
+                                      ),
+                                      ActionChip(
+                                        label: const Text('-'),
+                                        onPressed: appendQuickEditHold,
                                       ),
                                       TextButton(
                                         onPressed: deleteQuickEditNote,

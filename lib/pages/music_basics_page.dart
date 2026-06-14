@@ -43,6 +43,11 @@ class MusicBasicsContent extends StatelessWidget {
       (text.timeSignatureBasicsTitle, text.timeSignatureBasicsBody),
       (text.subdivisionBasicsTitle, text.subdivisionBasicsBody),
       (text.downbeatBasicsTitle, text.downbeatBasicsBody),
+      (text.westernNotationBasicsTitle, text.westernNotationBasicsBody),
+      (text.easternNotationBasicsTitle, text.easternNotationBasicsBody),
+      (text.octaveNotationBasicsTitle, text.octaveNotationBasicsBody),
+      (text.groupedNotesBasicsTitle, text.groupedNotesBasicsBody),
+      (text.heldNotesBasicsTitle, text.heldNotesBasicsBody),
       (text.jianpuBasicsTitle, text.jianpuBasicsBody),
     ];
 

@@ -179,9 +179,46 @@ class _MainHomePageState extends State<MainHomePage> {
   // Appends a note to the current sequence input, ensuring proper spacing.
   void _appendNoteToSequence(String note) {
     final currentText = _sequenceTextController.text.trim();
-    final nextText = currentText.isEmpty ? note : '$currentText $note';
+    final nextText = currentText.isEmpty
+        ? note
+        : currentText.endsWith('/')
+        ? '$currentText$note'
+        : '$currentText $note';
 
     _setSequenceInputText(nextText);
+  }
+
+  void _appendHoldToSequence() {
+    final currentText = _sequenceTextController.text.trim();
+    if (currentText.isEmpty || currentText.endsWith('/')) return;
+
+    _setSequenceInputText('$currentText -');
+  }
+
+  void _appendGroupSeparatorToSequence() {
+    final currentText = _sequenceTextController.text.trim();
+    if (currentText.isEmpty ||
+        currentText.endsWith('/') ||
+        currentText.endsWith('-')) {
+      return;
+    }
+
+    _setSequenceInputText('$currentText/');
+  }
+
+  void _applyOctaveMarkToLastNote(String mark) {
+    final tokens = _sequenceTextController.text.trim().split(RegExp(r'\s+'));
+    if (tokens.isEmpty || tokens.first.isEmpty) return;
+
+    final lastToken = tokens.last;
+    if (lastToken == '-' || lastToken.endsWith('/')) return;
+
+    final baseToken = lastToken.replaceFirst(RegExp(r"[,']+$"), '');
+    tokens[tokens.length - 1] = lastToken.endsWith(mark)
+        ? baseToken
+        : '$baseToken$mark';
+
+    _setSequenceInputText(tokens.join(' '));
   }
 
   // Applies an accidental (sharp or flat) to the last note in the sequence input.
@@ -191,9 +228,19 @@ class _MainHomePageState extends State<MainHomePage> {
     if (tokens.isEmpty || tokens.first.isEmpty) return;
 
     final lastToken = tokens.last;
+    final easternAccidentalToken = _toggleEasternAccidentalToken(
+      lastToken,
+      accidental,
+    );
+    if (easternAccidentalToken != null) {
+      tokens[tokens.length - 1] = easternAccidentalToken;
+      _setSequenceInputText(tokens.join(' '));
+      return;
+    }
+
     final parsedNotes = parseNoteSequenceText(lastToken);
 
-    if (parsedNotes.length != 1) return;
+    if (parsedNotes.length != 1 || parsedNotes.first.contains('/')) return;
 
     final baseNote = parsedNotes.first.substring(0, 1);
     tokens[tokens.length - 1] = parsedNotes.first.endsWith(accidental)
@@ -201,6 +248,33 @@ class _MainHomePageState extends State<MainHomePage> {
         : '$baseNote$accidental';
 
     _setSequenceInputText(tokens.join(' '));
+  }
+
+  String? _toggleEasternAccidentalToken(String token, String accidental) {
+    final octaveSuffix = RegExp(r"[,']+$").firstMatch(token)?.group(0) ?? '';
+    final baseToken = token.replaceFirst(RegExp(r"[,']+$"), '');
+
+    const flatNotes = {'R': 'Rb', 'G': 'Gb', 'D': 'Db', 'N': 'Nb'};
+    if (accidental == 'b') {
+      String? natural;
+      for (final entry in flatNotes.entries) {
+        if (entry.value == baseToken) {
+          natural = entry.key;
+          break;
+        }
+      }
+      if (natural != null) return '$natural$octaveSuffix';
+
+      final flat = flatNotes[baseToken];
+      if (flat != null) return '$flat$octaveSuffix';
+    }
+
+    if (accidental == '#') {
+      if (baseToken == 'M#') return 'M$octaveSuffix';
+      if (baseToken == 'M') return 'M#$octaveSuffix';
+    }
+
+    return null;
   }
 
   // Deletes the last note from the sequence input.
@@ -795,19 +869,14 @@ class _MainHomePageState extends State<MainHomePage> {
                                 'C',
                                 'D',
                                 'E',
+                                'F',
+                                'G',
+                                'S',
+                                'R',
+                                'M',
+                                'P',
+                                'N',
                               ])
-                                ActionChip(
-                                  label: Text(note),
-                                  onPressed: () => _appendNoteToSequence(note),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final note in const ['F', 'G'])
                                 ActionChip(
                                   label: Text(note),
                                   onPressed: () => _appendNoteToSequence(note),
@@ -821,6 +890,24 @@ class _MainHomePageState extends State<MainHomePage> {
                                 label: const Text('b'),
                                 onPressed: () =>
                                     _applyAccidentalToLastNote('b'),
+                              ),
+                              ActionChip(
+                                label: const Text("'"),
+                                onPressed: () =>
+                                    _applyOctaveMarkToLastNote("'"),
+                              ),
+                              ActionChip(
+                                label: const Text(','),
+                                onPressed: () =>
+                                    _applyOctaveMarkToLastNote(','),
+                              ),
+                              ActionChip(
+                                label: const Text('/'),
+                                onPressed: _appendGroupSeparatorToSequence,
+                              ),
+                              ActionChip(
+                                label: const Text('-'),
+                                onPressed: _appendHoldToSequence,
                               ),
                             ],
                           ),

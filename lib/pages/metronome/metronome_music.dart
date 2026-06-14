@@ -36,6 +36,41 @@ const Map<String, int> noteToSemitone = {
 
 const int maxNoteSequenceLength = 128;
 
+const Map<String, String> _easternShortNoteToWestern = {
+  'S': 'C',
+  'R': 'D',
+  'Rb': 'Db',
+  'G': 'E',
+  'Gb': 'Eb',
+  'M': 'F',
+  'M#': 'F#',
+  'P': 'G',
+  'D': 'A',
+  'Db': 'Ab',
+  'N': 'B',
+  'Nb': 'Bb',
+};
+
+const Map<String, String> _easternFullNoteToShort = {
+  'sa': 'S',
+  're': 'R',
+  're-flat': 'Rb',
+  'reb': 'Rb',
+  'ga': 'G',
+  'ga-flat': 'Gb',
+  'gab': 'Gb',
+  'ma': 'M',
+  'ma-sharp': 'M#',
+  'ma#': 'M#',
+  'pa': 'P',
+  'dha': 'D',
+  'dha-flat': 'Db',
+  'dhab': 'Db',
+  'ni': 'N',
+  'ni-flat': 'Nb',
+  'nib': 'Nb',
+};
+
 const List<String> timeSignatureOptions = [
   '1/4',
   '2/4',
@@ -171,40 +206,212 @@ double beatUnitWholeNoteLength(BeatUnit unit) {
   }
 }
 
-// Parses a sequence of musical notes from text, supporting natural notes and accidentals.
+// Parses a sequence of musical notes from text, keeping each whitespace-separated
+// token as one beat. Notes inside the same token are played within the same beat.
 List<String> parseNoteSequenceText(String text) {
-  final notes = <String>[];
-  int i = 0;
+  final beats = <String>[];
+  final useEasternNotation = _looksLikeEasternNotation(text);
 
-  while (i < text.length) {
-    final char = text[i].toUpperCase();
+  for (final rawToken in text.trim().split(RegExp(r'\s+'))) {
+    if (rawToken.isEmpty) continue;
 
-    if (!RegExp(r'[A-G]').hasMatch(char)) {
-      i++;
+    if (rawToken == '-') {
+      beats.add(rawToken);
       continue;
     }
 
-    String note = char;
+    final atoms = _parseBeatToken(rawToken, useEasternNotation);
+    if (atoms.isEmpty) continue;
 
-    if (i + 1 < text.length) {
-      final nextChar = text[i + 1];
-
-      if (nextChar == '#' || nextChar == '♯') {
-        note += '#';
-        i++;
-      } else if (nextChar == 'b' || nextChar == '♭') {
-        note += 'b';
-        i++;
-      }
-    }
-
-    notes.add(note);
-    i++;
+    beats.add(atoms.join('/'));
   }
 
-  return notes.toList(growable: false);
+  return beats.toList(growable: false);
 }
 
 String formatNoteSequenceText(String text) {
   return parseNoteSequenceText(text).join(' ');
+}
+
+bool isHoldBeatToken(String token) {
+  return token.trim() == '-';
+}
+
+List<String> notesInBeatToken(String token) {
+  final trimmed = token.trim();
+  if (trimmed.isEmpty || isHoldBeatToken(trimmed)) return const [];
+
+  return trimmed
+      .split('/')
+      .where((atom) => atom.trim().isNotEmpty)
+      .toList(growable: false);
+}
+
+// Resolves one parsed note atom to the western note name used by the audio files.
+({String note, int octave})? resolveSequenceNoteAtom(
+  String atom,
+  int octaveFallback,
+) {
+  final match = RegExp(r"^([A-G](?:#|b)?)(\d+|[,']*)$").firstMatch(atom.trim());
+
+  if (match == null) return null;
+
+  final westernNote = match.group(1)!;
+  final octaveSuffix = match.group(2)!;
+  final explicitOctave = int.tryParse(octaveSuffix);
+
+  if (explicitOctave != null) {
+    return (note: westernNote, octave: explicitOctave);
+  }
+
+  final octaveDelta = octaveSuffix.split('').fold<int>(0, (delta, mark) {
+    if (mark == "'") return delta + 1;
+    if (mark == ',') return delta - 1;
+    return delta;
+  });
+
+  return (note: westernNote, octave: octaveFallback + octaveDelta);
+}
+
+bool _looksLikeEasternNotation(String text) {
+  final lower = text.toLowerCase();
+  if (RegExp(
+    r'\b(?:sa|re|ga|ma|pa|dha|ni)(?:-(?:flat|sharp))?\b',
+  ).hasMatch(lower)) {
+    return true;
+  }
+
+  return RegExp(
+    r"(^|\s)[SRMPNsrmpn](?:#|b|♯|♭|[,'])*(?=\s|$|[A-Za-z])",
+  ).hasMatch(text);
+}
+
+List<String> _parseBeatToken(String token, bool useEasternNotation) {
+  final atoms = <String>[];
+  int i = 0;
+
+  while (i < token.length) {
+    if (token[i] == '/') {
+      i++;
+      continue;
+    }
+
+    final parsed = _parseNoteAtom(token, i, useEasternNotation);
+    if (parsed == null) return const [];
+
+    atoms.add(parsed.atom);
+    i = parsed.nextIndex;
+  }
+
+  return atoms.toList(growable: false);
+}
+
+({String atom, int nextIndex})? _parseNoteAtom(
+  String token,
+  int start,
+  bool useEasternNotation,
+) {
+  if (useEasternNotation) {
+    final eastern = _parseEasternNoteAtom(token, start);
+    if (eastern != null) return eastern;
+  }
+
+  final western = _parseWesternNoteAtom(token, start);
+  if (western != null) return western;
+
+  if (!useEasternNotation) {
+    return _parseEasternNoteAtom(token, start);
+  }
+
+  return null;
+}
+
+({String atom, int nextIndex})? _parseWesternNoteAtom(String token, int start) {
+  final noteMatch = RegExp(
+    r'^[A-Ga-g](?:#|b|♯|♭)?',
+  ).firstMatch(token.substring(start));
+  if (noteMatch == null) return null;
+
+  final raw = noteMatch.group(0)!;
+  final base = raw[0].toUpperCase();
+  final accidental = raw.length > 1 ? _normalizeAccidental(raw[1]) : '';
+  final suffix = _readOctaveSuffix(token, start + raw.length);
+
+  return (
+    atom: '$base$accidental${suffix.suffix}',
+    nextIndex: suffix.nextIndex,
+  );
+}
+
+({String atom, int nextIndex})? _parseEasternNoteAtom(String token, int start) {
+  final rest = token.substring(start);
+  final fullMatch = _matchEasternFullName(rest);
+
+  if (fullMatch != null) {
+    final suffix = _readOctaveSuffix(token, start + fullMatch.rawLength);
+    return (
+      atom: '${_easternShortNoteToWestern[fullMatch.note]!}${suffix.suffix}',
+      nextIndex: suffix.nextIndex,
+    );
+  }
+
+  final base = token[start].toUpperCase();
+  if (!RegExp(r'[SRGMPDN]').hasMatch(base)) return null;
+
+  var nextIndex = start + 1;
+  var accidental = '';
+  if (nextIndex < token.length) {
+    final mark = _normalizeAccidental(token[nextIndex]);
+    if (mark.isNotEmpty) {
+      accidental = mark;
+      nextIndex++;
+    }
+  }
+
+  final note = '$base$accidental';
+  if (!_easternShortNoteToWestern.containsKey(note)) return null;
+
+  final suffix = _readOctaveSuffix(token, nextIndex);
+  return (
+    atom: '${_easternShortNoteToWestern[note]!}${suffix.suffix}',
+    nextIndex: suffix.nextIndex,
+  );
+}
+
+({String note, int rawLength})? _matchEasternFullName(String rest) {
+  final entries = _easternFullNoteToShort.entries.toList()
+    ..sort((a, b) => b.key.length.compareTo(a.key.length));
+
+  for (final entry in entries) {
+    if (rest.toLowerCase().startsWith(entry.key)) {
+      return (note: entry.value, rawLength: entry.key.length);
+    }
+  }
+
+  return null;
+}
+
+({String suffix, int nextIndex}) _readOctaveSuffix(String token, int start) {
+  if (start >= token.length) return (suffix: '', nextIndex: start);
+
+  if (RegExp(r'\d').hasMatch(token[start])) {
+    var i = start;
+    while (i < token.length && RegExp(r'\d').hasMatch(token[i])) {
+      i++;
+    }
+    return (suffix: token.substring(start, i), nextIndex: i);
+  }
+
+  var i = start;
+  while (i < token.length && (token[i] == "'" || token[i] == ',')) {
+    i++;
+  }
+
+  return (suffix: token.substring(start, i), nextIndex: i);
+}
+
+String _normalizeAccidental(String char) {
+  if (char == '#' || char == '♯') return '#';
+  if (char == 'b' || char == '♭') return 'b';
+  return '';
 }
