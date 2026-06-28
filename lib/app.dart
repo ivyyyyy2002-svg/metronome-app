@@ -36,11 +36,11 @@ class _MyAppState extends State<MyApp> {
   Color _seedColorForTheme(AppThemeColor themeColor) {
     switch (themeColor) {
       case AppThemeColor.defaultColor:
-        return const Color.fromARGB(255, 146, 215, 222);
+        return Colors.blue;
       case AppThemeColor.rose:
-        return const Color(0xFFE879A3);
+        return Colors.pink;
       case AppThemeColor.purple:
-        return const Color(0xFF7C3AED);
+        return Colors.deepPurple;
     }
   }
 
@@ -60,6 +60,7 @@ class _MyAppState extends State<MyApp> {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: brightness,
+      dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
     );
     final scaffoldBackground = _scaffoldBackgroundForTheme(
       seedColor,

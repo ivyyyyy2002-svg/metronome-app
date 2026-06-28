@@ -295,11 +295,11 @@ class _MainHomePageState extends State<MainHomePage> {
   Color _colorForThemeChoice(AppThemeColor themeColor) {
     switch (themeColor) {
       case AppThemeColor.defaultColor:
-        return const Color.fromARGB(255, 146, 215, 222);
+        return Colors.blue;
       case AppThemeColor.rose:
-        return const Color(0xFFE879A3);
+        return Colors.pink;
       case AppThemeColor.purple:
-        return const Color(0xFF7C3AED);
+        return Colors.deepPurple;
     }
   }
 
@@ -727,6 +727,7 @@ class _MainHomePageState extends State<MainHomePage> {
       extendBody: true,
       bottomNavigationBar: _HomeTabBar(
         selectedIndex: _selectedTabIndex,
+        themeColor: widget.appSettingsController.themeColor,
         labels: [
           text.practiceTab,
           text.sequencesTab,
@@ -1659,12 +1660,14 @@ class _JianpuConverterCardState extends State<_JianpuConverterCard> {
 class _HomeTabBar extends StatelessWidget {
   const _HomeTabBar({
     required this.selectedIndex,
+    required this.themeColor,
     required this.labels,
     required this.icons,
     required this.onSelected,
   });
 
   final int selectedIndex;
+  final AppThemeColor themeColor;
   final List<String> labels;
   final List<IconData> icons;
   final ValueChanged<int> onSelected;
@@ -1676,10 +1679,12 @@ class _HomeTabBar extends StatelessWidget {
     final barColor = isDark
         ? Colors.black.withValues(alpha: 0.22)
         : Colors.white.withValues(alpha: 0.34);
-    final selectedColor = Color.alphaBlend(
-      scheme.primary.withValues(alpha: isDark ? 0.28 : 0.18),
-      Colors.white.withValues(alpha: isDark ? 0.10 : 0.46),
-    );
+    final selectedColor = !isDark && themeColor == AppThemeColor.defaultColor
+        ? Color.alphaBlend(
+            scheme.onSurface.withValues(alpha: 0.08),
+            scheme.primaryContainer,
+          )
+        : scheme.primaryContainer;
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(20, 0, 20, 14),
@@ -1726,13 +1731,13 @@ class _HomeTabBar extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                               color: scheme.primary.withValues(
-                                alpha: isDark ? 0.38 : 0.26,
+                                alpha: isDark ? 0.38 : 0.24,
                               ),
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: scheme.primary.withValues(
-                                  alpha: isDark ? 0.18 : 0.10,
+                                  alpha: isDark ? 0.18 : 0.14,
                                 ),
                                 blurRadius: 16,
                                 offset: const Offset(0, 4),
@@ -1785,6 +1790,7 @@ class _HomeTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final selectedForeground = scheme.onPrimaryContainer;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -1804,7 +1810,7 @@ class _HomeTabButton extends StatelessWidget {
                 icon,
                 size: 19,
                 color: selected
-                    ? scheme.primary
+                    ? selectedForeground
                     : scheme.onSurfaceVariant.withValues(alpha: 0.78),
               ),
               const SizedBox(height: 2),
@@ -1814,7 +1820,7 @@ class _HomeTabButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: selected
-                      ? scheme.primary
+                      ? selectedForeground
                       : scheme.onSurfaceVariant.withValues(alpha: 0.82),
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),

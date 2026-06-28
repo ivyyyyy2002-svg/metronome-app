@@ -58,19 +58,10 @@ class MusicBasicsContent extends StatelessWidget {
       padding: padding,
       shrinkWrap: shrinkWrap,
       physics: physics,
-      itemCount: cards.length + 1,
+      itemCount: cards.length,
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return Text(
-            text.basicsIntro,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-          );
-        }
-
-        final card = cards[index - 1];
+        final card = cards[index];
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),

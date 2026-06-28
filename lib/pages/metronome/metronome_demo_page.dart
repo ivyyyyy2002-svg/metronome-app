@@ -2083,6 +2083,24 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   Widget build(BuildContext context) {
     final text = _text;
     final isRunning = timer != null;
+    final inheritedTheme = Theme.of(context);
+    final pageScheme = ColorScheme.fromSeed(
+      seedColor: inheritedTheme.colorScheme.primary,
+      brightness: Brightness.light,
+      dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
+    ).copyWith(surface: Colors.white);
+    final pageTheme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: pageScheme,
+      scaffoldBackgroundColor: Colors.white,
+      fontFamilyFallback:
+          inheritedTheme.textTheme.bodyMedium?.fontFamilyFallback,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
+    );
     final int beatsForDisplay = timeSignatureBeats;
     final int beatInBar = (beat == 0) ? 1 : ((beat - 1) % beatsForDisplay) + 1;
     final int beatNumerator = beatInBar;
@@ -2091,18 +2109,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       final accent = _accentForBeatPosition(i + 1);
       final isActive = (i + 1) == beatInBar;
       final Color activeColor = switch (accent) {
-        ClickAccent.strong => Theme.of(context).colorScheme.primary,
-        ClickAccent.secondary => Theme.of(context).colorScheme.secondary,
-        ClickAccent.weak => Theme.of(context).colorScheme.tertiary,
+        ClickAccent.strong => pageScheme.primary,
+        ClickAccent.secondary => pageScheme.secondary,
+        ClickAccent.weak => pageScheme.tertiary,
       };
       final Color idleColor = switch (accent) {
-        ClickAccent.strong => Theme.of(
-          context,
-        ).colorScheme.primary.withValues(alpha: 0.35),
-        ClickAccent.secondary => Theme.of(
-          context,
-        ).colorScheme.secondary.withValues(alpha: 0.28),
-        ClickAccent.weak => Theme.of(context).colorScheme.outlineVariant,
+        ClickAccent.strong => pageScheme.primary.withValues(alpha: 0.35),
+        ClickAccent.secondary => pageScheme.secondary.withValues(alpha: 0.28),
+        ClickAccent.weak => pageScheme.outlineVariant,
       };
       return BeatIndicatorItem(
         isActive: isActive,
@@ -2110,113 +2124,117 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         idleColor: idleColor,
       );
     });
-    return Scaffold(
-      key: _scaffoldKey,
-      appBar: AppBar(
-        title: Text(text.metronomeTitle),
-        actions: [
-          IconButton(
-            tooltip: text.advanced,
-            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-            icon: const Icon(Icons.tune_rounded),
-          ),
-        ],
-      ),
-      endDrawer: Drawer(
-        child: AdvancedSettingsDrawer(
-          baseFrequencyHz: baseFrequencyHz,
-          minBaseFrequencyHz: _minBaseFrequencyHz,
-          maxBaseFrequencyHz: _maxBaseFrequencyHz,
-          // Note-name labels for the slider edges.
-          minBaseLabel: 'A$_instrumentMinOctave',
-          maxBaseLabel: 'A$_instrumentMaxOctave',
-          titleLabel: text.advancedSettings,
-          instrumentLabel: text.instrument,
-          instruments: instruments,
-          instrumentAvailability: instrumentAvailability,
-          selectedInstrument: selectedInstrument,
-          missingInstrumentLabel: text.missingInstrument,
-          onInstrumentChanged: _onInstrumentChanged,
-          onBaseFrequencyChanged: (v) {
-            setState(() => baseFrequencyHz = v);
-          },
-          onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+    return Theme(
+      data: pageTheme,
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text(text.metronomeTitle),
+          actions: [
+            IconButton(
+              tooltip: text.advanced,
+              onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+              icon: const Icon(Icons.tune_rounded),
+            ),
+          ],
         ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      PlaybackStatusPanel(
-                        anim: swingAnim,
-                        isRunning: isRunning,
-                        beatNumerator: beatNumerator,
-                        beatDenominator: beatDenominator,
-                        bpm: bpm,
-                        bpmLabel: text.bpm,
-                        beatIndicators: beatIndicators,
-                      ),
-                      const SizedBox(height: 14),
+        endDrawer: Drawer(
+          child: AdvancedSettingsDrawer(
+            baseFrequencyHz: baseFrequencyHz,
+            minBaseFrequencyHz: _minBaseFrequencyHz,
+            maxBaseFrequencyHz: _maxBaseFrequencyHz,
+            // Note-name labels for the slider edges.
+            minBaseLabel: 'A$_instrumentMinOctave',
+            maxBaseLabel: 'A$_instrumentMaxOctave',
+            titleLabel: text.advancedSettings,
+            instrumentLabel: text.instrument,
+            instruments: instruments,
+            instrumentAvailability: instrumentAvailability,
+            selectedInstrument: selectedInstrument,
+            missingInstrumentLabel: text.missingInstrument,
+            onInstrumentChanged: _onInstrumentChanged,
+            onBaseFrequencyChanged: (v) {
+              setState(() => baseFrequencyHz = v);
+            },
+            onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+          ),
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        PlaybackStatusPanel(
+                          anim: swingAnim,
+                          isRunning: isRunning,
+                          beatNumerator: beatNumerator,
+                          beatDenominator: beatDenominator,
+                          bpm: bpm,
+                          bpmLabel: text.bpm,
+                          beatIndicators: beatIndicators,
+                        ),
+                        const SizedBox(height: 14),
 
-                      // Metronome controls panel, including BPM slider,
-                      // click/sound toggles, meter picker, and instrument selector
-                      MetronomeControlsPanel(
-                        noteCount: noteSequence.length,
-                        currentSoundListenable: currentSoundVN,
-                        sequencePreviewText: _sequencePreviewText(),
-                        onSequenceTap: _openNoteSequenceEditor,
-                        notesLoadedLabel: text.notesLoaded,
-                        clickLabel: text.click,
-                        soundLabel: text.sound,
-                        bpm: bpm,
-                        enableClick: enableClick,
-                        enableSound: enableSound,
-                        onBpmChanged: (v) {
-                          setState(() => bpm = v.round());
-                        },
-                        onBpmChangeEnd: (v) {
-                          _applyBpm(v.round());
-                        },
-                        onClickToggle: (v) async {
-                          setState(() => enableClick = v);
-                          if (!v) {
-                            await _pauseClickPlayers();
-                          }
-                        },
-                        onSoundToggle: (v) async {
-                          setState(() => enableSound = v);
-                          if (!v) {
-                            await _releaseAllNotePlayers();
-                          }
-                        },
-                        onMeterTap: _openMeterPickerSheet,
-                        meterLabel:
-                            '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
-                      ),
-                    ],
+                        // Metronome controls panel, including BPM slider,
+                        // click/sound toggles, meter picker, and instrument selector
+                        MetronomeControlsPanel(
+                          noteCount: noteSequence.length,
+                          currentSoundListenable: currentSoundVN,
+                          sequencePreviewText: _sequencePreviewText(),
+                          onSequenceTap: _openNoteSequenceEditor,
+                          notesLoadedLabel: text.notesLoaded,
+                          clickLabel: text.click,
+                          soundLabel: text.sound,
+                          bpm: bpm,
+                          enableClick: enableClick,
+                          enableSound: enableSound,
+                          onBpmChanged: (v) {
+                            setState(() => bpm = v.round());
+                          },
+                          onBpmChangeEnd: (v) {
+                            _applyBpm(v.round());
+                          },
+                          onClickToggle: (v) async {
+                            setState(() => enableClick = v);
+                            if (!v) {
+                              await _pauseClickPlayers();
+                            }
+                          },
+                          onSoundToggle: (v) async {
+                            setState(() => enableSound = v);
+                            if (!v) {
+                              await _releaseAllNotePlayers();
+                            }
+                          },
+                          onMeterTap: _openMeterPickerSheet,
+                          meterLabel:
+                              '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            TransportBar(
-              isRunning: isRunning,
-              onStart: start,
-              onStop: () => stop(),
-              onReset: reset,
-              startLabel: text.start,
-              stopLabel: text.stop,
-              resetLabel: text.reset,
-            ),
-          ],
+              TransportBar(
+                isRunning: isRunning,
+                onStart: start,
+                onStop: () => stop(),
+                onReset: reset,
+                startLabel: text.start,
+                stopLabel: text.stop,
+                resetLabel: text.reset,
+              ),
+            ],
+          ),
         ),
       ),
     );
