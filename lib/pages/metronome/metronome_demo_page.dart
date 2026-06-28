@@ -67,6 +67,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   static const String _savedBeatUnitKey = 'metronome_beat_unit';
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
+  static const int _initialBpm = 90;
   // Lower-bound floor for any instrument (A0). Each instrument's actual usable
   // range is read from its Sf2Spec at runtime via _instrumentMinOctave /
   // _instrumentMaxOctave below.
@@ -79,7 +80,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Metronome state
   int beat = 0;
-  int bpm = 90; // Beats per minute
+  int bpm = _initialBpm; // Beats per minute
   Timer? timer;
   DateTime? practiceStartedAt;
 
@@ -1441,10 +1442,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await stop();
     swingController.reset();
     setState(() {
+      bpm = _initialBpm;
       beat = 0;
       noteIndex = 0;
       _refreshCurrentSoundPreview();
     });
+    unawaited(_saveMetronomeSettings());
 
     if (currentSound.isNotEmpty && !_usePerNotePlayers) {
       final player = notePlayers[notePoolIndex];

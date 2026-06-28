@@ -1,6 +1,6 @@
 {
-    "name": "metronome_app",
-    "short_name": "metronome_app",
+    "name": "MetriLoop",
+    "short_name": "MetriLoop",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

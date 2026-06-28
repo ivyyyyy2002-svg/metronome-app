@@ -676,13 +676,6 @@ class _MainHomePageState extends State<MainHomePage> {
                         });
                       },
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      text.languageSavedNotice,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -779,12 +772,6 @@ class _MainHomePageState extends State<MainHomePage> {
                               text.homeTitle,
                               style: Theme.of(context).textTheme.headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              text.appName,
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
                             ),
                           ],
                         ),
