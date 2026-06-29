@@ -722,6 +722,12 @@ class _MainHomePageState extends State<MainHomePage> {
         backgroundColor,
       ),
     ];
+    final pageTitles = [
+      text.homeTitle,
+      text.editNoteSequence,
+      text.toolsTab,
+      text.musicBasics,
+    ];
 
     return Scaffold(
       extendBody: true,
@@ -770,8 +776,8 @@ class _MainHomePageState extends State<MainHomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              text.homeTitle,
-                              style: Theme.of(context).textTheme.headlineSmall
+                              pageTitles[_selectedTabIndex],
+                              style: Theme.of(context).textTheme.headlineMedium
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                           ],

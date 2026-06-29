@@ -58,6 +58,9 @@ class MetronomeDemo extends StatefulWidget {
 // The state for the MetronomeDemo widget
 class _MetronomeDemoState extends State<MetronomeDemo>
     with SingleTickerProviderStateMixin {
+  static const String _asianDreamzSf2Path = 'assets/sf2/DSK Asian DreamZ.SF2';
+  static const String _emuSf2Path =
+      'assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2';
   static const String _savedBpmKey = 'metronome_bpm';
   static const String _savedInstrumentKey = 'metronome_instrument';
   static const String _savedTimeSignatureBeatsKey =
@@ -103,7 +106,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             bank: 0,
             program: 0,
             velocity: 92,
-            volume: 112,
+            volume: 100,
             expression: 112,
             // Allow the natural decay to ring longer than Pedal Off did,
             // but cap so it never fully bleeds across a slow beat.
@@ -112,12 +115,24 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             minOctave: 1,
             maxOctave: 6,
           ),
+          'uprightPiano': Sf2Spec(
+            assetPath: 'assets/sf2/UprightPianoKW-20220221.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 90,
+            volume: 100,
+            expression: 110,
+            gateScale: 1.05,
+            maxGateMs: 500,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
           'guzheng': Sf2Spec(
-            assetPath: 'assets/sf2/guzheng.sf2',
-            bank: 1,
-            program: 107,
+            assetPath: _asianDreamzSf2Path,
+            bank: 0,
+            program: 3,
             velocity: 86,
-            volume: 104,
+            volume: 100,
             expression: 108,
             maxGateMs: 240,
             minOctave: 1,
@@ -125,11 +140,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           ),
 
           'flute': Sf2Spec(
-            assetPath: 'assets/sf2/flute.sf2',
+            assetPath: _asianDreamzSf2Path,
             bank: 0,
-            program: 0,
+            program: 5,
             velocity: 80,
-            volume: 98,
+            volume: 100,
             expression: 104,
             gateScale: 1.15,
             maxGateMs: 360,
@@ -137,22 +152,47 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             maxOctave: 6,
           ),
           'pipa': Sf2Spec(
-            assetPath: 'assets/sf2/pipa.sf2',
+            assetPath: _asianDreamzSf2Path,
             bank: 0,
             program: 0,
             velocity: 84,
-            volume: 104,
+            volume: 100,
             expression: 108,
             maxGateMs: 230,
             minOctave: 1,
             maxOctave: 5,
+          ),
+          'ruan': Sf2Spec(
+            assetPath: _asianDreamzSf2Path,
+            bank: 0,
+            program: 2,
+            velocity: 84,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 250,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'erhu': Sf2Spec(
+            assetPath: _asianDreamzSf2Path,
+            bank: 0,
+            program: 4,
+            velocity: 82,
+            volume: 100,
+            expression: 110,
+            gateScale: 1.2,
+            minGateMs: 120,
+            maxGateMs: 430,
+            overlapMs: 60,
+            minOctave: 1,
+            maxOctave: 6,
           ),
           'shamisen': Sf2Spec(
             assetPath: 'assets/sf2/shamisen.sf2',
             bank: 0,
             program: 0,
             velocity: 82,
-            volume: 102,
+            volume: 100,
             expression: 106,
             maxGateMs: 220,
             minOctave: 1,
@@ -163,7 +203,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             bank: 0,
             program: 0,
             velocity: 72,
-            volume: 86,
+            volume: 100,
             expression: 96,
             gateScale: 1.45,
             minGateMs: 140,
@@ -172,18 +212,212 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             minOctave: 1,
             maxOctave: 6,
           ),
+          'tabla': Sf2Spec(
+            assetPath: 'assets/sf2/Tabla.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 96,
+            volume: 100,
+            expression: 110,
+            noteOffset: 12,
+            maxGateMs: 180,
+            minOctave: 3,
+            maxOctave: 4,
+          ),
           // m3_Instruments.sf2 is a 63-preset Turkish/Arabic compilation.
-          // Currently exposing program=11 (Oud) — the iconic Arab/Turkish lute.
+          // Expose a focused set of its best-known traditional instruments.
           'oud': Sf2Spec(
             assetPath: 'assets/sf2/m3_Instruments.sf2',
             bank: 0,
             program: 11,
             velocity: 84,
-            volume: 104,
+            volume: 100,
             expression: 108,
             maxGateMs: 260,
             minOctave: 1,
             maxOctave: 4,
+          ),
+          'qanun': Sf2Spec(
+            assetPath: 'assets/sf2/m3_Instruments.sf2',
+            bank: 0,
+            program: 2,
+            velocity: 84,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 280,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'duduk': Sf2Spec(
+            assetPath: 'assets/sf2/m3_Instruments.sf2',
+            bank: 0,
+            program: 31,
+            velocity: 80,
+            volume: 100,
+            expression: 108,
+            gateScale: 1.2,
+            minGateMs: 120,
+            maxGateMs: 430,
+            overlapMs: 60,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'ney': Sf2Spec(
+            assetPath: 'assets/sf2/m3_Instruments.sf2',
+            bank: 0,
+            program: 46,
+            velocity: 80,
+            volume: 100,
+            expression: 108,
+            gateScale: 1.2,
+            minGateMs: 120,
+            maxGateMs: 430,
+            overlapMs: 60,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'tanbur': Sf2Spec(
+            assetPath: 'assets/sf2/m3_Instruments.sf2',
+            bank: 0,
+            program: 47,
+            velocity: 84,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 280,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'celesta': Sf2Spec(
+            assetPath: '$_emuSf2Path/Celesta.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 80,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 300,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'harp': Sf2Spec(
+            assetPath: '$_emuSf2Path/Harp.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 82,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 300,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'clarinet': Sf2Spec(
+            assetPath: '$_emuSf2Path/Clarinet.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 78,
+            volume: 100,
+            expression: 106,
+            gateScale: 1.2,
+            minGateMs: 120,
+            maxGateMs: 430,
+            overlapMs: 60,
+            minOctave: 3,
+            maxOctave: 6,
+          ),
+          'oboe': Sf2Spec(
+            assetPath: '$_emuSf2Path/Oboe.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 78,
+            volume: 100,
+            expression: 106,
+            gateScale: 1.2,
+            minGateMs: 120,
+            maxGateMs: 430,
+            overlapMs: 60,
+            minOctave: 4,
+            maxOctave: 6,
+          ),
+          'trumpet': Sf2Spec(
+            assetPath: '$_emuSf2Path/Trumpet.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 82,
+            volume: 100,
+            expression: 108,
+            gateScale: 1.15,
+            maxGateMs: 400,
+            overlapMs: 50,
+            minOctave: 2,
+            maxOctave: 5,
+          ),
+          'frenchHorn': Sf2Spec(
+            assetPath: '$_emuSf2Path/French Horn 1.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 80,
+            volume: 100,
+            expression: 106,
+            gateScale: 1.25,
+            minGateMs: 120,
+            maxGateMs: 440,
+            overlapMs: 70,
+            minOctave: 2,
+            maxOctave: 5,
+          ),
+          'acousticGuitar': Sf2Spec(
+            assetPath: '$_emuSf2Path/Acoustic Gtr.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 84,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 260,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'electricGuitar': Sf2Spec(
+            assetPath: '$_emuSf2Path/El Guitar 1.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 84,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 280,
+            minOctave: 1,
+            maxOctave: 6,
+          ),
+          'acousticBass': Sf2Spec(
+            assetPath: '$_emuSf2Path/Acoustic Bass.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 88,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 280,
+            minOctave: 1,
+            maxOctave: 4,
+          ),
+          'bianzhong': Sf2Spec(
+            assetPath: '$_emuSf2Path/Bianzhong.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 86,
+            volume: 100,
+            expression: 110,
+            maxGateMs: 360,
+            minOctave: 3,
+            maxOctave: 6,
+          ),
+          'marimba': Sf2Spec(
+            assetPath: '$_emuSf2Path/Marimba.sf2',
+            bank: 0,
+            program: 0,
+            velocity: 88,
+            volume: 100,
+            expression: 108,
+            maxGateMs: 280,
+            minOctave: 1,
+            maxOctave: 6,
           ),
         },
       );
@@ -218,12 +452,31 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // SF2-only mode: only list instruments that have a SoundFont in assetSpecs.
   final List<String> instruments = [
     'piano',
-    'guzheng',
-    'flute',
+    'uprightPiano',
     'pipa',
+    'ruan',
+    'guzheng',
+    'erhu',
+    'flute',
     'shamisen',
     'harmonium',
+    'tabla',
     'oud',
+    'qanun',
+    'duduk',
+    'ney',
+    'tanbur',
+    'celesta',
+    'harp',
+    'clarinet',
+    'oboe',
+    'trumpet',
+    'frenchHorn',
+    'acousticGuitar',
+    'electricGuitar',
+    'acousticBass',
+    'bianzhong',
+    'marimba',
   ];
   final Map<String, bool> instrumentAvailability = {};
   String selectedInstrument = 'piano';
@@ -1770,6 +2023,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  const SizedBox(height: 4),
                                   TextField(
                                     controller: sequenceController,
                                     autofocus: true,
@@ -2084,23 +2338,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final text = _text;
     final isRunning = timer != null;
     final inheritedTheme = Theme.of(context);
-    final pageScheme = ColorScheme.fromSeed(
-      seedColor: inheritedTheme.colorScheme.primary,
-      brightness: Brightness.light,
-      dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
-    ).copyWith(surface: Colors.white);
-    final pageTheme = ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      colorScheme: pageScheme,
-      scaffoldBackgroundColor: Colors.white,
-      fontFamilyFallback:
-          inheritedTheme.textTheme.bodyMedium?.fontFamilyFallback,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-      ),
-    );
+    final pageScheme = inheritedTheme.colorScheme;
+    final pageBackground = inheritedTheme.brightness == Brightness.light
+        ? Colors.white
+        : inheritedTheme.scaffoldBackgroundColor;
     final int beatsForDisplay = timeSignatureBeats;
     final int beatInBar = (beat == 0) ? 1 : ((beat - 1) % beatsForDisplay) + 1;
     final int beatNumerator = beatInBar;
@@ -2124,117 +2365,120 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         idleColor: idleColor,
       );
     });
-    return Theme(
-      data: pageTheme,
-      child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          title: Text(text.metronomeTitle),
-          actions: [
-            IconButton(
-              tooltip: text.advanced,
-              onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
-              icon: const Icon(Icons.tune_rounded),
-            ),
-          ],
-        ),
-        endDrawer: Drawer(
-          child: AdvancedSettingsDrawer(
-            baseFrequencyHz: baseFrequencyHz,
-            minBaseFrequencyHz: _minBaseFrequencyHz,
-            maxBaseFrequencyHz: _maxBaseFrequencyHz,
-            // Note-name labels for the slider edges.
-            minBaseLabel: 'A$_instrumentMinOctave',
-            maxBaseLabel: 'A$_instrumentMaxOctave',
-            titleLabel: text.advancedSettings,
-            instrumentLabel: text.instrument,
-            instruments: instruments,
-            instrumentAvailability: instrumentAvailability,
-            selectedInstrument: selectedInstrument,
-            missingInstrumentLabel: text.missingInstrument,
-            onInstrumentChanged: _onInstrumentChanged,
-            onBaseFrequencyChanged: (v) {
-              setState(() => baseFrequencyHz = v);
-            },
-            onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: pageBackground,
+      appBar: AppBar(
+        backgroundColor: pageBackground,
+        surfaceTintColor: Colors.transparent,
+        title: Text(text.metronomeTitle),
+        actions: [
+          IconButton(
+            tooltip: text.advanced,
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+            icon: const Icon(Icons.tune_rounded),
           ),
+        ],
+      ),
+      endDrawer: Drawer(
+        backgroundColor: inheritedTheme.brightness == Brightness.light
+            ? Colors.white
+            : pageScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        child: AdvancedSettingsDrawer(
+          baseFrequencyHz: baseFrequencyHz,
+          minBaseFrequencyHz: _minBaseFrequencyHz,
+          maxBaseFrequencyHz: _maxBaseFrequencyHz,
+          // Note-name labels for the slider edges.
+          minBaseLabel: 'A$_instrumentMinOctave',
+          maxBaseLabel: 'A$_instrumentMaxOctave',
+          titleLabel: text.advancedSettings,
+          instrumentLabel: text.instrument,
+          instruments: instruments,
+          instrumentAvailability: instrumentAvailability,
+          selectedInstrument: selectedInstrument,
+          missingInstrumentLabel: text.missingInstrument,
+          onInstrumentChanged: _onInstrumentChanged,
+          onBaseFrequencyChanged: (v) {
+            setState(() => baseFrequencyHz = v);
+          },
+          onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
         ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 16,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        PlaybackStatusPanel(
-                          anim: swingAnim,
-                          isRunning: isRunning,
-                          beatNumerator: beatNumerator,
-                          beatDenominator: beatDenominator,
-                          bpm: bpm,
-                          bpmLabel: text.bpm,
-                          beatIndicators: beatIndicators,
-                        ),
-                        const SizedBox(height: 14),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      PlaybackStatusPanel(
+                        anim: swingAnim,
+                        isRunning: isRunning,
+                        beatNumerator: beatNumerator,
+                        beatDenominator: beatDenominator,
+                        bpm: bpm,
+                        bpmLabel: text.bpm,
+                        beatIndicators: beatIndicators,
+                      ),
+                      const SizedBox(height: 14),
 
-                        // Metronome controls panel, including BPM slider,
-                        // click/sound toggles, meter picker, and instrument selector
-                        MetronomeControlsPanel(
-                          noteCount: noteSequence.length,
-                          currentSoundListenable: currentSoundVN,
-                          sequencePreviewText: _sequencePreviewText(),
-                          onSequenceTap: _openNoteSequenceEditor,
-                          notesLoadedLabel: text.notesLoaded,
-                          clickLabel: text.click,
-                          soundLabel: text.sound,
-                          bpm: bpm,
-                          enableClick: enableClick,
-                          enableSound: enableSound,
-                          onBpmChanged: (v) {
-                            setState(() => bpm = v.round());
-                          },
-                          onBpmChangeEnd: (v) {
-                            _applyBpm(v.round());
-                          },
-                          onClickToggle: (v) async {
-                            setState(() => enableClick = v);
-                            if (!v) {
-                              await _pauseClickPlayers();
-                            }
-                          },
-                          onSoundToggle: (v) async {
-                            setState(() => enableSound = v);
-                            if (!v) {
-                              await _releaseAllNotePlayers();
-                            }
-                          },
-                          onMeterTap: _openMeterPickerSheet,
-                          meterLabel:
-                              '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
-                        ),
-                      ],
-                    ),
+                      // Metronome controls panel, including BPM slider,
+                      // click/sound toggles, meter picker, and instrument selector
+                      MetronomeControlsPanel(
+                        noteCount: noteSequence.length,
+                        currentSoundListenable: currentSoundVN,
+                        sequencePreviewText: _sequencePreviewText(),
+                        onSequenceTap: _openNoteSequenceEditor,
+                        notesLoadedLabel: text.notesLoaded,
+                        clickLabel: text.click,
+                        soundLabel: text.sound,
+                        bpm: bpm,
+                        enableClick: enableClick,
+                        enableSound: enableSound,
+                        onBpmChanged: (v) {
+                          setState(() => bpm = v.round());
+                        },
+                        onBpmChangeEnd: (v) {
+                          _applyBpm(v.round());
+                        },
+                        onClickToggle: (v) async {
+                          setState(() => enableClick = v);
+                          if (!v) {
+                            await _pauseClickPlayers();
+                          }
+                        },
+                        onSoundToggle: (v) async {
+                          setState(() => enableSound = v);
+                          if (!v) {
+                            await _releaseAllNotePlayers();
+                          }
+                        },
+                        onMeterTap: _openMeterPickerSheet,
+                        meterLabel:
+                            '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
+                      ),
+                    ],
                   ),
                 ),
               ),
-              TransportBar(
-                isRunning: isRunning,
-                onStart: start,
-                onStop: () => stop(),
-                onReset: reset,
-                startLabel: text.start,
-                stopLabel: text.stop,
-                resetLabel: text.reset,
-              ),
-            ],
-          ),
+            ),
+            TransportBar(
+              isRunning: isRunning,
+              onStart: start,
+              onStop: () => stop(),
+              onReset: reset,
+              startLabel: text.start,
+              stopLabel: text.stop,
+              resetLabel: text.reset,
+            ),
+          ],
         ),
       ),
     );

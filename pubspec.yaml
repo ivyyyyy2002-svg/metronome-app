@@ -34,3 +34,14 @@ flutter:
     - assets/notes/guzheng/
 
     - assets/sf2/
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Celesta.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Harp.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Clarinet.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Oboe.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Trumpet.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/French Horn 1.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Acoustic Gtr.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/El Guitar 1.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Acoustic Bass.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Bianzhong.sf2
+    - assets/sf2/EMU_Liveware_ESC_SoundFont_Library_SF2/Marimba.sf2
