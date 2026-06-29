@@ -1,4 +1,4 @@
-# MetriLoop
+# Metrinote
 
 A Flutter-based melodic metronome app designed to support music practice with both rhythmic clicks and configurable musical note patterns. This project was developed as a Western University ECE software project and focuses on mobile app development, audio playback, UI interaction, and configurable practice settings.
 

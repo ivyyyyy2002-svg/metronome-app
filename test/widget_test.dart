@@ -14,7 +14,7 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
-    expect(find.text('MetriLoop'), findsOneWidget);
+    expect(find.text('Metrinote'), findsOneWidget);
     expect(find.text('Start Metronome'), findsOneWidget);
   });
 }

@@ -110,7 +110,7 @@ class _MyAppState extends State<MyApp> {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'MetriLoop',
+          title: 'Metrinote',
           themeMode: appSettingsController.themeMode,
           theme: _themeDataFor(seedColor, Brightness.light),
           darkTheme: _themeDataFor(seedColor, Brightness.dark),
