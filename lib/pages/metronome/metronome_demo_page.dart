@@ -30,12 +30,14 @@ class _NoteSequenceEditorResult {
     this.text,
     this.name,
     this.savedSequence,
+    this.notation,
   });
 
   final _NoteSequenceEditorAction action;
   final String? text;
   final String? name;
   final SavedNoteSequence? savedSequence;
+  final NoteNotation? notation;
 }
 
 // The MetronomeDemo widget
@@ -1717,8 +1719,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Apply a custom note sequence from text input, with parsing,
   // validation, and preparation of audio assets
-  Future<void> _applyCustomNoteSequenceText(String text) async {
-    final saved = await widget.noteSequenceController.setSequenceFromText(text);
+  Future<void> _applyCustomNoteSequenceText(
+    String text, {
+    NoteNotation? notation,
+  }) async {
+    final saved = await widget.noteSequenceController.setSequenceFromText(
+      text,
+      notation: notation,
+    );
     if (!saved) return;
 
     await _refreshAppliedNoteSequence();
@@ -1802,8 +1810,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   Future<void> _saveEditedNoteSequence({
     required String text,
     required String name,
+    required NoteNotation notation,
   }) async {
-    final parsedSequence = parseNoteSequenceText(text);
+    final parsedSequence = parseNoteSequenceText(text, notation: notation);
     if (parsedSequence.isEmpty ||
         parsedSequence.length > maxNoteSequenceLength) {
       return;
@@ -1812,19 +1821,27 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final existingSequence = _savedSequenceByName(name);
     if (existingSequence != null) {
       if (_hasSameSequence(parsedSequence, existingSequence.sequence)) {
-        await _applyCustomNoteSequenceText(parsedSequence.join(' '));
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_text.alreadySavedNotice)));
-        return;
+        final hasSameText = text.trim() == existingSequence.sequenceText.trim();
+        if (!hasSameText) {
+          final shouldReplace = await _confirmReplaceSavedSequence(name);
+          if (!shouldReplace || !mounted) return;
+        } else {
+          await _applyCustomNoteSequenceText(text, notation: notation);
+          if (!mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(_text.alreadySavedNotice)));
+          return;
+        }
       }
 
-      final shouldReplace = await _confirmReplaceSavedSequence(name);
-      if (!shouldReplace || !mounted) return;
+      if (!_hasSameSequence(parsedSequence, existingSequence.sequence)) {
+        final shouldReplace = await _confirmReplaceSavedSequence(name);
+        if (!shouldReplace || !mounted) return;
+      }
     }
 
-    await _applyCustomNoteSequenceText(parsedSequence.join(' '));
+    await _applyCustomNoteSequenceText(text, notation: notation);
     final saved = await widget.noteSequenceController.saveCurrentSequence(name);
     if (!saved || !mounted) return;
     ScaffoldMessenger.of(
@@ -1836,7 +1853,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // or importing from saved sequences, with validation and preparation of audio assets for the new sequence
   Future<void> _openNoteSequenceEditor() async {
     final sequenceController = TextEditingController(
-      text: noteSequence.join(' '),
+      text: widget.noteSequenceController.sequenceText,
     );
     final nameController = TextEditingController();
     final searchController = TextEditingController();
@@ -1850,6 +1867,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             .searchSavedSequences(searchController.text);
         String? sequenceErrorText;
         String? sequenceNameErrorText;
+        var quickEntryNotation =
+            widget.noteSequenceController.notation ?? NoteNotation.western;
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -2045,24 +2064,50 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
                                   // Quick edit chips for notes, accidentals, and small edit actions.
                                   const SizedBox(height: 10),
+                                  SegmentedButton<NoteNotation>(
+                                    segments: [
+                                      ButtonSegment(
+                                        value: NoteNotation.western,
+                                        label: Text(_text.westernNotation),
+                                      ),
+                                      ButtonSegment(
+                                        value: NoteNotation.eastern,
+                                        label: Text(_text.easternNotation),
+                                      ),
+                                    ],
+                                    selected: {quickEntryNotation},
+                                    onSelectionChanged: (selection) {
+                                      setDialogState(() {
+                                        quickEntryNotation = selection.first;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 8),
                                   Wrap(
                                     spacing: 8,
                                     runSpacing: 8,
                                     children: [
-                                      for (final note in const [
-                                        'A',
-                                        'B',
-                                        'C',
-                                        'D',
-                                        'E',
-                                        'F',
-                                        'G',
-                                        'S',
-                                        'R',
-                                        'M',
-                                        'P',
-                                        'N',
-                                      ])
+                                      for (final note
+                                          in quickEntryNotation ==
+                                                  NoteNotation.western
+                                              ? const [
+                                                  'A',
+                                                  'B',
+                                                  'C',
+                                                  'D',
+                                                  'E',
+                                                  'F',
+                                                  'G',
+                                                ]
+                                              : const [
+                                                  'S',
+                                                  'R',
+                                                  'G',
+                                                  'M',
+                                                  'P',
+                                                  'D',
+                                                  'N',
+                                                ])
                                         ActionChip(
                                           label: Text(note),
                                           onPressed: () =>
@@ -2109,7 +2154,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    '${parseNoteSequenceText(sequenceController.text).length} / $maxNoteSequenceLength',
+                                    '${parseNoteSequenceText(sequenceController.text, notation: quickEntryNotation).length} / $maxNoteSequenceLength',
                                     textAlign: TextAlign.end,
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
@@ -2149,6 +2194,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                           final parsedSequence =
                                               parseNoteSequenceText(
                                                 sequenceController.text,
+                                                notation: quickEntryNotation,
                                               );
                                           final name = nameController.text
                                               .trim();
@@ -2180,8 +2226,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                             _NoteSequenceEditorResult(
                                               action: _NoteSequenceEditorAction
                                                   .saveText,
-                                              text: parsedSequence.join(' '),
+                                              text: sequenceController.text
+                                                  .trim(),
                                               name: name,
+                                              notation: quickEntryNotation,
                                             ),
                                           );
                                         },
@@ -2204,6 +2252,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                           final parsedSequence =
                                               parseNoteSequenceText(
                                                 sequenceController.text,
+                                                notation: quickEntryNotation,
                                               );
                                           if (parsedSequence.isEmpty) {
                                             setDialogState(() {
@@ -2226,7 +2275,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                             _NoteSequenceEditorResult(
                                               action: _NoteSequenceEditorAction
                                                   .applyText,
-                                              text: parsedSequence.join(' '),
+                                              text: sequenceController.text
+                                                  .trim(),
+                                              notation: quickEntryNotation,
                                             ),
                                           );
                                         },
@@ -2307,13 +2358,18 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       case _NoteSequenceEditorAction.applyText:
         final text = result.text;
         if (text == null) return;
-        await _applyCustomNoteSequenceText(text);
+        await _applyCustomNoteSequenceText(text, notation: result.notation);
         break;
       case _NoteSequenceEditorAction.saveText:
         final text = result.text;
         final name = result.name;
-        if (text == null || name == null) return;
-        await _saveEditedNoteSequence(text: text, name: name);
+        final notation = result.notation;
+        if (text == null || name == null || notation == null) return;
+        await _saveEditedNoteSequence(
+          text: text,
+          name: name,
+          notation: notation,
+        );
         break;
       case _NoteSequenceEditorAction.importSaved:
         final savedSequence = result.savedSequence;
@@ -2328,8 +2384,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   String _sequencePreviewText() {
     if (noteSequence.isEmpty) return _text.noSequenceLoaded;
     const int previewLimit = 24;
-    final preview = noteSequence.take(previewLimit).join(' ');
-    if (noteSequence.length <= previewLimit) return preview;
+    final originalSequence = widget.noteSequenceController.sequenceText
+        .trim()
+        .split(RegExp(r'\s+'));
+    final preview = originalSequence.take(previewLimit).join(' ');
+    if (originalSequence.length <= previewLimit) return preview;
     return '$preview ...';
   }
 

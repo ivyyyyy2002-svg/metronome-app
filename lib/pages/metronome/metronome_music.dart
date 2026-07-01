@@ -208,9 +208,13 @@ double beatUnitWholeNoteLength(BeatUnit unit) {
 
 // Parses a sequence of musical notes from text, keeping each whitespace-separated
 // token as one beat. Notes inside the same token are played within the same beat.
-List<String> parseNoteSequenceText(String text) {
+enum NoteNotation { western, eastern }
+
+List<String> parseNoteSequenceText(String text, {NoteNotation? notation}) {
   final beats = <String>[];
-  final useEasternNotation = _looksLikeEasternNotation(text);
+  final useEasternNotation =
+      notation == NoteNotation.eastern ||
+      (notation == null && _looksLikeEasternNotation(text));
 
   for (final rawToken in text.trim().split(RegExp(r'\s+'))) {
     if (rawToken.isEmpty) continue;

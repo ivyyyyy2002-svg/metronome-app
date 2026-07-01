@@ -40,6 +40,7 @@ class _MainHomePageState extends State<MainHomePage> {
   final TextEditingController _savedSearchController = TextEditingController();
   String? _sequenceErrorText;
   String? _sequenceNameErrorText;
+  NoteNotation _quickEntryNotation = NoteNotation.western;
   int _selectedTabIndex = 0;
 
   @override
@@ -48,6 +49,8 @@ class _MainHomePageState extends State<MainHomePage> {
     widget.noteSequenceController.addListener(_handleSequenceControllerChanged);
     widget.practiceHistoryController.addListener(_refreshPracticeHistory);
     _savedSearchController.addListener(_refreshSavedSequenceList);
+    _quickEntryNotation =
+        widget.noteSequenceController.notation ?? NoteNotation.western;
     _syncSequenceText();
   }
 
@@ -135,13 +138,21 @@ class _MainHomePageState extends State<MainHomePage> {
   }
 
   void _handleSequenceTextChanged(String text) {
-    final parsedSequence = parseNoteSequenceText(text);
+    final parsedSequence = parseNoteSequenceText(
+      text,
+      notation: _quickEntryNotation,
+    );
     if (parsedSequence.isEmpty ||
         parsedSequence.length > maxNoteSequenceLength) {
       return;
     }
 
-    unawaited(widget.noteSequenceController.setSequenceFromText(text));
+    unawaited(
+      widget.noteSequenceController.setSequenceFromText(
+        text,
+        notation: _quickEntryNotation,
+      ),
+    );
 
     if (_sequenceErrorText != null) {
       setState(() {
@@ -164,7 +175,10 @@ class _MainHomePageState extends State<MainHomePage> {
   // Normalizes the spacing in the sequence input field, ensuring there is
   // only a single space between notes and no leading/trailing spaces.
   void _normalizeSequenceInputSpacing() {
-    final formattedText = formatNoteSequenceText(_sequenceTextController.text);
+    final formattedText = _sequenceTextController.text
+        .trim()
+        .split(RegExp(r'\s+'))
+        .join(' ');
     if (formattedText.isEmpty ||
         formattedText == _sequenceTextController.text) {
       return;
@@ -316,7 +330,10 @@ class _MainHomePageState extends State<MainHomePage> {
 
   // Applies the custom note sequence entered by the user, validating it first.
   Future<bool> _applyCustomSequence() async {
-    final parsedSequence = parseNoteSequenceText(_sequenceTextController.text);
+    final parsedSequence = parseNoteSequenceText(
+      _sequenceTextController.text,
+      notation: _quickEntryNotation,
+    );
     final text = appTextFor(widget.appSettingsController.language);
 
     if (parsedSequence.isEmpty) {
@@ -333,7 +350,10 @@ class _MainHomePageState extends State<MainHomePage> {
       return false;
     }
 
-    final formattedText = parsedSequence.join(' ');
+    final formattedText = _sequenceTextController.text
+        .trim()
+        .split(RegExp(r'\s+'))
+        .join(' ');
     _sequenceTextController.value = TextEditingValue(
       text: formattedText,
       selection: TextSelection.collapsed(offset: formattedText.length),
@@ -341,6 +361,7 @@ class _MainHomePageState extends State<MainHomePage> {
 
     final saved = await widget.noteSequenceController.setSequenceFromText(
       formattedText,
+      notation: _quickEntryNotation,
     );
     if (!saved) return false;
     if (mounted) {
@@ -386,16 +407,27 @@ class _MainHomePageState extends State<MainHomePage> {
     if (existingSequence != null) {
       final currentSequence = parseNoteSequenceText(
         _sequenceTextController.text,
+        notation: _quickEntryNotation,
       );
       if (_hasSameSequence(currentSequence, existingSequence.sequence)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(text.alreadySavedNotice)));
-        return;
+        final hasSameText =
+            _sequenceTextController.text.trim() ==
+            existingSequence.sequenceText.trim();
+        if (!hasSameText) {
+          final shouldReplace = await _confirmReplaceSavedSequence(name);
+          if (!shouldReplace || !mounted) return;
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(text.alreadySavedNotice)));
+          return;
+        }
       }
 
-      final shouldReplace = await _confirmReplaceSavedSequence(name);
-      if (!shouldReplace || !mounted) return;
+      if (!_hasSameSequence(currentSequence, existingSequence.sequence)) {
+        final shouldReplace = await _confirmReplaceSavedSequence(name);
+        if (!shouldReplace || !mounted) return;
+      }
     }
 
     final saved = await widget.noteSequenceController.saveCurrentSequence(name);
@@ -416,6 +448,7 @@ class _MainHomePageState extends State<MainHomePage> {
     );
     if (!imported || !mounted) return;
 
+    _quickEntryNotation = savedSequence.notation ?? NoteNotation.western;
     _sequenceTextController.value = TextEditingValue(
       text: savedSequence.sequenceText,
       selection: TextSelection.collapsed(
@@ -907,7 +940,7 @@ class _MainHomePageState extends State<MainHomePage> {
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
-                                  '${parseNoteSequenceText(_sequenceTextController.text).length} / $maxNoteSequenceLength',
+                                  '${parseNoteSequenceText(_sequenceTextController.text, notation: _quickEntryNotation).length} / $maxNoteSequenceLength',
                                   textAlign: TextAlign.right,
                                   style: Theme.of(context).textTheme.labelSmall
                                       ?.copyWith(
@@ -938,24 +971,52 @@ class _MainHomePageState extends State<MainHomePage> {
 
                           // Note input action chips for quick entry of notes and accidentals
                           const SizedBox(height: 12),
+                          SegmentedButton<NoteNotation>(
+                            segments: [
+                              ButtonSegment(
+                                value: NoteNotation.western,
+                                label: Text(text.westernNotation),
+                              ),
+                              ButtonSegment(
+                                value: NoteNotation.eastern,
+                                label: Text(text.easternNotation),
+                              ),
+                            ],
+                            selected: {_quickEntryNotation},
+                            onSelectionChanged: (selection) {
+                              setState(() {
+                                _quickEntryNotation = selection.first;
+                              });
+                              _handleSequenceTextChanged(
+                                _sequenceTextController.text,
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              for (final note in const [
-                                'A',
-                                'B',
-                                'C',
-                                'D',
-                                'E',
-                                'F',
-                                'G',
-                                'S',
-                                'R',
-                                'M',
-                                'P',
-                                'N',
-                              ])
+                              for (final note
+                                  in _quickEntryNotation == NoteNotation.western
+                                      ? const [
+                                          'A',
+                                          'B',
+                                          'C',
+                                          'D',
+                                          'E',
+                                          'F',
+                                          'G',
+                                        ]
+                                      : const [
+                                          'S',
+                                          'R',
+                                          'G',
+                                          'M',
+                                          'P',
+                                          'D',
+                                          'N',
+                                        ])
                                 ActionChip(
                                   label: Text(note),
                                   onPressed: () => _appendNoteToSequence(note),
