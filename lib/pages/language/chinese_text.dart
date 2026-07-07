@@ -20,6 +20,18 @@ class ChineseText implements AppLanguageText {
   String get dark => '深色';
 
   @override
+  String get themeColor => '主题颜色';
+
+  @override
+  String get defaultThemeColor => '默认';
+
+  @override
+  String get roseThemeColor => '玫瑰色';
+
+  @override
+  String get purpleThemeColor => '紫色';
+
+  @override
   String get language => '语言';
 
   @override
@@ -35,10 +47,22 @@ class ChineseText implements AppLanguageText {
   String get hindi => '印地语';
 
   @override
-  String get homeTitle => '练习';
+  String get homeTitle => '主页';
 
   @override
-  String get appName => 'Metronome Studio';
+  String get appName => 'Metrinote';
+
+  @override
+  String get practiceTab => '练习';
+
+  @override
+  String get sequencesTab => '音符模式';
+
+  @override
+  String get toolsTab => '工具';
+
+  @override
+  String get basicsTab => '基础';
 
   @override
   String get readyTitle => '你好，\n准备开始练习了吗？';
@@ -53,6 +77,24 @@ class ChineseText implements AppLanguageText {
   String get musicBasics => '音乐基础';
 
   @override
+  String get practiceHistory => '练习记录';
+
+  @override
+  String get todayPractice => '今天';
+
+  @override
+  String get last7Days => '最近 7 天';
+
+  @override
+  String get lastSession => '上次练习';
+
+  @override
+  String get mostUsedBpm => '常用 BPM';
+
+  @override
+  String get noPracticeYet => '还没有练习记录';
+
+  @override
   String get basicsIntro => '节奏、拍号和记谱的简短参考。';
 
   @override
@@ -65,7 +107,8 @@ class ChineseText implements AppLanguageText {
   String get timeSignatureBasicsTitle => '拍号';
 
   @override
-  String get timeSignatureBasicsBody => '上面的数字表示每小节有几拍。4/4 很常见，适合多数练习；3/4 通常会有圆舞曲一样的律动。';
+  String get timeSignatureBasicsBody =>
+      '上面的数字表示每小节有几拍。4/4 很常见，适合多数练习；3/4 通常会有圆舞曲一样的律动。';
 
   @override
   String get subdivisionBasicsTitle => '细分';
@@ -83,7 +126,109 @@ class ChineseText implements AppLanguageText {
   String get jianpuBasicsTitle => '简谱';
 
   @override
-  String get jianpuBasicsBody => '简谱用数字表示音级，例如 1 2 3 5 6。它在中国乐器学习中很常见，选择调后可以对应到音名。';
+  String get jianpuBasicsBody =>
+      '简谱用数字表示音级，例如 1 2 3 5 6。它在中国乐器学习中很常见，选择调后可以对应到音名。';
+
+  @override
+  String get westernNotationBasicsTitle => '西方音名';
+
+  @override
+  String get westernNotationBasicsBody =>
+      '西方音名使用 A-G。升号 (#) 表示升高半音，降号 (b) 表示降低半音。';
+
+  @override
+  String get easternNotationBasicsTitle => '东方音名';
+
+  @override
+  String get easternNotationBasicsBody =>
+      '东方记谱使用 Sa Re Ga Ma Pa Dha Ni，也可以写成 S R G M P D N。在这个 app 中对应 C D E F G A B。';
+
+  @override
+  String get octaveNotationBasicsTitle => '八度';
+
+  @override
+  String get octaveNotationBasicsBody =>
+      "使用 ' 表示高八度，使用逗号表示低八度。例如 C' 比 C 高，C, 比 C 低。";
+
+  @override
+  String get groupedNotesBasicsTitle => '同拍音';
+
+  @override
+  String get groupedNotesBasicsBody =>
+      '空格表示进入下一拍。没有空格的多个音会在同一拍内播放，例如 C D E FG 表示 F 和 G 都在第 4 拍。';
+
+  @override
+  String get heldNotesBasicsTitle => '延长音';
+
+  @override
+  String get heldNotesBasicsBody =>
+      '短横线 (-) 表示把前一个音延长到下一拍。例如 C - D E 表示 C 会持续到第 2 拍。';
+
+  @override
+  String get scalePatternGenerator => '音阶模式生成器';
+
+  @override
+  String get scalePatternDescription => '快速生成音阶练习，并放入当前音符模式。';
+
+  @override
+  String get notation => '记谱';
+
+  @override
+  String get westernNotation => '西方';
+
+  @override
+  String get easternNotation => '东方';
+
+  @override
+  String get rootKey => '主音';
+
+  @override
+  String get scale => '音阶';
+
+  @override
+  String get direction => '方向';
+
+  @override
+  String get ascending => '上行';
+
+  @override
+  String get descending => '下行';
+
+  @override
+  String get upAndDown => '上下行';
+
+  @override
+  String get majorPentatonic => '大调五声音阶';
+
+  @override
+  String get minorPentatonic => '小调五声音阶';
+
+  @override
+  String get majorScale => '大调音阶';
+
+  @override
+  String get minorScale => '小调音阶';
+
+  @override
+  String get generatedPattern => '生成的音符模式';
+
+  @override
+  String get useAsSequence => '作为音符模式使用';
+
+  @override
+  String get patternAppliedNotice => '已放入音符模式编辑区。';
+
+  @override
+  String get jianpuConverter => '简谱转换器';
+
+  @override
+  String get jianpuConverterDescription => '选择调号后，把数字简谱转换成可以播放的音符模式。';
+
+  @override
+  String get jianpuInput => '简谱输入';
+
+  @override
+  String get convertedSequence => '转换结果';
 
   @override
   String get practiceNotePattern => '练习音符模式';
@@ -95,7 +240,8 @@ class ChineseText implements AppLanguageText {
   String get notesToPlay => '要播放的音符';
 
   @override
-  String get noteInputHelper => '使用 A-G、# 和 b。例如：A B C# Bb。';
+  String get noteInputHelper =>
+      "可用 A-G 或 S R G M P D N。可用 '、逗号、/ 和 - 表示八度、同拍音和延长音。";
 
   @override
   String get applySequence => '应用音符模式';
@@ -113,10 +259,7 @@ class ChineseText implements AppLanguageText {
   String get sequenceExample => '示例：ABCDEFG, C#D#EF#G#';
 
   @override
-  String get sequenceError => '请输入至少一个 A-G 的音符，也可以使用升号 (#) 和降号 (b)。';
-
-  @override
-  String get languageSavedNotice => '语言设置已保存';
+  String get sequenceError => '请输入至少一个有效的西方或东方音符。';
 
   @override
   String get metronomeTitle => '节拍器';
@@ -247,4 +390,16 @@ class ChineseText implements AppLanguageText {
 
   @override
   String noPlayableAssets(String instrument) => '找不到 $instrument 的可播放资源';
+
+  @override
+  String get scorePreview => '谱子';
+
+  @override
+  String get addScore => '添加谱子';
+
+  @override
+  String get scorePlaceholderTitle => '还没有添加谱子';
+
+  @override
+  String get scorePlaceholderBody => '这里会用于显示 PDF 或谱子图片。';
 }

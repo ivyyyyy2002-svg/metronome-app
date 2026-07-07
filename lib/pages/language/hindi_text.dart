@@ -20,6 +20,18 @@ class HindiText implements AppLanguageText {
   String get dark => 'डार्क';
 
   @override
+  String get themeColor => 'Theme color';
+
+  @override
+  String get defaultThemeColor => 'Default';
+
+  @override
+  String get roseThemeColor => 'Rose';
+
+  @override
+  String get purpleThemeColor => 'Purple';
+
+  @override
   String get language => 'भाषा';
 
   @override
@@ -35,10 +47,22 @@ class HindiText implements AppLanguageText {
   String get hindi => 'हिन्दी';
 
   @override
-  String get homeTitle => 'अभ्यास';
+  String get homeTitle => 'होम';
 
   @override
-  String get appName => 'Metronome Studio';
+  String get appName => 'Metrinote';
+
+  @override
+  String get practiceTab => 'Practice';
+
+  @override
+  String get sequencesTab => 'Sequences';
+
+  @override
+  String get toolsTab => 'Tools';
+
+  @override
+  String get basicsTab => 'Basics';
 
   @override
   String get readyTitle => 'नमस्ते,\nअभ्यास के लिए तैयार हैं?';
@@ -52,6 +76,24 @@ class HindiText implements AppLanguageText {
 
   @override
   String get musicBasics => 'Music Basics';
+
+  @override
+  String get practiceHistory => 'Practice History';
+
+  @override
+  String get todayPractice => 'Today';
+
+  @override
+  String get last7Days => 'Last 7 days';
+
+  @override
+  String get lastSession => 'Last session';
+
+  @override
+  String get mostUsedBpm => 'Most used BPM';
+
+  @override
+  String get noPracticeYet => 'अभी कोई practice record नहीं है';
 
   @override
   String get basicsIntro =>
@@ -93,6 +135,110 @@ class HindiText implements AppLanguageText {
       'Jianpu scale degrees के लिए numbers इस्तेमाल करता है, जैसे 1 2 3 5 6। Key चुनकर इसे note names से जोड़ा जा सकता है।';
 
   @override
+  String get westernNotationBasicsTitle => 'Western Notes';
+
+  @override
+  String get westernNotationBasicsBody =>
+      'Western note names A-G इस्तेमाल करते हैं। Sharp (#) note को एक semitone ऊपर करता है, और flat (b) note को एक semitone नीचे करता है।';
+
+  @override
+  String get easternNotationBasicsTitle => 'Eastern Notes';
+
+  @override
+  String get easternNotationBasicsBody =>
+      'Eastern notation Sa Re Ga Ma Pa Dha Ni इस्तेमाल करता है, या S R G M P D N. इस app में ये C D E F G A B से map होते हैं।';
+
+  @override
+  String get octaveNotationBasicsTitle => 'Octaves';
+
+  @override
+  String get octaveNotationBasicsBody =>
+      "Higher octave के लिए ' और lower octave के लिए comma इस्तेमाल करें। जैसे C' C से ऊँचा है, और C, C से नीचे है।";
+
+  @override
+  String get groupedNotesBasicsTitle => 'Grouped Notes';
+
+  @override
+  String get groupedNotesBasicsBody =>
+      'Space अगले beat पर ले जाता है। बिना space वाले notes एक ही beat में बजते हैं, इसलिए C D E FG में F और G चौथे beat में साथ आते हैं।';
+
+  @override
+  String get heldNotesBasicsTitle => 'Held Notes';
+
+  @override
+  String get heldNotesBasicsBody =>
+      'Dash (-) previous note को अगले beat तक hold करता है। जैसे C - D E में C second beat तक चलता है।';
+
+  @override
+  String get scalePatternGenerator => 'Scale Pattern Generator';
+
+  @override
+  String get scalePatternDescription =>
+      'Scale practice pattern बनाएँ और note sequence में भेजें।';
+
+  @override
+  String get notation => 'Notation';
+
+  @override
+  String get westernNotation => 'Western';
+
+  @override
+  String get easternNotation => 'Eastern';
+
+  @override
+  String get rootKey => 'Root key';
+
+  @override
+  String get scale => 'Scale';
+
+  @override
+  String get direction => 'Direction';
+
+  @override
+  String get ascending => 'Ascending';
+
+  @override
+  String get descending => 'Descending';
+
+  @override
+  String get upAndDown => 'Up and down';
+
+  @override
+  String get majorPentatonic => 'Major pentatonic';
+
+  @override
+  String get minorPentatonic => 'Minor pentatonic';
+
+  @override
+  String get majorScale => 'Major scale';
+
+  @override
+  String get minorScale => 'Minor scale';
+
+  @override
+  String get generatedPattern => 'Generated pattern';
+
+  @override
+  String get useAsSequence => 'Use as Sequence';
+
+  @override
+  String get patternAppliedNotice =>
+      'Pattern sequence editor में जोड़ दिया गया है।';
+
+  @override
+  String get jianpuConverter => 'Jianpu Converter';
+
+  @override
+  String get jianpuConverterDescription =>
+      'Key चुनकर numbered notation को playable note names में बदलें।';
+
+  @override
+  String get jianpuInput => 'Jianpu input';
+
+  @override
+  String get convertedSequence => 'Converted sequence';
+
+  @override
   String get practiceNotePattern => 'नोट पैटर्न';
 
   @override
@@ -103,7 +249,8 @@ class HindiText implements AppLanguageText {
   String get notesToPlay => 'बजाने वाले नोट्स';
 
   @override
-  String get noteInputHelper => 'A-G, # और b इस्तेमाल करें। उदाहरण: A B C# Bb।';
+  String get noteInputHelper =>
+      "A-G या S R G M P D N इस्तेमाल करें। ', comma, / और - octave, grouped notes और holds के लिए हैं।";
 
   @override
   String get applySequence => 'पैटर्न लागू करें';
@@ -122,10 +269,7 @@ class HindiText implements AppLanguageText {
 
   @override
   String get sequenceError =>
-      'A-G में से कम से कम एक नोट डालें। आप sharps (#) और flats (b) भी इस्तेमाल कर सकते हैं।';
-
-  @override
-  String get languageSavedNotice => 'भाषा सेटिंग सेव हो गई है।';
+      'कम से कम एक valid western या eastern note डालें।';
 
   @override
   String get metronomeTitle => 'मेट्रोनोम';
@@ -259,4 +403,17 @@ class HindiText implements AppLanguageText {
   @override
   String noPlayableAssets(String instrument) =>
       '$instrument के लिए कोई playable asset नहीं मिला';
+
+  @override
+  String get scorePreview => 'Score';
+
+  @override
+  String get addScore => 'Score जोड़ें';
+
+  @override
+  String get scorePlaceholderTitle => 'कोई score नहीं जोड़ा गया';
+
+  @override
+  String get scorePlaceholderBody =>
+      'यह जगह PDF या score image दिखाने के लिए है।';
 }

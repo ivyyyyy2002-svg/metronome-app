@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:pdfx/pdfx.dart';
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -88,6 +91,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   int bpm = _initialBpm; // Beats per minute
   Timer? timer;
   DateTime? practiceStartedAt;
+  Uint8List? scoreImageBytes;
+  String? scoreFileName;
+  String? scorePdfPath;
+  PdfControllerPinch? scorePdfController;
+  int scorePdfPage = 1;
+  int scorePdfPages = 0;
+  final TransformationController _scoreTransformationController =
+      TransformationController();
+  double scoreZoom = 1;
 
   // just_audio players
   final AudioPlayer clickStrongPlayer = AudioPlayer();
@@ -1717,6 +1729,65 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   AppLanguageText get _text =>
       appTextFor(widget.appSettingsController.language);
 
+  Widget _buildAdvancedSettingsDrawer({
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+  }) {
+    return Drawer(
+      backgroundColor: theme.brightness == Brightness.light
+          ? Colors.white
+          : colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      child: AdvancedSettingsDrawer(
+        baseFrequencyHz: baseFrequencyHz,
+        minBaseFrequencyHz: _minBaseFrequencyHz,
+        maxBaseFrequencyHz: _maxBaseFrequencyHz,
+        // Note-name labels for the slider edges.
+        minBaseLabel: 'A$_instrumentMinOctave',
+        maxBaseLabel: 'A$_instrumentMaxOctave',
+        titleLabel: _text.advancedSettings,
+        instrumentLabel: _text.instrument,
+        instruments: instruments,
+        instrumentAvailability: instrumentAvailability,
+        selectedInstrument: selectedInstrument,
+        missingInstrumentLabel: _text.missingInstrument,
+        onInstrumentChanged: _onInstrumentChanged,
+        onBaseFrequencyChanged: (v) {
+          setState(() => baseFrequencyHz = v);
+        },
+        onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+      ),
+    );
+  }
+
+  Future<void> _openAdvancedSettingsPanel({
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+    required bool useDialog,
+  }) async {
+    if (!useDialog) {
+      _scaffoldKey.currentState?.openEndDrawer();
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(28),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 620),
+            child: _buildAdvancedSettingsDrawer(
+              theme: theme,
+              colorScheme: colorScheme,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Apply a custom note sequence from text input, with parsing,
   // validation, and preparation of audio assets
   Future<void> _applyCustomNoteSequenceText(
@@ -2392,6 +2463,678 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return '$preview ...';
   }
 
+  // Reset the score zoom level to default (1.0) and reset
+  // transformation matrices for both image and PDF views
+  void _resetScoreZoom() {
+    scoreZoom = 1;
+    _scoreTransformationController.value = Matrix4.identity();
+    scorePdfController?.value = Matrix4.identity();
+  }
+
+  Future<void> _pickScoreFile() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+
+      final file = result.files.single;
+      final extension = file.extension?.toLowerCase();
+      if (extension == 'pdf') {
+        final path = file.path;
+        if (path == null) return;
+
+        final nextController = PdfControllerPinch(
+          document: PdfDocument.openFile(path),
+        );
+        final previousController = scorePdfController;
+
+        setState(() {
+          previousController?.dispose();
+          scorePdfController = nextController;
+          scoreImageBytes = null;
+          scoreFileName = file.name;
+          scorePdfPath = path;
+          scorePdfPage = 1;
+          scorePdfPages = 0;
+          _resetScoreZoom();
+        });
+        return;
+      }
+
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) return;
+
+      setState(() {
+        scorePdfController?.dispose();
+        scorePdfController = null;
+        scoreImageBytes = bytes;
+        scoreFileName = file.name;
+        scorePdfPath = null;
+        scorePdfPage = 1;
+        scorePdfPages = 0;
+        _resetScoreZoom();
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  void _setScoreZoom(double nextZoom) {
+    final clampedZoom = nextZoom.clamp(0.75, 4.0).toDouble();
+
+    setState(() {
+      scoreZoom = clampedZoom;
+      _scoreTransformationController.value = Matrix4.identity()
+        ..scaleByDouble(clampedZoom, clampedZoom, 1.0, 1.0);
+      scorePdfController?.value = Matrix4.identity()
+        ..scaleByDouble(clampedZoom, clampedZoom, 1.0, 1.0);
+    });
+  }
+
+  // Open the score preview in a fullscreen dialog,
+  // allowing zooming and navigation for both image and PDF scores
+  Future<void> _openScoreFullScreen({
+    required AppLanguageText text,
+    required ColorScheme colorScheme,
+  }) async {
+    final imageBytes = scoreImageBytes;
+    final pdfPath = scorePdfPath;
+    if (imageBytes == null && pdfPath == null) return;
+    final fullscreenPdfController = pdfPath == null
+        ? null
+        : PdfControllerPinch(document: PdfDocument.openFile(pdfPath));
+    var fullscreenZoom = 1.0;
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              void setFullscreenZoom(double nextZoom) {
+                final clampedZoom = nextZoom.clamp(0.75, 4.0).toDouble();
+                setDialogState(() {
+                  fullscreenZoom = clampedZoom;
+                  fullscreenPdfController?.value = Matrix4.identity()
+                    ..scaleByDouble(clampedZoom, clampedZoom, 1.0, 1.0);
+                });
+              }
+
+              return Dialog.fullscreen(
+                backgroundColor: colorScheme.surface,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              tooltip: text.close,
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.fullscreen_exit_rounded),
+                            ),
+                            Expanded(
+                              child: Text(
+                                scoreFileName ?? text.scorePreview,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Zoom out',
+                              onPressed: () =>
+                                  setFullscreenZoom(fullscreenZoom - 0.25),
+                              icon: const Icon(Icons.zoom_out_rounded),
+                            ),
+                            Text(
+                              '${(fullscreenZoom * 100).round()}%',
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                            IconButton(
+                              tooltip: 'Zoom in',
+                              onPressed: () =>
+                                  setFullscreenZoom(fullscreenZoom + 0.25),
+                              icon: const Icon(Icons.zoom_in_rounded),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Divider(height: 1, color: colorScheme.outlineVariant),
+                      Expanded(
+                        child: imageBytes != null
+                            ? _buildScoreImageView(imageBytes)
+                            : _buildScorePdfView(
+                                fullscreenPdfController!,
+                                colorScheme: colorScheme,
+                                updatePageState: setDialogState,
+                                onPageChanged: (_) {},
+                                onDocumentLoaded: (_) {},
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      fullscreenPdfController?.dispose();
+    }
+  }
+
+  Widget _buildScorePdfView(
+    PdfControllerPinch controller, {
+    required ColorScheme colorScheme,
+    required StateSetter updatePageState,
+    required ValueChanged<int> onPageChanged,
+    required ValueChanged<PdfDocument> onDocumentLoaded,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: PdfViewPinch(
+        controller: controller,
+        minScale: 0.75,
+        maxScale: 4,
+        padding: 12,
+        backgroundDecoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.12),
+        ),
+        onPageChanged: (page) {
+          onPageChanged(page);
+          updatePageState(() {});
+        },
+        onDocumentLoaded: (document) {
+          onDocumentLoaded(document);
+          updatePageState(() {});
+        },
+        builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
+          options: const DefaultBuilderOptions(),
+          documentLoaderBuilder: (_) =>
+              const Center(child: CircularProgressIndicator()),
+          pageLoaderBuilder: (_) =>
+              const Center(child: CircularProgressIndicator()),
+          errorBuilder: (_, error) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetronomeCore({
+    required AppLanguageText text,
+    required bool isRunning,
+    required int beatNumerator,
+    required int beatDenominator,
+    required List<BeatIndicatorItem> beatIndicators,
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+      horizontal: 18,
+      vertical: 16,
+    ),
+  }) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: padding,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            PlaybackStatusPanel(
+              anim: swingAnim,
+              isRunning: isRunning,
+              beatNumerator: beatNumerator,
+              beatDenominator: beatDenominator,
+              bpm: bpm,
+              bpmLabel: text.bpm,
+              beatIndicators: beatIndicators,
+            ),
+            const SizedBox(height: 14),
+
+            // Metronome controls panel, including BPM slider,
+            // click/sound toggles, meter picker, and instrument selector
+            MetronomeControlsPanel(
+              noteCount: noteSequence.length,
+              currentSoundListenable: currentSoundVN,
+              sequencePreviewText: _sequencePreviewText(),
+              onSequenceTap: _openNoteSequenceEditor,
+              notesLoadedLabel: text.notesLoaded,
+              clickLabel: text.click,
+              soundLabel: text.sound,
+              bpm: bpm,
+              enableClick: enableClick,
+              enableSound: enableSound,
+              onBpmChanged: (v) {
+                setState(() => bpm = v.round());
+              },
+              onBpmChangeEnd: (v) {
+                _applyBpm(v.round());
+              },
+              onClickToggle: (v) async {
+                setState(() => enableClick = v);
+                if (!v) {
+                  await _pauseClickPlayers();
+                }
+              },
+              onSoundToggle: (v) async {
+                setState(() => enableSound = v);
+                if (!v) {
+                  await _releaseAllNotePlayers();
+                }
+              },
+              onMeterTap: _openMeterPickerSheet,
+              meterLabel:
+                  '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Build the score practice panel, which displays the loaded score
+  // as an image or PDF, and provides controls for zooming and navigation
+  Widget _buildScorePracticePanel({
+    required AppLanguageText text,
+    required ColorScheme colorScheme,
+  }) {
+    final staffLineColor = colorScheme.outlineVariant.withValues(alpha: 0.78);
+    final imageBytes = scoreImageBytes;
+    final pdfController = scorePdfController;
+    final hasScoreFile = imageBytes != null || pdfController != null;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 14, 12),
+            child: Row(
+              children: [
+                Icon(Icons.library_music_rounded, color: colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    text.scorePreview,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _pickScoreFile,
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text(text.addScore),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colorScheme.outlineVariant),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.32,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.72),
+                  ),
+                ),
+                child: !hasScoreFile
+                    ? Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                                vertical: 36,
+                              ),
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  for (int group = 0; group < 4; group++)
+                                    Column(
+                                      children: [
+                                        for (int line = 0; line < 5; line++)
+                                          Container(
+                                            height: 1,
+                                            margin: const EdgeInsets.symmetric(
+                                              vertical: 4,
+                                            ),
+                                            color: staffLineColor,
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 320),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface.withValues(
+                                    alpha: 0.94,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: colorScheme.outlineVariant,
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(18),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.picture_as_pdf_rounded,
+                                        size: 34,
+                                        color: colorScheme.primary,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        text.scorePlaceholderTitle,
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        text.scorePlaceholderBody,
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Stack(
+                        children: [
+                          Positioned.fill(
+                            child: pdfController != null
+                                ? _buildScorePdfView(
+                                    pdfController,
+                                    colorScheme: colorScheme,
+                                    updatePageState: setState,
+                                    onPageChanged: (page) {
+                                      scorePdfPage = page;
+                                    },
+                                    onDocumentLoaded: (document) {
+                                      scorePdfPages = document.pagesCount;
+                                    },
+                                  )
+                                : _buildScoreImageView(imageBytes!),
+                          ),
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: colorScheme.surface.withValues(
+                                  alpha: 0.92,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: colorScheme.outlineVariant,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (pdfController != null) ...[
+                                    IconButton(
+                                      tooltip: 'Previous page',
+                                      onPressed: scorePdfPage <= 1
+                                          ? null
+                                          : () => pdfController.previousPage(
+                                              duration: const Duration(
+                                                milliseconds: 220,
+                                              ),
+                                              curve: Curves.easeOut,
+                                            ),
+                                      icon: const Icon(
+                                        Icons.chevron_left_rounded,
+                                      ),
+                                    ),
+                                    Text(
+                                      scorePdfPages == 0
+                                          ? '$scorePdfPage'
+                                          : '$scorePdfPage/$scorePdfPages',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.labelMedium,
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Next page',
+                                      onPressed:
+                                          scorePdfPages == 0 ||
+                                              scorePdfPage >= scorePdfPages
+                                          ? null
+                                          : () => pdfController.nextPage(
+                                              duration: const Duration(
+                                                milliseconds: 220,
+                                              ),
+                                              curve: Curves.easeOut,
+                                            ),
+                                      icon: const Icon(
+                                        Icons.chevron_right_rounded,
+                                      ),
+                                    ),
+                                  ],
+                                  IconButton(
+                                    tooltip: 'Zoom out',
+                                    onPressed: () =>
+                                        _setScoreZoom(scoreZoom - 0.25),
+                                    icon: const Icon(Icons.zoom_out_rounded),
+                                  ),
+                                  Text(
+                                    '${(scoreZoom * 100).round()}%',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelMedium,
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Zoom in',
+                                    onPressed: () =>
+                                        _setScoreZoom(scoreZoom + 0.25),
+                                    icon: const Icon(Icons.zoom_in_rounded),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Fullscreen',
+                                    onPressed: () => _openScoreFullScreen(
+                                      text: text,
+                                      colorScheme: colorScheme,
+                                    ),
+                                    icon: const Icon(Icons.fullscreen_rounded),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build the score image view, allowing zooming and panning of the loaded score image
+  Widget _buildScoreImageView(Uint8List imageBytes) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: InteractiveViewer(
+        transformationController: _scoreTransformationController,
+        minScale: 0.75,
+        maxScale: 4,
+        boundaryMargin: const EdgeInsets.all(160),
+        onInteractionEnd: (_) {
+          final nextZoom = _scoreTransformationController.value
+              .getMaxScaleOnAxis()
+              .clamp(0.75, 4.0)
+              .toDouble();
+          if ((nextZoom - scoreZoom).abs() < 0.01) return;
+
+          setState(() {
+            scoreZoom = nextZoom;
+          });
+        },
+        child: Center(
+          child: Image.memory(
+            imageBytes,
+            fit: BoxFit.contain,
+            gaplessPlayback: true,
+            errorBuilder: (context, error, stackTrace) {
+              return Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'This image could not be loaded.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Build the main body of the metronome page, including the metronome core
+  Widget _buildMetronomeBody({
+    required AppLanguageText text,
+    required bool isRunning,
+    required int beatNumerator,
+    required int beatDenominator,
+    required List<BeatIndicatorItem> beatIndicators,
+    required ColorScheme colorScheme,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscapeTablet =
+            constraints.maxWidth >= 840 &&
+            constraints.maxWidth > constraints.maxHeight;
+
+        if (!isLandscapeTablet) {
+          return Column(
+            children: [
+              Expanded(
+                child: _buildMetronomeCore(
+                  text: text,
+                  isRunning: isRunning,
+                  beatNumerator: beatNumerator,
+                  beatDenominator: beatDenominator,
+                  beatIndicators: beatIndicators,
+                ),
+              ),
+              TransportBar(
+                isRunning: isRunning,
+                onStart: start,
+                onStop: () => stop(),
+                onReset: reset,
+                startLabel: text.start,
+                stopLabel: text.stop,
+                resetLabel: text.reset,
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: math.min(430, constraints.maxWidth * 0.38),
+                      child: _buildMetronomeCore(
+                        text: text,
+                        isRunning: isRunning,
+                        beatNumerator: beatNumerator,
+                        beatDenominator: beatDenominator,
+                        beatIndicators: beatIndicators,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: _buildScorePracticePanel(
+                        text: text,
+                        colorScheme: colorScheme,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            TransportBar(
+              isRunning: isRunning,
+              onStart: start,
+              onStop: () => stop(),
+              onReset: reset,
+              startLabel: text.start,
+              stopLabel: text.stop,
+              resetLabel: text.reset,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Build the main scaffold of the metronome page, including the app bar, body, and advanced settings drawer
   @override
   Widget build(BuildContext context) {
     final text = _text;
@@ -2401,6 +3144,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final pageBackground = inheritedTheme.brightness == Brightness.light
         ? Colors.white
         : inheritedTheme.scaffoldBackgroundColor;
+    final mediaSize = MediaQuery.sizeOf(context);
+    final isLandscapeTablet =
+        mediaSize.width >= 840 && mediaSize.width > mediaSize.height;
     final int beatsForDisplay = timeSignatureBeats;
     final int beatInBar = (beat == 0) ? 1 : ((beat - 1) % beatsForDisplay) + 1;
     final int beatNumerator = beatInBar;
@@ -2434,110 +3180,27 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         actions: [
           IconButton(
             tooltip: text.advanced,
-            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+            onPressed: () => _openAdvancedSettingsPanel(
+              theme: inheritedTheme,
+              colorScheme: pageScheme,
+              useDialog: isLandscapeTablet,
+            ),
             icon: const Icon(Icons.tune_rounded),
           ),
         ],
       ),
-      endDrawer: Drawer(
-        backgroundColor: inheritedTheme.brightness == Brightness.light
-            ? Colors.white
-            : pageScheme.surface,
-        surfaceTintColor: Colors.transparent,
-        child: AdvancedSettingsDrawer(
-          baseFrequencyHz: baseFrequencyHz,
-          minBaseFrequencyHz: _minBaseFrequencyHz,
-          maxBaseFrequencyHz: _maxBaseFrequencyHz,
-          // Note-name labels for the slider edges.
-          minBaseLabel: 'A$_instrumentMinOctave',
-          maxBaseLabel: 'A$_instrumentMaxOctave',
-          titleLabel: text.advancedSettings,
-          instrumentLabel: text.instrument,
-          instruments: instruments,
-          instrumentAvailability: instrumentAvailability,
-          selectedInstrument: selectedInstrument,
-          missingInstrumentLabel: text.missingInstrument,
-          onInstrumentChanged: _onInstrumentChanged,
-          onBaseFrequencyChanged: (v) {
-            setState(() => baseFrequencyHz = v);
-          },
-          onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
-        ),
+      endDrawer: _buildAdvancedSettingsDrawer(
+        theme: inheritedTheme,
+        colorScheme: pageScheme,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      PlaybackStatusPanel(
-                        anim: swingAnim,
-                        isRunning: isRunning,
-                        beatNumerator: beatNumerator,
-                        beatDenominator: beatDenominator,
-                        bpm: bpm,
-                        bpmLabel: text.bpm,
-                        beatIndicators: beatIndicators,
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Metronome controls panel, including BPM slider,
-                      // click/sound toggles, meter picker, and instrument selector
-                      MetronomeControlsPanel(
-                        noteCount: noteSequence.length,
-                        currentSoundListenable: currentSoundVN,
-                        sequencePreviewText: _sequencePreviewText(),
-                        onSequenceTap: _openNoteSequenceEditor,
-                        notesLoadedLabel: text.notesLoaded,
-                        clickLabel: text.click,
-                        soundLabel: text.sound,
-                        bpm: bpm,
-                        enableClick: enableClick,
-                        enableSound: enableSound,
-                        onBpmChanged: (v) {
-                          setState(() => bpm = v.round());
-                        },
-                        onBpmChangeEnd: (v) {
-                          _applyBpm(v.round());
-                        },
-                        onClickToggle: (v) async {
-                          setState(() => enableClick = v);
-                          if (!v) {
-                            await _pauseClickPlayers();
-                          }
-                        },
-                        onSoundToggle: (v) async {
-                          setState(() => enableSound = v);
-                          if (!v) {
-                            await _releaseAllNotePlayers();
-                          }
-                        },
-                        onMeterTap: _openMeterPickerSheet,
-                        meterLabel:
-                            '$timeSignatureBeats/$timeSignatureNote · ${_localizedBeatUnitLabel(beatUnit)}',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            TransportBar(
-              isRunning: isRunning,
-              onStart: start,
-              onStop: () => stop(),
-              onReset: reset,
-              startLabel: text.start,
-              stopLabel: text.stop,
-              resetLabel: text.reset,
-            ),
-          ],
+        child: _buildMetronomeBody(
+          text: text,
+          isRunning: isRunning,
+          beatNumerator: beatNumerator,
+          beatDenominator: beatDenominator,
+          beatIndicators: beatIndicators,
+          colorScheme: pageScheme,
         ),
       ),
     );
@@ -2554,6 +3217,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
     _disposePerNotePlayers();
     currentSoundVN.dispose();
+    scorePdfController?.dispose();
+    _scoreTransformationController.dispose();
     swingController.dispose();
     super.dispose();
   }

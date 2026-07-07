@@ -6,6 +6,10 @@ abstract class AppLanguageText {
   String get system;
   String get light;
   String get dark;
+  String get themeColor;
+  String get defaultThemeColor;
+  String get roseThemeColor;
+  String get purpleThemeColor;
   String get language;
   String get english;
   String get chinese;
@@ -14,11 +18,21 @@ abstract class AppLanguageText {
 
   String get homeTitle;
   String get appName;
+  String get practiceTab;
+  String get sequencesTab;
+  String get toolsTab;
+  String get basicsTab;
 
   String get readyTitle;
   String get readyDescription;
   String get startMetronome;
   String get musicBasics;
+  String get practiceHistory;
+  String get todayPractice;
+  String get last7Days;
+  String get lastSession;
+  String get mostUsedBpm;
+  String get noPracticeYet;
   String get basicsIntro;
   String get bpmBasicsTitle;
   String get bpmBasicsBody;
@@ -30,6 +44,38 @@ abstract class AppLanguageText {
   String get downbeatBasicsBody;
   String get jianpuBasicsTitle;
   String get jianpuBasicsBody;
+  String get westernNotationBasicsTitle;
+  String get westernNotationBasicsBody;
+  String get easternNotationBasicsTitle;
+  String get easternNotationBasicsBody;
+  String get octaveNotationBasicsTitle;
+  String get octaveNotationBasicsBody;
+  String get groupedNotesBasicsTitle;
+  String get groupedNotesBasicsBody;
+  String get heldNotesBasicsTitle;
+  String get heldNotesBasicsBody;
+  String get scalePatternGenerator;
+  String get scalePatternDescription;
+  String get notation;
+  String get westernNotation;
+  String get easternNotation;
+  String get rootKey;
+  String get scale;
+  String get direction;
+  String get ascending;
+  String get descending;
+  String get upAndDown;
+  String get majorPentatonic;
+  String get minorPentatonic;
+  String get majorScale;
+  String get minorScale;
+  String get generatedPattern;
+  String get useAsSequence;
+  String get patternAppliedNotice;
+  String get jianpuConverter;
+  String get jianpuConverterDescription;
+  String get jianpuInput;
+  String get convertedSequence;
 
   String get practiceNotePattern;
   String get notePatternDescription;
@@ -41,8 +87,6 @@ abstract class AppLanguageText {
   String get sequenceSavedNotice;
   String get sequenceExample;
   String get sequenceError;
-
-  String get languageSavedNotice;
 
   String get metronomeTitle;
   String get advanced;
@@ -87,4 +131,8 @@ abstract class AppLanguageText {
   String get subdivisionDottedEighth;
   String get missingInstrument;
   String noPlayableAssets(String instrument);
+  String get scorePreview;
+  String get addScore;
+  String get scorePlaceholderTitle;
+  String get scorePlaceholderBody;
 }

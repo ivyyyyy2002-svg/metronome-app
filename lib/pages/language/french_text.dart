@@ -20,6 +20,18 @@ class FrenchText implements AppLanguageText {
   String get dark => 'Sombre';
 
   @override
+  String get themeColor => 'Couleur du thème';
+
+  @override
+  String get defaultThemeColor => 'Défaut';
+
+  @override
+  String get roseThemeColor => 'Rose';
+
+  @override
+  String get purpleThemeColor => 'Violet';
+
+  @override
   String get language => 'Langue';
 
   @override
@@ -35,10 +47,22 @@ class FrenchText implements AppLanguageText {
   String get hindi => 'हिन्दी';
 
   @override
-  String get homeTitle => 'Pratique';
+  String get homeTitle => 'Accueil';
 
   @override
-  String get appName => 'Metronome Studio';
+  String get appName => 'Metrinote';
+
+  @override
+  String get practiceTab => 'Pratique';
+
+  @override
+  String get sequencesTab => 'Motifs';
+
+  @override
+  String get toolsTab => 'Outils';
+
+  @override
+  String get basicsTab => 'Bases';
 
   @override
   String get readyTitle => 'Bonjour,\nprêt à pratiquer ?';
@@ -52,6 +76,24 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get musicBasics => 'Bases musicales';
+
+  @override
+  String get practiceHistory => 'Historique';
+
+  @override
+  String get todayPractice => 'Aujourd’hui';
+
+  @override
+  String get last7Days => '7 derniers jours';
+
+  @override
+  String get lastSession => 'Dernière séance';
+
+  @override
+  String get mostUsedBpm => 'BPM fréquent';
+
+  @override
+  String get noPracticeYet => 'Aucune pratique enregistrée';
 
   @override
   String get basicsIntro =>
@@ -93,6 +135,109 @@ class FrenchText implements AppLanguageText {
       'Le jianpu utilise des chiffres pour les degrés de la gamme, comme 1 2 3 5 6. Il peut être relié aux noms de notes en choisissant une tonalité.';
 
   @override
+  String get westernNotationBasicsTitle => 'Notes occidentales';
+
+  @override
+  String get westernNotationBasicsBody =>
+      'Les notes occidentales utilisent A-G. Le dièse (#) monte une note d’un demi-ton, et le bémol (b) la baisse d’un demi-ton.';
+
+  @override
+  String get easternNotationBasicsTitle => 'Notes orientales';
+
+  @override
+  String get easternNotationBasicsBody =>
+      'La notation orientale utilise Sa Re Ga Ma Pa Dha Ni, ou S R G M P D N. Dans cette app, cela correspond à C D E F G A B.';
+
+  @override
+  String get octaveNotationBasicsTitle => 'Octaves';
+
+  @override
+  String get octaveNotationBasicsBody =>
+      "Utilisez ' pour une octave plus haute et une virgule pour une octave plus basse. Par exemple, C' est plus haut que C, et C, est plus bas que C.";
+
+  @override
+  String get groupedNotesBasicsTitle => 'Notes groupées';
+
+  @override
+  String get groupedNotesBasicsBody =>
+      'Un espace passe au temps suivant. Les notes sans espace se jouent dans le même temps, donc C D E FG place F et G ensemble sur le quatrième temps.';
+
+  @override
+  String get heldNotesBasicsTitle => 'Notes tenues';
+
+  @override
+  String get heldNotesBasicsBody =>
+      'Un tiret (-) prolonge la note précédente pendant un autre temps. Par exemple, C - D E garde C pendant le deuxième temps.';
+
+  @override
+  String get scalePatternGenerator => 'Générateur de gammes';
+
+  @override
+  String get scalePatternDescription =>
+      'Créez un motif de gamme et envoyez-le aux notes à jouer.';
+
+  @override
+  String get notation => 'Notation';
+
+  @override
+  String get westernNotation => 'Occidentale';
+
+  @override
+  String get easternNotation => 'Orientale';
+
+  @override
+  String get rootKey => 'Tonalité';
+
+  @override
+  String get scale => 'Gamme';
+
+  @override
+  String get direction => 'Direction';
+
+  @override
+  String get ascending => 'Montant';
+
+  @override
+  String get descending => 'Descendant';
+
+  @override
+  String get upAndDown => 'Aller-retour';
+
+  @override
+  String get majorPentatonic => 'Pentatonique majeure';
+
+  @override
+  String get minorPentatonic => 'Pentatonique mineure';
+
+  @override
+  String get majorScale => 'Gamme majeure';
+
+  @override
+  String get minorScale => 'Gamme mineure';
+
+  @override
+  String get generatedPattern => 'Motif généré';
+
+  @override
+  String get useAsSequence => 'Utiliser comme motif';
+
+  @override
+  String get patternAppliedNotice => 'Motif ajouté à l’éditeur.';
+
+  @override
+  String get jianpuConverter => 'Convertisseur Jianpu';
+
+  @override
+  String get jianpuConverterDescription =>
+      'Convertissez la notation chiffrée en notes jouables en choisissant une tonalité.';
+
+  @override
+  String get jianpuInput => 'Entrée jianpu';
+
+  @override
+  String get convertedSequence => 'Séquence convertie';
+
+  @override
   String get practiceNotePattern => 'Motif de notes';
 
   @override
@@ -103,7 +248,8 @@ class FrenchText implements AppLanguageText {
   String get notesToPlay => 'Notes à jouer';
 
   @override
-  String get noteInputHelper => 'Utilisez A-G, # et b. Exemple : A B C# Bb.';
+  String get noteInputHelper =>
+      "Utilisez A-G ou S R G M P D N. Utilisez ', virgule, / et - pour les octaves, notes groupées et tenues.";
 
   @override
   String get applySequence => 'Appliquer le motif';
@@ -122,10 +268,7 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get sequenceError =>
-      'Entrez au moins une note de A à G. Vous pouvez aussi utiliser les dièses (#) et les bémols (b).';
-
-  @override
-  String get languageSavedNotice => 'La langue a été enregistrée.';
+      'Entrez au moins une note occidentale ou orientale valide.';
 
   @override
   String get metronomeTitle => 'Métronome';
@@ -259,4 +402,17 @@ class FrenchText implements AppLanguageText {
   @override
   String noPlayableAssets(String instrument) =>
       'Aucune ressource jouable trouvée pour $instrument';
+
+  @override
+  String get scorePreview => 'Partition';
+
+  @override
+  String get addScore => 'Ajouter';
+
+  @override
+  String get scorePlaceholderTitle => 'Aucune partition';
+
+  @override
+  String get scorePlaceholderBody =>
+      'Cet espace affichera un PDF ou une image de partition.';
 }
