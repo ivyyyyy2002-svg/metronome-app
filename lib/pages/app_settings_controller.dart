@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Controller class for managing app-wide settings such as theme mode and language
 enum AppLanguage { system, english, chinese, french, hindi }
 
-enum AppThemeColor { defaultColor, rose, purple }
+enum AppThemeColor { defaultColor, rose, purple, warm, teal }
 
 class AppSettingsController extends ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
@@ -107,6 +107,12 @@ class AppSettingsController extends ChangeNotifier {
         return AppThemeColor.purple;
       case 'purple':
         return AppThemeColor.purple;
+      case 'warm':
+      case 'yellow':
+        return AppThemeColor.warm;
+      case 'teal':
+      case 'mint':
+        return AppThemeColor.teal;
       case 'defaultColor':
       default:
         return AppThemeColor.defaultColor;

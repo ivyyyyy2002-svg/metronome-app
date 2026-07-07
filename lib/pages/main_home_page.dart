@@ -314,6 +314,10 @@ class _MainHomePageState extends State<MainHomePage> {
         return Colors.pink;
       case AppThemeColor.purple:
         return Colors.deepPurple;
+      case AppThemeColor.warm:
+        return const Color(0xFFE0A92F);
+      case AppThemeColor.teal:
+        return Colors.teal;
     }
   }
 
@@ -325,6 +329,10 @@ class _MainHomePageState extends State<MainHomePage> {
         return text.roseThemeColor;
       case AppThemeColor.purple:
         return text.purpleThemeColor;
+      case AppThemeColor.warm:
+        return text.warmThemeColor;
+      case AppThemeColor.teal:
+        return text.tealThemeColor;
     }
   }
 
@@ -1746,9 +1754,12 @@ class _HomeTabBar extends StatelessWidget {
     final barColor = isDark
         ? Colors.black.withValues(alpha: 0.22)
         : Colors.white.withValues(alpha: 0.34);
-    final selectedColor = !isDark && themeColor == AppThemeColor.defaultColor
+    final selectedColor =
+        !isDark &&
+            (themeColor == AppThemeColor.warm ||
+                themeColor == AppThemeColor.teal)
         ? Color.alphaBlend(
-            scheme.onSurface.withValues(alpha: 0.08),
+            scheme.primary.withValues(alpha: 0.14),
             scheme.primaryContainer,
           )
         : scheme.primaryContainer;

@@ -2170,8 +2170,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                         Expanded(
                           child: TabBarView(
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                              ListView(
+                                padding: EdgeInsets.zero,
                                 children: [
                                   const SizedBox(height: 4),
                                   TextField(
@@ -2368,7 +2368,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                       ),
                                     ],
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(height: 18),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
@@ -2963,7 +2963,20 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     required AppLanguageText text,
     required ColorScheme colorScheme,
   }) {
-    final staffLineColor = colorScheme.outlineVariant.withValues(alpha: 0.78);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scorePanelColor = isDark ? const Color(0xFF161616) : Colors.white;
+    final scorePaperColor = isDark
+        ? const Color(0xFF101010)
+        : const Color(0xFFFFFEFB);
+    final scoreOverlayColor = isDark
+        ? const Color(0xFF1D1D1D).withValues(alpha: 0.94)
+        : Colors.white.withValues(alpha: 0.96);
+    final scoreBorderColor = isDark
+        ? Colors.white.withValues(alpha: 0.12)
+        : const Color(0xFFE7E0D4);
+    final staffLineColor = isDark
+        ? Colors.white.withValues(alpha: 0.22)
+        : const Color(0xFFD8D1C5);
     final imageBytes = scoreImageBytes;
     final pdfPageBytes = scorePdfPageBytes;
     final isPdfScore = scorePdfDocument != null;
@@ -2971,9 +2984,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: scorePanelColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outlineVariant),
+        border: Border.all(color: scoreBorderColor),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -3007,13 +3020,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               padding: const EdgeInsets.all(18),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.32,
-                  ),
+                  color: scorePaperColor,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.72),
-                  ),
+                  border: Border.all(color: scoreBorderColor),
                 ),
                 child: !hasScoreFile
                     ? Stack(
@@ -3050,13 +3059,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                               constraints: const BoxConstraints(maxWidth: 320),
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  color: colorScheme.surface.withValues(
-                                    alpha: 0.94,
-                                  ),
+                                  color: scoreOverlayColor,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: colorScheme.outlineVariant,
-                                  ),
+                                  border: Border.all(color: scoreBorderColor),
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.all(18),
@@ -3128,13 +3133,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                             right: 10,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: colorScheme.surface.withValues(
-                                  alpha: 0.92,
-                                ),
+                                color: scoreOverlayColor,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: colorScheme.outlineVariant,
-                                ),
+                                border: Border.all(color: scoreBorderColor),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,

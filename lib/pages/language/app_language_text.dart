@@ -10,6 +10,8 @@ abstract class AppLanguageText {
   String get defaultThemeColor;
   String get roseThemeColor;
   String get purpleThemeColor;
+  String get warmThemeColor;
+  String get tealThemeColor;
   String get language;
   String get english;
   String get chinese;

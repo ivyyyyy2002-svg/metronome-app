@@ -32,6 +32,12 @@ class FrenchText implements AppLanguageText {
   String get purpleThemeColor => 'Violet';
 
   @override
+  String get warmThemeColor => 'Jaune';
+
+  @override
+  String get tealThemeColor => 'Sarcelle';
+
+  @override
   String get language => 'Langue';
 
   @override

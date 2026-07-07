@@ -32,6 +32,12 @@ class ChineseText implements AppLanguageText {
   String get purpleThemeColor => '紫色';
 
   @override
+  String get warmThemeColor => '黄色';
+
+  @override
+  String get tealThemeColor => '青绿色';
+
+  @override
   String get language => '语言';
 
   @override

@@ -33,6 +33,12 @@ class _MyAppState extends State<MyApp> {
   final PracticeHistoryController practiceHistoryController =
       PracticeHistoryController();
 
+  static const Color _defaultThemeSeed = Color(0xFFC18A2B);
+  static const Color _defaultDarkBackground = Color(0xFF111111);
+  static const Color _roseLightBackground = Color(0xFFFFF8FA);
+  static const Color _warmLightBackground = Color(0xFFFFFCF5);
+  static const Color _tealLightBackground = Color(0xFFF5FFFC);
+
   Color _seedColorForTheme(AppThemeColor themeColor) {
     switch (themeColor) {
       case AppThemeColor.defaultColor:
@@ -41,10 +47,36 @@ class _MyAppState extends State<MyApp> {
         return Colors.pink;
       case AppThemeColor.purple:
         return Colors.deepPurple;
+      case AppThemeColor.warm:
+        return _defaultThemeSeed;
+      case AppThemeColor.teal:
+        return Colors.teal;
     }
   }
 
-  Color _scaffoldBackgroundForTheme(Color seedColor, Brightness brightness) {
+  Color _scaffoldBackgroundForTheme(
+    AppThemeColor themeColor,
+    Color seedColor,
+    Brightness brightness,
+  ) {
+    if (brightness == Brightness.light) {
+      switch (themeColor) {
+        case AppThemeColor.rose:
+          return _roseLightBackground;
+        case AppThemeColor.warm:
+          return _warmLightBackground;
+        case AppThemeColor.teal:
+          return _tealLightBackground;
+        case AppThemeColor.defaultColor:
+        case AppThemeColor.purple:
+          break;
+      }
+    }
+
+    if (themeColor == AppThemeColor.warm && brightness == Brightness.dark) {
+      return _defaultDarkBackground;
+    }
+
     final baseColor = brightness == Brightness.dark
         ? const Color(0xFF101214)
         : const Color(0xFFFAFBFC);
@@ -56,13 +88,69 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  ThemeData _themeDataFor(Color seedColor, Brightness brightness) {
-    final colorScheme = ColorScheme.fromSeed(
+  ColorScheme _colorSchemeForTheme(
+    AppThemeColor themeColor,
+    Color seedColor,
+    Brightness brightness,
+  ) {
+    final generatedScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: brightness,
       dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
     );
+
+    if (brightness == Brightness.dark) {
+      return generatedScheme;
+    }
+
+    switch (themeColor) {
+      case AppThemeColor.rose:
+        return generatedScheme.copyWith(
+          primary: const Color(0xFFF06D9D),
+          onPrimary: const Color(0xFF3A1020),
+          primaryContainer: const Color(0xFFFFD8E5),
+          onPrimaryContainer: const Color(0xFF4A1027),
+          secondaryContainer: const Color(0xFFFFE8EF),
+          onSecondaryContainer: const Color(0xFF49303A),
+          surface: Colors.white,
+          surfaceContainerHighest: const Color(0xFFFFEDF3),
+        );
+      case AppThemeColor.warm:
+        return generatedScheme.copyWith(
+          primary: const Color(0xFFE0A92F),
+          onPrimary: const Color(0xFF2A1B00),
+          primaryContainer: const Color(0xFFF6D77A),
+          onPrimaryContainer: const Color(0xFF382500),
+          secondaryContainer: const Color(0xFFFFEAB4),
+          onSecondaryContainer: const Color(0xFF463716),
+          surface: Colors.white,
+          surfaceContainerHighest: const Color(0xFFFFEFC6),
+        );
+      case AppThemeColor.teal:
+        return generatedScheme.copyWith(
+          primary: const Color(0xFF26A69A),
+          onPrimary: const Color(0xFF003732),
+          primaryContainer: const Color(0xFFB2DFDB),
+          onPrimaryContainer: const Color(0xFF003B36),
+          secondaryContainer: const Color(0xFFD9F3EF),
+          onSecondaryContainer: const Color(0xFF244B46),
+          surface: Colors.white,
+          surfaceContainerHighest: const Color(0xFFE0F2F1),
+        );
+      case AppThemeColor.defaultColor:
+      case AppThemeColor.purple:
+        return generatedScheme;
+    }
+  }
+
+  ThemeData _themeDataFor(
+    AppThemeColor themeColor,
+    Color seedColor,
+    Brightness brightness,
+  ) {
+    final colorScheme = _colorSchemeForTheme(themeColor, seedColor, brightness);
     final scaffoldBackground = _scaffoldBackgroundForTheme(
+      themeColor,
       seedColor,
       brightness,
     );
@@ -112,8 +200,16 @@ class _MyAppState extends State<MyApp> {
           debugShowCheckedModeBanner: false,
           title: 'Metrinote',
           themeMode: appSettingsController.themeMode,
-          theme: _themeDataFor(seedColor, Brightness.light),
-          darkTheme: _themeDataFor(seedColor, Brightness.dark),
+          theme: _themeDataFor(
+            appSettingsController.themeColor,
+            seedColor,
+            Brightness.light,
+          ),
+          darkTheme: _themeDataFor(
+            appSettingsController.themeColor,
+            seedColor,
+            Brightness.dark,
+          ),
           home: MainHomePage(
             noteSequenceController: noteSequenceController,
             appSettingsController: appSettingsController,

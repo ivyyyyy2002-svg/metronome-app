@@ -32,6 +32,12 @@ class HindiText implements AppLanguageText {
   String get purpleThemeColor => 'Purple';
 
   @override
+  String get warmThemeColor => 'Yellow';
+
+  @override
+  String get tealThemeColor => 'Teal';
+
+  @override
   String get language => 'भाषा';
 
   @override
