@@ -2480,6 +2480,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       },
     );
 
+    await Future<void>.delayed(const Duration(milliseconds: 350));
     sequenceController.dispose();
     nameController.dispose();
     searchController.dispose();
