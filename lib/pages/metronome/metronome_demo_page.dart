@@ -93,10 +93,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   DateTime? practiceStartedAt;
   Uint8List? scoreImageBytes;
   String? scoreFileName;
-  String? scorePdfPath;
-  PdfControllerPinch? scorePdfController;
+  PdfDocument? scorePdfDocument;
+  Uint8List? scorePdfPageBytes;
   int scorePdfPage = 1;
   int scorePdfPages = 0;
+  bool isScorePdfPageLoading = false;
+  int _scorePdfRenderRequestId = 0;
   final TransformationController _scoreTransformationController =
       TransformationController();
   double scoreZoom = 1;
@@ -1760,6 +1762,36 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     );
   }
 
+  // Build the content of the advanced settings panel, used in both drawer and dialog modes.
+  Widget _buildAdvancedSettingsContent({
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+  }) {
+    return ColoredBox(
+      color: theme.brightness == Brightness.light
+          ? Colors.white
+          : colorScheme.surface,
+      child: AdvancedSettingsDrawer(
+        baseFrequencyHz: baseFrequencyHz,
+        minBaseFrequencyHz: _minBaseFrequencyHz,
+        maxBaseFrequencyHz: _maxBaseFrequencyHz,
+        minBaseLabel: 'A$_instrumentMinOctave',
+        maxBaseLabel: 'A$_instrumentMaxOctave',
+        titleLabel: _text.advancedSettings,
+        instrumentLabel: _text.instrument,
+        instruments: instruments,
+        instrumentAvailability: instrumentAvailability,
+        selectedInstrument: selectedInstrument,
+        missingInstrumentLabel: _text.missingInstrument,
+        onInstrumentChanged: _onInstrumentChanged,
+        onBaseFrequencyChanged: (v) {
+          setState(() => baseFrequencyHz = v);
+        },
+        onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+      ),
+    );
+  }
+
   Future<void> _openAdvancedSettingsPanel({
     required ThemeData theme,
     required ColorScheme colorScheme,
@@ -1772,15 +1804,43 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     await showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return Dialog(
           insetPadding: const EdgeInsets.all(28),
           clipBehavior: Clip.antiAlias,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 620),
-            child: _buildAdvancedSettingsDrawer(
-              theme: theme,
-              colorScheme: colorScheme,
+          child: SizedBox(
+            width: 420,
+            height: 620,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _text.advancedSettings,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close_rounded),
+                        label: Text(_text.close),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: colorScheme.outlineVariant),
+                Expanded(
+                  child: _buildAdvancedSettingsContent(
+                    theme: theme,
+                    colorScheme: colorScheme,
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -2468,7 +2528,65 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   void _resetScoreZoom() {
     scoreZoom = 1;
     _scoreTransformationController.value = Matrix4.identity();
-    scorePdfController?.value = Matrix4.identity();
+  }
+
+  Future<void> _renderScorePdfPage(int pageNumber) async {
+    final document = scorePdfDocument;
+    if (document == null) return;
+
+    final requestId = ++_scorePdfRenderRequestId;
+    final nextPage = pageNumber.clamp(1, document.pagesCount);
+
+    setState(() {
+      isScorePdfPageLoading = true;
+      scorePdfPage = nextPage;
+      scorePdfPages = document.pagesCount;
+      _resetScoreZoom();
+    });
+
+    PdfPage? page;
+    try {
+      page = await document.getPage(nextPage);
+      final renderScale = math.min(3.0, 2200 / page.width);
+      final renderedPage = await page.render(
+        width: page.width * renderScale,
+        height: page.height * renderScale,
+        format: PdfPageImageFormat.png,
+        backgroundColor: '#FFFFFF',
+      );
+      if (renderedPage == null ||
+          !mounted ||
+          requestId != _scorePdfRenderRequestId) {
+        return;
+      }
+
+      setState(() {
+        scorePdfPageBytes = renderedPage.bytes;
+        isScorePdfPageLoading = false;
+        scoreZoom = 1;
+      });
+    } catch (error) {
+      if (!mounted || requestId != _scorePdfRenderRequestId) return;
+
+      setState(() {
+        isScorePdfPageLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      await page?.close();
+    }
+  }
+
+  Future<void> _goToScorePdfPage(int pageNumber) async {
+    final document = scorePdfDocument;
+    if (document == null) return;
+
+    final nextPage = pageNumber.clamp(1, document.pagesCount);
+    if (nextPage == scorePdfPage && scorePdfPageBytes != null) return;
+
+    await _renderScorePdfPage(nextPage);
   }
 
   Future<void> _pickScoreFile() async {
@@ -2487,37 +2605,37 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         final path = file.path;
         if (path == null) return;
 
-        final nextController = PdfControllerPinch(
-          document: PdfDocument.openFile(path),
-        );
-        final previousController = scorePdfController;
+        final previousDocument = scorePdfDocument;
+        final nextDocument = await PdfDocument.openFile(path);
 
         setState(() {
-          previousController?.dispose();
-          scorePdfController = nextController;
+          scorePdfDocument = nextDocument;
           scoreImageBytes = null;
+          scorePdfPageBytes = null;
           scoreFileName = file.name;
-          scorePdfPath = path;
           scorePdfPage = 1;
-          scorePdfPages = 0;
+          scorePdfPages = nextDocument.pagesCount;
           _resetScoreZoom();
         });
+        await previousDocument?.close();
+        await _renderScorePdfPage(1);
         return;
       }
 
       final bytes = file.bytes;
       if (bytes == null || bytes.isEmpty) return;
 
+      final previousDocument = scorePdfDocument;
       setState(() {
-        scorePdfController?.dispose();
-        scorePdfController = null;
+        scorePdfDocument = null;
+        scorePdfPageBytes = null;
         scoreImageBytes = bytes;
         scoreFileName = file.name;
-        scorePdfPath = null;
         scorePdfPage = 1;
         scorePdfPages = 0;
         _resetScoreZoom();
       });
+      await previousDocument?.close();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -2533,8 +2651,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       scoreZoom = clampedZoom;
       _scoreTransformationController.value = Matrix4.identity()
         ..scaleByDouble(clampedZoom, clampedZoom, 1.0, 1.0);
-      scorePdfController?.value = Matrix4.identity()
-        ..scaleByDouble(clampedZoom, clampedZoom, 1.0, 1.0);
     });
   }
 
@@ -2544,17 +2660,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     required AppLanguageText text,
     required ColorScheme colorScheme,
   }) async {
-    final imageBytes = scoreImageBytes;
-    final pdfPath = scorePdfPath;
-    if (imageBytes == null && pdfPath == null) return;
-    final fullscreenPdfController = pdfPath == null
-        ? null
-        : PdfControllerPinch(document: PdfDocument.openFile(pdfPath));
+    final isPdfScore = scorePdfDocument != null;
+    if (scoreImageBytes == null && scorePdfPageBytes == null) return;
+    final fullscreenTransformationController = TransformationController();
     var fullscreenZoom = 1.0;
 
     try {
       await showDialog<void>(
         context: context,
+        barrierDismissible: false,
         builder: (context) {
           return StatefulBuilder(
             builder: (context, setDialogState) {
@@ -2562,9 +2676,29 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                 final clampedZoom = nextZoom.clamp(0.75, 4.0).toDouble();
                 setDialogState(() {
                   fullscreenZoom = clampedZoom;
-                  fullscreenPdfController?.value = Matrix4.identity()
+                  fullscreenTransformationController.value = Matrix4.identity()
                     ..scaleByDouble(clampedZoom, clampedZoom, 1.0, 1.0);
                 });
+              }
+
+              Future<void> goToFullscreenPdfPage(int pageNumber) async {
+                await _goToScorePdfPage(pageNumber);
+                fullscreenTransformationController.value = Matrix4.identity();
+                setDialogState(() {
+                  fullscreenZoom = 1;
+                });
+              }
+
+              void handleFullscreenSwipe(DragEndDetails details) {
+                if (!isPdfScore) return;
+
+                final velocity = details.primaryVelocity ?? 0;
+                if (velocity < -420 && scorePdfPage < scorePdfPages) {
+                  unawaited(goToFullscreenPdfPage(scorePdfPage + 1));
+                }
+                if (velocity > 420 && scorePdfPage > 1) {
+                  unawaited(goToFullscreenPdfPage(scorePdfPage - 1));
+                }
               }
 
               return Dialog.fullscreen(
@@ -2573,14 +2707,18 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                         child: Row(
                           children: [
-                            IconButton(
-                              tooltip: text.close,
+                            FilledButton.icon(
                               onPressed: () => Navigator.of(context).pop(),
                               icon: const Icon(Icons.fullscreen_exit_rounded),
+                              label: Text(text.close),
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size(112, 48),
+                              ),
                             ),
+                            const SizedBox(width: 14),
                             Expanded(
                               child: Text(
                                 scoreFileName ?? text.scorePreview,
@@ -2590,36 +2728,152 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ),
-                            IconButton(
+                            IconButton.filledTonal(
                               tooltip: 'Zoom out',
                               onPressed: () =>
                                   setFullscreenZoom(fullscreenZoom - 0.25),
                               icon: const Icon(Icons.zoom_out_rounded),
                             ),
-                            Text(
-                              '${(fullscreenZoom * 100).round()}%',
-                              style: Theme.of(context).textTheme.labelMedium,
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 48,
+                              child: Text(
+                                '${(fullscreenZoom * 100).round()}%',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
                             ),
-                            IconButton(
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
                               tooltip: 'Zoom in',
                               onPressed: () =>
                                   setFullscreenZoom(fullscreenZoom + 0.25),
                               icon: const Icon(Icons.zoom_in_rounded),
                             ),
+                            if (isPdfScore) ...[
+                              const SizedBox(width: 14),
+                              SizedBox(
+                                width: 72,
+                                child: Text(
+                                  scorePdfPages == 0
+                                      ? '$scorePdfPage'
+                                      : '$scorePdfPage/$scorePdfPages',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                       Divider(height: 1, color: colorScheme.outlineVariant),
                       Expanded(
-                        child: imageBytes != null
-                            ? _buildScoreImageView(imageBytes)
-                            : _buildScorePdfView(
-                                fullscreenPdfController!,
-                                colorScheme: colorScheme,
-                                updatePageState: setDialogState,
-                                onPageChanged: (_) {},
-                                onDocumentLoaded: (_) {},
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onHorizontalDragEnd: handleFullscreenSwipe,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: _buildScoreImageView(
+                                  scoreImageBytes ?? scorePdfPageBytes!,
+                                  controller:
+                                      fullscreenTransformationController,
+                                  onZoomChanged: (zoom) {
+                                    setDialogState(() {
+                                      fullscreenZoom = zoom;
+                                    });
+                                  },
+                                ),
                               ),
+                              if (isPdfScore && scorePdfPage < scorePdfPages)
+                                Positioned(
+                                  right: 18,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.68,
+                                        ),
+                                        borderRadius: BorderRadius.circular(28),
+                                        border: Border.all(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.10,
+                                            ),
+                                            blurRadius: 14,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () => goToFullscreenPdfPage(
+                                          scorePdfPage + 1,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.chevron_right_rounded,
+                                          size: 32,
+                                        ),
+                                        color: Colors.black87,
+                                        style: IconButton.styleFrom(
+                                          minimumSize: const Size(56, 72),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (isPdfScore && scorePdfPage > 1)
+                                Positioned(
+                                  left: 18,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.68,
+                                        ),
+                                        borderRadius: BorderRadius.circular(28),
+                                        border: Border.all(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.10,
+                                            ),
+                                            blurRadius: 14,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () => goToFullscreenPdfPage(
+                                          scorePdfPage - 1,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.chevron_left_rounded,
+                                          size: 32,
+                                        ),
+                                        color: Colors.black87,
+                                        style: IconButton.styleFrom(
+                                          minimumSize: const Size(56, 72),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -2630,56 +2884,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         },
       );
     } finally {
-      fullscreenPdfController?.dispose();
+      fullscreenTransformationController.dispose();
     }
-  }
-
-  Widget _buildScorePdfView(
-    PdfControllerPinch controller, {
-    required ColorScheme colorScheme,
-    required StateSetter updatePageState,
-    required ValueChanged<int> onPageChanged,
-    required ValueChanged<PdfDocument> onDocumentLoaded,
-  }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: PdfViewPinch(
-        controller: controller,
-        minScale: 0.75,
-        maxScale: 4,
-        padding: 12,
-        backgroundDecoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.12),
-        ),
-        onPageChanged: (page) {
-          onPageChanged(page);
-          updatePageState(() {});
-        },
-        onDocumentLoaded: (document) {
-          onDocumentLoaded(document);
-          updatePageState(() {});
-        },
-        builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
-          options: const DefaultBuilderOptions(),
-          documentLoaderBuilder: (_) =>
-              const Center(child: CircularProgressIndicator()),
-          pageLoaderBuilder: (_) =>
-              const Center(child: CircularProgressIndicator()),
-          errorBuilder: (_, error) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  error.toString(),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
   }
 
   Widget _buildMetronomeCore({
@@ -2759,8 +2965,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }) {
     final staffLineColor = colorScheme.outlineVariant.withValues(alpha: 0.78);
     final imageBytes = scoreImageBytes;
-    final pdfController = scorePdfController;
-    final hasScoreFile = imageBytes != null || pdfController != null;
+    final pdfPageBytes = scorePdfPageBytes;
+    final isPdfScore = scorePdfDocument != null;
+    final hasScoreFile = imageBytes != null || pdfPageBytes != null;
 
     return Container(
       decoration: BoxDecoration(
@@ -2895,19 +3102,26 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                     : Stack(
                         children: [
                           Positioned.fill(
-                            child: pdfController != null
-                                ? _buildScorePdfView(
-                                    pdfController,
-                                    colorScheme: colorScheme,
-                                    updatePageState: setState,
-                                    onPageChanged: (page) {
-                                      scorePdfPage = page;
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: _buildScoreImageView(
+                                    imageBytes ?? pdfPageBytes!,
+                                    onZoomChanged: (zoom) {
+                                      setState(() {
+                                        scoreZoom = zoom;
+                                      });
                                     },
-                                    onDocumentLoaded: (document) {
-                                      scorePdfPages = document.pagesCount;
-                                    },
-                                  )
-                                : _buildScoreImageView(imageBytes!),
+                                  ),
+                                ),
+                                if (isScorePdfPageLoading)
+                                  const Positioned.fill(
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                           Positioned(
                             top: 10,
@@ -2925,16 +3139,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (pdfController != null) ...[
+                                  if (isPdfScore) ...[
                                     IconButton(
                                       tooltip: 'Previous page',
                                       onPressed: scorePdfPage <= 1
                                           ? null
-                                          : () => pdfController.previousPage(
-                                              duration: const Duration(
-                                                milliseconds: 220,
-                                              ),
-                                              curve: Curves.easeOut,
+                                          : () => _goToScorePdfPage(
+                                              scorePdfPage - 1,
                                             ),
                                       icon: const Icon(
                                         Icons.chevron_left_rounded,
@@ -2954,11 +3165,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                           scorePdfPages == 0 ||
                                               scorePdfPage >= scorePdfPages
                                           ? null
-                                          : () => pdfController.nextPage(
-                                              duration: const Duration(
-                                                milliseconds: 220,
-                                              ),
-                                              curve: Curves.easeOut,
+                                          : () => _goToScorePdfPage(
+                                              scorePdfPage + 1,
                                             ),
                                       icon: const Icon(
                                         Icons.chevron_right_rounded,
@@ -3005,25 +3213,27 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     );
   }
 
-  // Build the score image view, allowing zooming and panning of the loaded score image
-  Widget _buildScoreImageView(Uint8List imageBytes) {
+  Widget _buildScoreImageView(
+    Uint8List imageBytes, {
+    TransformationController? controller,
+    ValueChanged<double>? onZoomChanged,
+  }) {
+    final activeController = controller ?? _scoreTransformationController;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: InteractiveViewer(
-        transformationController: _scoreTransformationController,
+        transformationController: activeController,
         minScale: 0.75,
         maxScale: 4,
-        boundaryMargin: const EdgeInsets.all(160),
+        panEnabled: false,
+        boundaryMargin: EdgeInsets.zero,
         onInteractionEnd: (_) {
-          final nextZoom = _scoreTransformationController.value
+          final nextZoom = activeController.value
               .getMaxScaleOnAxis()
               .clamp(0.75, 4.0)
               .toDouble();
-          if ((nextZoom - scoreZoom).abs() < 0.01) return;
-
-          setState(() {
-            scoreZoom = nextZoom;
-          });
+          onZoomChanged?.call(nextZoom);
         },
         child: Center(
           child: Image.memory(
@@ -3217,7 +3427,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
     _disposePerNotePlayers();
     currentSoundVN.dispose();
-    scorePdfController?.dispose();
+    unawaited(scorePdfDocument?.close());
     _scoreTransformationController.dispose();
     swingController.dispose();
     super.dispose();
