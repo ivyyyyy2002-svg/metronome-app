@@ -155,18 +155,143 @@ class _MyAppState extends State<MyApp> {
       brightness,
     );
 
-    return ThemeData(
+    final isDark = brightness == Brightness.dark;
+
+    final baseTheme = ThemeData(
       useMaterial3: true,
       fontFamilyFallback: _fontFamilyFallback,
       colorScheme: colorScheme,
+    );
+
+    // Refined typography: heavier display weights with tighter tracking
+    // for a more contemporary, editorial feel.
+    final textTheme = baseTheme.textTheme.copyWith(
+      displayLarge: baseTheme.textTheme.displayLarge?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -2.0,
+      ),
+      displayMedium: baseTheme.textTheme.displayMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1.5,
+      ),
+      headlineMedium: baseTheme.textTheme.headlineMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.8,
+      ),
+      titleLarge: baseTheme.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+      ),
+      titleMedium: baseTheme.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.2,
+      ),
+    );
+
+    // Translucent, rounded input fields that sit well on glass panels.
+    final inputBorderSide = BorderSide(
+      color: isDark
+          ? Colors.white.withValues(alpha: 0.22)
+          : colorScheme.outline.withValues(alpha: 0.55),
+    );
+    OutlineInputBorder inputBorder(BorderSide side) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: side,
+    );
+
+    return baseTheme.copyWith(
+      textTheme: textTheme,
       scaffoldBackgroundColor: scaffoldBackground,
       appBarTheme: AppBarTheme(
-        backgroundColor: scaffoldBackground,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: colorScheme.onSurface,
+        ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: isDark
+            ? Color.alphaBlend(
+                Colors.white.withValues(alpha: 0.05),
+                scaffoldBackground,
+              )
+            : colorScheme.surface,
         surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : colorScheme.onSurface.withValues(alpha: 0.035),
+        border: inputBorder(inputBorderSide),
+        enabledBorder: inputBorder(inputBorderSide),
+        focusedBorder: inputBorder(
+          BorderSide(color: colorScheme.primary, width: 1.6),
+        ),
+        errorBorder: inputBorder(BorderSide(color: colorScheme.error)),
+        focusedErrorBorder: inputBorder(
+          BorderSide(color: colorScheme.error, width: 1.6),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          side: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.35)
+                : colorScheme.outline,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      chipTheme: baseTheme.chipTheme.copyWith(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        side: BorderSide(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.18)
+              : colorScheme.outline.withValues(alpha: 0.5),
+        ),
+        // Plain white fills: chips sit inside grey-tinted glass tiles, where
+        // seed-tinted fills clashed. White + border keeps them tappable.
+        backgroundColor: isDark
+            ? Colors.white.withValues(alpha: 0.09)
+            : Colors.white,
+      ),
+      sliderTheme: baseTheme.sliderTheme.copyWith(
+        trackHeight: 6,
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      dialogTheme: baseTheme.dialogTheme.copyWith(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        surfaceTintColor: Colors.transparent,
+      ),
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant.withValues(alpha: 0.5),
       ),
     );
   }

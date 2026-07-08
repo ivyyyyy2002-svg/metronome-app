@@ -99,6 +99,9 @@ class FrenchText implements AppLanguageText {
   String get mostUsedBpm => 'BPM fréquent';
 
   @override
+  String get favoriteInstrument => 'Instrument favori';
+
+  @override
   String get noPracticeYet => 'Aucune pratique enregistrée';
 
   @override

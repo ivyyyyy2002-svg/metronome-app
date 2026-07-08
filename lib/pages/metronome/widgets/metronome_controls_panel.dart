@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../theme/glass.dart';
+
 // Main control panel for the metronome page, containing BPM slider, click/sound toggles, meter picker, and instrument selector
 class MetronomeControlsPanel extends StatelessWidget {
   const MetronomeControlsPanel({
@@ -50,18 +52,12 @@ class MetronomeControlsPanel extends StatelessWidget {
       children: [
         // Sequence display and tap area
         InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           onTap: onSequenceTap,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
-              ),
-            ),
+            decoration: glassInnerDecoration(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -141,13 +137,16 @@ class MetronomeControlsPanel extends StatelessWidget {
               selected: enableClick,
               showCheckmark: false,
               selectedColor: null,
-              backgroundColor: scheme.surfaceContainerHighest,
               labelStyle: TextStyle(
                 color: enableClick ? null : scheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
+              // Always-visible border so the toggle reads clearly against
+              // the near-plain page background.
               side: BorderSide(
-                color: enableClick ? Colors.transparent : scheme.outlineVariant,
+                color: enableClick
+                    ? scheme.primary.withValues(alpha: 0.65)
+                    : scheme.outline,
               ),
               onSelected: onClickToggle,
             ),
@@ -157,13 +156,14 @@ class MetronomeControlsPanel extends StatelessWidget {
               selected: enableSound,
               showCheckmark: false,
               selectedColor: null,
-              backgroundColor: scheme.surfaceContainerHighest,
               labelStyle: TextStyle(
                 color: enableSound ? null : scheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
               side: BorderSide(
-                color: enableSound ? Colors.transparent : scheme.outlineVariant,
+                color: enableSound
+                    ? scheme.primary.withValues(alpha: 0.65)
+                    : scheme.outline,
               ),
               onSelected: onSoundToggle,
             ),
@@ -171,14 +171,11 @@ class MetronomeControlsPanel extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(999),
           onTap: onMeterTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: glassInnerDecoration(context, borderRadius: 999),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

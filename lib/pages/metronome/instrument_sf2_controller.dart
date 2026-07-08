@@ -35,7 +35,7 @@ class Sf2Spec {
     this.gateScale = 1.0,
     this.minGateMs = 80,
     this.maxGateMs = 320,
-    this.latencyOffsetMs = 55,
+    this.latencyOffsetMs = 0,
     this.overlapMs = 0,
     this.minOctave = 1,
     this.maxOctave = 6,

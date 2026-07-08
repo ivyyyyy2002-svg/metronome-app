@@ -9,6 +9,7 @@ class PracticeSession {
     required this.durationSeconds,
     required this.bpm,
     required this.sequenceText,
+    this.instrument,
   });
 
   final DateTime startedAt;
@@ -16,12 +17,17 @@ class PracticeSession {
   final int bpm;
   final String sequenceText;
 
+  /// Instrument key used for the session. Nullable for sessions recorded
+  /// before this field existed.
+  final String? instrument;
+
   Map<String, dynamic> toJson() {
     return {
       'startedAt': startedAt.toIso8601String(),
       'durationSeconds': durationSeconds,
       'bpm': bpm,
       'sequenceText': sequenceText,
+      if (instrument != null) 'instrument': instrument,
     };
   }
 
@@ -30,6 +36,7 @@ class PracticeSession {
     final durationSeconds = json['durationSeconds'];
     final bpm = json['bpm'];
     final sequenceText = json['sequenceText'];
+    final instrument = json['instrument'];
 
     if (startedAtText is! String ||
         durationSeconds is! int ||
@@ -46,6 +53,9 @@ class PracticeSession {
       durationSeconds: durationSeconds,
       bpm: bpm,
       sequenceText: sequenceText,
+      instrument: instrument is String && instrument.isNotEmpty
+          ? instrument
+          : null,
     );
   }
 }
@@ -87,6 +97,27 @@ class PracticeHistoryController extends ChangeNotifier {
     return entries.first.key;
   }
 
+  /// The instrument used in the most sessions (by practice time), or null
+  /// if no session has an instrument recorded.
+  String? get mostUsedInstrument {
+    final seconds = <String, int>{};
+    for (final session in _sessions) {
+      final instrument = session.instrument;
+      if (instrument == null) continue;
+      seconds[instrument] =
+          (seconds[instrument] ?? 0) + session.durationSeconds;
+    }
+    if (seconds.isEmpty) return null;
+
+    final entries = seconds.entries.toList()
+      ..sort((a, b) {
+        final secondsCompare = b.value.compareTo(a.value);
+        if (secondsCompare != 0) return secondsCompare;
+        return a.key.compareTo(b.key);
+      });
+    return entries.first.key;
+  }
+
   Future<void> load() async {
     if (_isLoaded) return;
 
@@ -101,6 +132,7 @@ class PracticeHistoryController extends ChangeNotifier {
     required int bpm,
     required String sequenceText,
     DateTime? startedAt,
+    String? instrument,
   }) async {
     final durationSeconds = duration.inSeconds;
     if (durationSeconds < minimumSessionSeconds) return;
@@ -110,6 +142,7 @@ class PracticeHistoryController extends ChangeNotifier {
       durationSeconds: durationSeconds,
       bpm: bpm,
       sequenceText: sequenceText,
+      instrument: instrument,
     );
 
     _sessions = [session, ..._sessions].take(_maxStoredSessions).toList();

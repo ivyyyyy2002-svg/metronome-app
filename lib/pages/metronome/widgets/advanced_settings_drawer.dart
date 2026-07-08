@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../instrument_names.dart';
+
 // Drawer widget for advanced metronome settings like base pitch
 class AdvancedSettingsDrawer extends StatelessWidget {
   const AdvancedSettingsDrawer({
     super.key,
-    required this.baseFrequencyHz,
-    required this.minBaseFrequencyHz,
-    required this.maxBaseFrequencyHz,
-    required this.onBaseFrequencyChanged,
-    required this.onBaseFrequencyChangeEnd,
+    required this.baseOctave,
+    required this.minBaseOctave,
+    required this.maxBaseOctave,
+    required this.onBaseOctaveChanged,
     required this.titleLabel,
     required this.instrumentLabel,
     required this.instruments,
@@ -16,15 +17,12 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.selectedInstrument,
     required this.onInstrumentChanged,
     required this.missingInstrumentLabel,
-    this.minBaseLabel,
-    this.maxBaseLabel,
   });
 
-  final double baseFrequencyHz;
-  final double minBaseFrequencyHz;
-  final double maxBaseFrequencyHz;
-  final ValueChanged<double> onBaseFrequencyChanged;
-  final ValueChanged<double> onBaseFrequencyChangeEnd;
+  final int baseOctave;
+  final int minBaseOctave;
+  final int maxBaseOctave;
+  final ValueChanged<int> onBaseOctaveChanged;
   final String titleLabel;
   final String instrumentLabel;
   final List<String> instruments;
@@ -32,12 +30,15 @@ class AdvancedSettingsDrawer extends StatelessWidget {
   final String selectedInstrument;
   final ValueChanged<String> onInstrumentChanged;
   final String missingInstrumentLabel;
-  // Note-name labels rendered at the slider edges (e.g. "A1" and "A6").
-  final String? minBaseLabel;
-  final String? maxBaseLabel;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final octaveOptions = [
+      for (int octave = minBaseOctave; octave <= maxBaseOctave; octave++)
+        octave,
+    ];
+
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -57,43 +58,49 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Pitch row: slider with note-name labels at the edges instead of
-          // a raw frequency readout. The slider tooltip still shows Hz.
-          Row(
+          Text(
+            'Base Pitch',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Choose the default pitch height for notes like C or S. Use ' or , in the sequence for higher or lower notes.",
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              SizedBox(
-                width: 36,
-                child: Text(
-                  minBaseLabel ?? '',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelMedium,
+              for (final octave in octaveOptions)
+                ChoiceChip(
+                  label: Text('A$octave'),
+                  selected: baseOctave == octave,
+                  showCheckmark: false,
+                  onSelected: (_) => onBaseOctaveChanged(octave),
                 ),
-              ),
-              Expanded(
-                child: Slider(
-                  value: baseFrequencyHz.clamp(
-                    minBaseFrequencyHz,
-                    maxBaseFrequencyHz,
-                  ),
-                  min: minBaseFrequencyHz,
-                  max: maxBaseFrequencyHz,
-                  divisions: ((maxBaseFrequencyHz - minBaseFrequencyHz) * 2)
-                      .round()
-                      .clamp(1, 1 << 30),
-                  label: '${baseFrequencyHz.toStringAsFixed(1)} Hz',
-                  onChanged: onBaseFrequencyChanged,
-                  onChangeEnd: onBaseFrequencyChangeEnd,
-                ),
-              ),
-              SizedBox(
-                width: 36,
-                child: Text(
-                  maxBaseLabel ?? '',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              border: Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Available pitch range: A$minBaseOctave - A$maxBaseOctave',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           const SizedBox(height: 18),
           Text(
@@ -171,41 +178,7 @@ class _InstrumentChipSelector extends StatelessWidget {
     ),
   ];
 
-  static const Map<String, String> _instrumentDisplayNames = {
-    'piano': 'Piano A',
-    'uprightPiano': 'Piano B',
-    'pipa': 'Pipa',
-    'ruan': 'Ruan',
-    'guzheng': 'Guzheng',
-    'erhu': 'Erhu',
-    'flute': 'Bamboo Flute',
-    'shamisen': 'Shamisen',
-    'harmonium': 'Harmonium',
-    'tabla': 'Tabla',
-    'oud': 'Oud',
-    'qanun': 'Qanun',
-    'duduk': 'Duduk',
-    'ney': 'Ney',
-    'tanbur': 'Tanbur',
-    'celesta': 'Celesta',
-    'harp': 'Harp',
-    'clarinet': 'Clarinet',
-    'oboe': 'Oboe',
-    'trumpet': 'Trumpet',
-    'frenchHorn': 'French Horn',
-    'acousticGuitar': 'Acoustic Guitar',
-    'electricGuitar': 'Electric Guitar',
-    'acousticBass': 'Acoustic Bass',
-    'bianzhong': 'Bianzhong',
-    'marimba': 'Marimba',
-  };
-
-  String _displayName(String instrument) {
-    final displayName = _instrumentDisplayNames[instrument];
-    if (displayName != null) return displayName;
-    if (instrument.isEmpty) return instrument;
-    return '${instrument[0].toUpperCase()}${instrument.substring(1)}';
-  }
+  String _displayName(String instrument) => instrumentDisplayName(instrument);
 
   @override
   Widget build(BuildContext context) {

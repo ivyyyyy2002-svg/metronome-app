@@ -34,6 +34,7 @@ abstract class AppLanguageText {
   String get last7Days;
   String get lastSession;
   String get mostUsedBpm;
+  String get favoriteInstrument;
   String get noPracticeYet;
   String get basicsIntro;
   String get bpmBasicsTitle;

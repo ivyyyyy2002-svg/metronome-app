@@ -23,29 +23,49 @@ class TransportBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            IconButton.filledTonal(
+              tooltip: resetLabel,
+              onPressed: onReset,
+              icon: const Icon(Icons.refresh_rounded),
+              style: IconButton.styleFrom(
+                minimumSize: const Size(52, 52),
+                side: BorderSide(color: scheme.outline.withValues(alpha: 0.6)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Primary action: a large pill-shaped start button.
             FilledButton.icon(
               onPressed: isRunning ? null : onStart,
-              icon: const Icon(Icons.play_arrow),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(150, 54),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded, size: 26),
               label: Text(startLabel),
             ),
-            const SizedBox(width: 10),
-            OutlinedButton.icon(
+            const SizedBox(width: 14),
+            IconButton.filledTonal(
+              tooltip: stopLabel,
               onPressed: isRunning ? onStop : null,
-              icon: const Icon(Icons.stop),
-              label: Text(stopLabel),
-            ),
-            const SizedBox(width: 10),
-            TextButton.icon(
-              onPressed: onReset,
-              icon: const Icon(Icons.refresh),
-              label: Text(resetLabel),
+              icon: const Icon(Icons.stop_rounded),
+              style: IconButton.styleFrom(
+                minimumSize: const Size(52, 52),
+                foregroundColor: scheme.error,
+                side: BorderSide(color: scheme.outline.withValues(alpha: 0.6)),
+              ),
             ),
           ],
         ),

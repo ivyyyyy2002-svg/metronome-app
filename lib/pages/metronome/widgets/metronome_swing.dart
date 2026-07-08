@@ -28,6 +28,11 @@ class MetronomeSwing extends StatelessWidget {
           final weightColor = isRunning
               ? scheme.primary
               : scheme.primary.withValues(alpha: 0.72);
+          // Swing speed peaks as the pendulum sweeps through center
+          // (anim.value near 0); drive a subtle glow from it.
+          final speedFactor = isRunning
+              ? (1.0 - anim.value.abs()).clamp(0.0, 1.0)
+              : 0.0;
 
           return Stack(
             alignment: Alignment.center,
@@ -63,18 +68,30 @@ class MetronomeSwing extends StatelessWidget {
                         ),
                         Positioned(
                           top: 24,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
+                          child: Container(
                             width: 34,
                             height: 50,
                             decoration: BoxDecoration(
-                              color: weightColor,
+                              // Slight top highlight for a bit of depth.
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color.alphaBlend(
+                                    Colors.white.withValues(alpha: 0.28),
+                                    weightColor,
+                                  ),
+                                  weightColor,
+                                ],
+                              ),
                               borderRadius: BorderRadius.circular(17),
                               boxShadow: [
                                 BoxShadow(
-                                  color: scheme.primary.withValues(alpha: 0.18),
-                                  blurRadius: 12,
+                                  color: scheme.primary.withValues(
+                                    alpha: 0.18 + 0.28 * speedFactor,
+                                  ),
+                                  blurRadius: 12 + 10 * speedFactor,
+                                  spreadRadius: 2 * speedFactor,
                                   offset: const Offset(0, 5),
                                 ),
                               ],

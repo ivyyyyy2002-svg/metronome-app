@@ -10,6 +10,7 @@ import 'package:pdfx/pdfx.dart';
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../theme/glass.dart';
 import '../app_settings_controller.dart';
 import '../language/app_language_text.dart';
 import '../language/app_text.dart';
@@ -73,6 +74,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   static const String _savedTimeSignatureNoteKey =
       'metronome_time_signature_note';
   static const String _savedBeatUnitKey = 'metronome_beat_unit';
+  static const String _savedBaseOctaveKey = 'metronome_base_octave';
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
   static const int _initialBpm = 90;
@@ -518,7 +520,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // --- Per-note preloaded players to avoid setAudioSource on every beat ---
   final Map<String, AudioPlayer> _perNotePlayers = {};
   final Map<String, int> _perNoteTokens = {};
-  final bool _usePerNotePlayers = false;
+  // Preloaded per-note players: avoids a setAudioSource + asset load on
+  // nearly every tick (the 12-player pool almost never replays the same
+  // source), which caused variable note latency that grew audible at high
+  // BPM relative to the click.
+  final bool _usePerNotePlayers = true;
   int? activeSf2MidiNote;
 
   int uiUpdateEvery = 4;
@@ -574,6 +580,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final savedBeats = prefs.getInt(_savedTimeSignatureBeatsKey);
     final savedNote = prefs.getInt(_savedTimeSignatureNoteKey);
     final savedBeatUnit = prefs.getString(_savedBeatUnitKey);
+    final savedBaseOctave = prefs.getInt(_savedBaseOctaveKey);
 
     setState(() {
       if (savedBpm != null) {
@@ -596,6 +603,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           fallbackNote: timeSignatureNote,
         );
       }
+      if (savedBaseOctave != null) {
+        baseOctave = savedBaseOctave;
+        octaveShift = 0;
+        _syncOctaveBounds();
+        _syncBaseFrequencyFromAnchor();
+        _refreshCurrentSoundPreview();
+      }
     });
     swingController.duration = Duration(milliseconds: _computeTickIntervalMs());
   }
@@ -607,6 +621,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await prefs.setInt(_savedTimeSignatureBeatsKey, timeSignatureBeats);
     await prefs.setInt(_savedTimeSignatureNoteKey, timeSignatureNote);
     await prefs.setString(_savedBeatUnitKey, beatUnitConfigValue(beatUnit));
+    await prefs.setInt(_savedBaseOctaveKey, baseOctave);
   }
 
   // ---------- Audio Session ----------
@@ -675,10 +690,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
         if (loadedBaseFrequencyHz != null) {
           baseFrequencyHz = loadedBaseFrequencyHz;
-          _setBaseFromFrequencyNoSetState(baseFrequencyHz);
-        } else {
-          _syncBaseFrequencyFromAnchor();
         }
+        _syncBaseFrequencyFromAnchor();
 
         configLoaded = true;
         _refreshCurrentSoundPreview();
@@ -718,7 +731,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       setState(() {
         noteSequence = loadedSequence;
         noteIndex = 0;
-        _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+        octaveShift = 0;
+        _syncBaseFrequencyFromAnchor();
         _refreshCurrentSoundPreview();
       });
       await _refreshInstrumentAvailability(prepareCurrentInstrument: false);
@@ -748,12 +762,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       instrumentSf2Controller.assetSpecs[selectedInstrument]?.maxOctave ??
       _absoluteMaxOctave;
 
-  // Slider frequency bounds follow the active instrument's usable octave range.
-  double get _minBaseFrequencyHz =>
-      440.0 * math.pow(2.0, _instrumentMinOctave - 4).toDouble();
-  double get _maxBaseFrequencyHz =>
-      440.0 * math.pow(2.0, _instrumentMaxOctave - 4).toDouble();
-
   void _syncOctaveBounds() {
     final lo = _instrumentMinOctave;
     final hi = _instrumentMaxOctave;
@@ -777,11 +785,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return 'A';
   }
 
-  String _noteNameFromToken(String token) {
-    final parsed = resolveSequenceNoteAtom(token, baseOctave);
-    return parsed?.note ?? token.trim();
-  }
-
   double? _frequencyForNote(String note, int octave) {
     final semitone = noteToSemitone[note];
     if (semitone == null) return null;
@@ -791,51 +794,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   bool _useSf2ForCurrentInstrument() {
     return instrumentSf2Controller.isReadyFor(selectedInstrument);
-  }
-
-  // Find the nearest base octave that allows the anchor note to be
-  // as close as possible to the target frequency
-  int _nearestBaseOctaveForFrequency(
-    String note,
-    double targetHz,
-    int fallbackBase,
-  ) {
-    final semitone = noteToSemitone[note];
-    if (semitone == null) return fallbackBase;
-
-    final int lo = _instrumentMinOctave;
-    final int hi = _instrumentMaxOctave;
-    int bestOctave = fallbackBase.clamp(lo, hi).toInt();
-    double bestDiff = double.infinity;
-
-    for (int octave = lo; octave <= hi; octave++) {
-      final freq = _frequencyForNote(note, octave);
-      if (freq == null) continue;
-      final diff = (freq - targetHz).abs();
-      if (diff < bestDiff) {
-        bestDiff = diff;
-        bestOctave = octave;
-      }
-    }
-    return bestOctave;
-  }
-
-  // Set base octave based on a target frequency for the anchor note, without
-  // calling setState (used during config load and when changing base frequency)
-  void _setBaseFromFrequencyNoSetState(double targetHz) {
-    if (noteSequence.isEmpty) return;
-    final anchorToken = _anchorNoteToken();
-    final anchorNote = _noteNameFromToken(anchorToken);
-    final parsedAnchor = resolveSequenceNoteAtom(anchorToken, baseOctave);
-    final targetBase = _nearestBaseOctaveForFrequency(
-      anchorNote,
-      targetHz,
-      baseOctave,
-    );
-
-    baseOctave = targetBase;
-    _syncOctaveBounds();
-    octaveShift = parsedAnchor != null ? (baseOctave - parsedAnchor.octave) : 0;
   }
 
   void _syncBaseFrequencyFromAnchor() {
@@ -863,17 +821,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     currentSoundVN.value = currentSound;
   }
 
-  Future<void> _applyBaseFrequency(double newFrequencyHz) async {
-    final clampedHz = newFrequencyHz
-        .clamp(_minBaseFrequencyHz, _maxBaseFrequencyHz)
-        .toDouble();
+  Future<void> _applyBaseOctave(int newBaseOctave) async {
     setState(() {
-      baseFrequencyHz = clampedHz;
-      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+      baseOctave = newBaseOctave.clamp(minOctave, maxOctave).toInt();
+      octaveShift = 0;
       beat = 0;
       noteIndex = 0;
+      _syncBaseFrequencyFromAnchor();
       _refreshCurrentSoundPreview();
     });
+    unawaited(_saveMetronomeSettings());
     await _refreshInstrumentAvailability();
     _restartIfRunning();
   }
@@ -1527,6 +1484,30 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
+  Future<void> _playTickAudio({
+    required int beatInBar,
+    required String token,
+    required double durationBeats,
+  }) async {
+    // Fire the click and the instrument note at the same instant instead of
+    // serializing them. Awaiting the click first made every note wait for
+    // the click's seek()+play() platform-channel round trips (tens of ms,
+    // with jitter), so notes lagged audibly behind the click — and the lag
+    // became a larger fraction of the beat as BPM increased.
+    Future<void>? clickFuture;
+    if (enableClick) {
+      clickFuture = playClickForBeat(beatInBar);
+    }
+
+    if (enableSound && !isHoldBeatToken(token)) {
+      _playBeatToken(token, durationBeats: durationBeats);
+    }
+
+    if (clickFuture != null) {
+      await clickFuture;
+    }
+  }
+
   // Handle instrument change: clear caches, dispose players, and preload for new instrument
   Future<void> _onInstrumentChanged(String newInstrument) async {
     if (instrumentAvailability.isNotEmpty &&
@@ -1550,14 +1531,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     if (!mounted) return;
     setState(() {
       selectedInstrument = newInstrument;
-      // Re-clamp octave settings to the new instrument's playable range,
-      // then snap baseFrequencyHz to the nearest valid anchor frequency.
+      // Keep the selected base octave when possible. Only clamp when the new
+      // instrument cannot play that octave.
       _syncOctaveBounds();
-      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
-      baseFrequencyHz = baseFrequencyHz.clamp(
-        _minBaseFrequencyHz,
-        _maxBaseFrequencyHz,
-      );
+      octaveShift = 0;
+      _syncBaseFrequencyFromAnchor();
+      _refreshCurrentSoundPreview();
     });
     unawaited(_saveMetronomeSettings());
 
@@ -1631,15 +1610,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     currentSound = isHoldBeatToken(token) ? '-' : currentFullNames.join('/');
     currentSoundVN.value = currentSound;
 
+    unawaited(
+      _playTickAudio(
+        beatInBar: beatInBar,
+        token: token,
+        durationBeats: 1.0 + heldBeats,
+      ),
+    );
+
     if (beat % uiUpdateEvery == 0) {
       setState(() {});
-    }
-
-    if (enableClick) {
-      playClickForBeat(beatInBar);
-    }
-    if (enableSound && !isHoldBeatToken(token)) {
-      _playBeatToken(token, durationBeats: 1.0 + heldBeats);
     }
   }
 
@@ -1702,6 +1682,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         bpm: bpm,
         sequenceText: noteSequence.join(' '),
         startedAt: startedAt,
+        instrument: selectedInstrument,
       );
     }
   }
@@ -1741,12 +1722,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           : colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       child: AdvancedSettingsDrawer(
-        baseFrequencyHz: baseFrequencyHz,
-        minBaseFrequencyHz: _minBaseFrequencyHz,
-        maxBaseFrequencyHz: _maxBaseFrequencyHz,
-        // Note-name labels for the slider edges.
-        minBaseLabel: 'A$_instrumentMinOctave',
-        maxBaseLabel: 'A$_instrumentMaxOctave',
+        baseOctave: baseOctave,
+        minBaseOctave: _instrumentMinOctave,
+        maxBaseOctave: _instrumentMaxOctave,
         titleLabel: _text.advancedSettings,
         instrumentLabel: _text.instrument,
         instruments: instruments,
@@ -1754,10 +1732,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         selectedInstrument: selectedInstrument,
         missingInstrumentLabel: _text.missingInstrument,
         onInstrumentChanged: _onInstrumentChanged,
-        onBaseFrequencyChanged: (v) {
-          setState(() => baseFrequencyHz = v);
-        },
-        onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+        onBaseOctaveChanged: _applyBaseOctave,
       ),
     );
   }
@@ -1772,11 +1747,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           ? Colors.white
           : colorScheme.surface,
       child: AdvancedSettingsDrawer(
-        baseFrequencyHz: baseFrequencyHz,
-        minBaseFrequencyHz: _minBaseFrequencyHz,
-        maxBaseFrequencyHz: _maxBaseFrequencyHz,
-        minBaseLabel: 'A$_instrumentMinOctave',
-        maxBaseLabel: 'A$_instrumentMaxOctave',
+        baseOctave: baseOctave,
+        minBaseOctave: _instrumentMinOctave,
+        maxBaseOctave: _instrumentMaxOctave,
         titleLabel: _text.advancedSettings,
         instrumentLabel: _text.instrument,
         instruments: instruments,
@@ -1784,10 +1757,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         selectedInstrument: selectedInstrument,
         missingInstrumentLabel: _text.missingInstrument,
         onInstrumentChanged: _onInstrumentChanged,
-        onBaseFrequencyChanged: (v) {
-          setState(() => baseFrequencyHz = v);
-        },
-        onBaseFrequencyChangeEnd: (v) => _applyBaseFrequency(v),
+        onBaseOctaveChanged: _applyBaseOctave,
       ),
     );
   }
@@ -1879,7 +1849,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       noteSequence = widget.noteSequenceController.sequence;
       noteIndex = 0;
       beat = 0;
-      _setBaseFromFrequencyNoSetState(baseFrequencyHz);
+      octaveShift = 0;
+      _syncBaseFrequencyFromAnchor();
       _refreshCurrentSoundPreview();
     });
 
@@ -2184,7 +2155,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                       labelText: _text.notesToPlay,
                                       helperText: _text.noteInputHelper,
                                       errorText: sequenceErrorText,
-                                      border: const OutlineInputBorder(),
                                     ),
                                     onChanged: (_) {
                                       setDialogState(() {
@@ -2195,93 +2165,109 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
                                   // Quick edit chips for notes, accidentals, and small edit actions.
                                   const SizedBox(height: 10),
-                                  SegmentedButton<NoteNotation>(
-                                    segments: [
-                                      ButtonSegment(
-                                        value: NoteNotation.western,
-                                        label: Text(_text.westernNotation),
-                                      ),
-                                      ButtonSegment(
-                                        value: NoteNotation.eastern,
-                                        label: Text(_text.easternNotation),
-                                      ),
-                                    ],
-                                    selected: {quickEntryNotation},
-                                    onSelectionChanged: (selection) {
-                                      setDialogState(() {
-                                        quickEntryNotation = selection.first;
-                                      });
-                                    },
+                                  _MetronomeQuickEntryGroup(
+                                    title: 'Quick entry',
+                                    child: SegmentedButton<NoteNotation>(
+                                      segments: [
+                                        ButtonSegment(
+                                          value: NoteNotation.western,
+                                          label: Text(_text.westernNotation),
+                                        ),
+                                        ButtonSegment(
+                                          value: NoteNotation.eastern,
+                                          label: Text(_text.easternNotation),
+                                        ),
+                                      ],
+                                      selected: {quickEntryNotation},
+                                      onSelectionChanged: (selection) {
+                                        setDialogState(() {
+                                          quickEntryNotation = selection.first;
+                                        });
+                                      },
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      for (final note
-                                          in quickEntryNotation ==
-                                                  NoteNotation.western
-                                              ? const [
-                                                  'A',
-                                                  'B',
-                                                  'C',
-                                                  'D',
-                                                  'E',
-                                                  'F',
-                                                  'G',
-                                                ]
-                                              : const [
-                                                  'S',
-                                                  'R',
-                                                  'G',
-                                                  'M',
-                                                  'P',
-                                                  'D',
-                                                  'N',
-                                                ])
+                                  _MetronomeQuickEntryGroup(
+                                    title: 'Notes',
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        for (final note
+                                            in quickEntryNotation ==
+                                                    NoteNotation.western
+                                                ? const [
+                                                    'A',
+                                                    'B',
+                                                    'C',
+                                                    'D',
+                                                    'E',
+                                                    'F',
+                                                    'G',
+                                                  ]
+                                                : const [
+                                                    'S',
+                                                    'R',
+                                                    'G',
+                                                    'M',
+                                                    'P',
+                                                    'D',
+                                                    'N',
+                                                  ])
+                                          ActionChip(
+                                            label: Text(note),
+                                            onPressed: () =>
+                                                appendQuickEditNote(note),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _MetronomeQuickEntryGroup(
+                                    title: 'Modifiers',
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
                                         ActionChip(
-                                          label: Text(note),
+                                          label: const Text('#'),
                                           onPressed: () =>
-                                              appendQuickEditNote(note),
+                                              applyQuickEditAccidental('#'),
                                         ),
-                                      ActionChip(
-                                        label: const Text('#'),
-                                        onPressed: () =>
-                                            applyQuickEditAccidental('#'),
-                                      ),
-                                      ActionChip(
-                                        label: const Text('b'),
-                                        onPressed: () =>
-                                            applyQuickEditAccidental('b'),
-                                      ),
-                                      ActionChip(
-                                        label: const Text("'"),
-                                        onPressed: () =>
-                                            applyQuickEditOctaveMark("'"),
-                                      ),
-                                      ActionChip(
-                                        label: const Text(','),
-                                        onPressed: () =>
-                                            applyQuickEditOctaveMark(','),
-                                      ),
-                                      ActionChip(
-                                        label: const Text('/'),
-                                        onPressed:
-                                            appendQuickEditGroupSeparator,
-                                      ),
-                                      ActionChip(
-                                        label: const Text('-'),
-                                        onPressed: appendQuickEditHold,
-                                      ),
-                                      TextButton(
-                                        onPressed: deleteQuickEditNote,
-                                        child: Text(_text.deleteNote),
-                                      ),
-                                      TextButton(
-                                        onPressed: clearQuickEditNotes,
-                                        child: Text(_text.clearNotes),
-                                      ),
-                                    ],
+                                        ActionChip(
+                                          label: const Text('b'),
+                                          onPressed: () =>
+                                              applyQuickEditAccidental('b'),
+                                        ),
+                                        ActionChip(
+                                          label: const Text("'"),
+                                          onPressed: () =>
+                                              applyQuickEditOctaveMark("'"),
+                                        ),
+                                        ActionChip(
+                                          label: const Text(','),
+                                          onPressed: () =>
+                                              applyQuickEditOctaveMark(','),
+                                        ),
+                                        ActionChip(
+                                          label: const Text('/'),
+                                          onPressed:
+                                              appendQuickEditGroupSeparator,
+                                        ),
+                                        ActionChip(
+                                          label: const Text('-'),
+                                          onPressed: appendQuickEditHold,
+                                        ),
+                                        TextButton(
+                                          onPressed: deleteQuickEditNote,
+                                          child: Text(_text.deleteNote),
+                                        ),
+                                        TextButton(
+                                          onPressed: clearQuickEditNotes,
+                                          child: Text(_text.clearNotes),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
@@ -2305,7 +2291,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                           textCapitalization:
                                               TextCapitalization.words,
                                           decoration: InputDecoration(
-                                            border: const OutlineInputBorder(),
                                             errorText: sequenceNameErrorText,
                                             labelText: _text.sequenceName,
                                           ),
@@ -2426,7 +2411,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                     onChanged: (_) => refreshSearchResults(),
                                     decoration: InputDecoration(
                                       labelText: _text.searchSequences,
-                                      border: const OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 10),
@@ -2444,11 +2428,22 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                                   filteredSequences[index];
                                               return ListTile(
                                                 title: Text(item.name),
-                                                subtitle: Text(
-                                                  item.sequenceText,
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                                subtitle: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    const SizedBox(height: 4),
+                                                    _MetronomeNotationBadge(
+                                                      notation: item.notation,
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      item.sequenceText,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
                                                 ),
                                                 onTap: () {
                                                   Navigator.of(context).pop(
@@ -2986,7 +2981,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return Container(
       decoration: BoxDecoration(
         color: scorePanelColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: scoreBorderColor),
       ),
       clipBehavior: Clip.antiAlias,
@@ -3022,7 +3017,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: scorePaperColor,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: scoreBorderColor),
                 ),
                 child: !hasScoreFile
@@ -3353,9 +3348,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final isRunning = timer != null;
     final inheritedTheme = Theme.of(context);
     final pageScheme = inheritedTheme.colorScheme;
-    final pageBackground = inheritedTheme.brightness == Brightness.light
-        ? Colors.white
-        : inheritedTheme.scaffoldBackgroundColor;
     final mediaSize = MediaQuery.sizeOf(context);
     final isLandscapeTablet =
         mediaSize.width >= 840 && mediaSize.width > mediaSize.height;
@@ -3384,9 +3376,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     });
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: pageBackground,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: pageBackground,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         title: Text(text.metronomeTitle),
         actions: [
@@ -3405,14 +3397,19 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         theme: inheritedTheme,
         colorScheme: pageScheme,
       ),
-      body: SafeArea(
-        child: _buildMetronomeBody(
-          text: text,
-          isRunning: isRunning,
-          beatNumerator: beatNumerator,
-          beatDenominator: beatDenominator,
-          beatIndicators: beatIndicators,
-          colorScheme: pageScheme,
+      body: GlassBackground(
+        // Keep this page near-plain (a whisper of theme color): controls and
+        // the pendulum need to stand out clearly against the background.
+        tint: inheritedTheme.brightness == Brightness.dark ? 0.14 : 0.03,
+        child: SafeArea(
+          child: _buildMetronomeBody(
+            text: text,
+            isRunning: isRunning,
+            beatNumerator: beatNumerator,
+            beatDenominator: beatDenominator,
+            beatIndicators: beatIndicators,
+            colorScheme: pageScheme,
+          ),
         ),
       ),
     );
@@ -3433,5 +3430,74 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     _scoreTransformationController.dispose();
     swingController.dispose();
     super.dispose();
+  }
+}
+
+class _MetronomeQuickEntryGroup extends StatelessWidget {
+  const _MetronomeQuickEntryGroup({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _MetronomeNotationBadge extends StatelessWidget {
+  const _MetronomeNotationBadge({required this.notation});
+
+  final NoteNotation? notation;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isEastern = notation == NoteNotation.eastern;
+    final label = isEastern ? 'Eastern' : 'Western';
+    final color = isEastern ? scheme.tertiary : scheme.primary;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          border: Border.all(color: color.withValues(alpha: 0.42)),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 }

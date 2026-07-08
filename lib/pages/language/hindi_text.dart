@@ -99,6 +99,9 @@ class HindiText implements AppLanguageText {
   String get mostUsedBpm => 'Most used BPM';
 
   @override
+  String get favoriteInstrument => 'पसंदीदा instrument';
+
+  @override
   String get noPracticeYet => 'अभी कोई practice record नहीं है';
 
   @override

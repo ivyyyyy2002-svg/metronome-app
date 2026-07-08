@@ -1,3 +1,5 @@
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
 
 import 'metronome_swing.dart';
@@ -37,74 +39,95 @@ class PlaybackStatusPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         MetronomeSwing(anim: anim, isRunning: isRunning, amplitudeDeg: 18),
-        const SizedBox(height: 12),
-        Column(
+        const SizedBox(height: 14),
+        // Oversized BPM readout as the visual anchor of the page.
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
             Text(
-              '$beatNumerator/$beatDenominator',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w700),
+              '$bpm',
+              style: theme.textTheme.displayLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -2.5,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 16,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: beatIndicators
-                    .map((indicator) {
-                      return SizedBox(
-                        width: 18,
-                        height: 16,
-                        child: Center(
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween<double>(
-                              end: indicator.isActive ? 1.0 : 0.66,
-                            ),
-                            duration: const Duration(milliseconds: 140),
-                            curve: Curves.easeOut,
-                            builder: (context, scale, child) {
-                              return Transform.scale(
-                                scale: scale,
-                                child: child,
-                              );
-                            },
+            const SizedBox(width: 8),
+            Text(
+              bpmLabel.toUpperCase(),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2.4,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '$beatNumerator/$beatDenominator',
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 20,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: beatIndicators
+                .map((indicator) {
+                  return SizedBox(
+                    width: 22,
+                    height: 20,
+                    child: Center(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(
+                          end: indicator.isActive ? 1.0 : 0.62,
+                        ),
+                        duration: const Duration(milliseconds: 140),
+                        curve: Curves.easeOut,
+                        builder: (context, scale, _) {
+                          return Transform.scale(
+                            scale: scale,
                             child: Container(
-                              width: 10,
-                              height: 10,
+                              width: 13,
+                              height: 13,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: indicator.isActive
                                     ? indicator.activeColor
                                     : indicator.idleColor,
+                                boxShadow: indicator.isActive
+                                    ? [
+                                        BoxShadow(
+                                          color: indicator.activeColor
+                                              .withValues(alpha: 0.55),
+                                          blurRadius: 10,
+                                          spreadRadius: 1,
+                                        ),
+                                      ]
+                                    : null,
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    })
-                    .toList(growable: false),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '$bpm',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(width: 6),
-                Text(bpmLabel, style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            ),
-          ],
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                })
+                .toList(growable: false),
+          ),
         ),
       ],
     );

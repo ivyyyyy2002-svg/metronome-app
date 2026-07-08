@@ -2,8 +2,11 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/glass.dart';
 import 'app_settings_controller.dart';
+import 'metronome/instrument_names.dart';
 import 'metronome/metronome_music.dart';
 import 'metronome/note_sequence_controller.dart';
 import 'music_basics_page.dart';
@@ -34,6 +37,8 @@ class _MainHomePageState extends State<MainHomePage> {
   static const int _savedSequencePreviewLimit = 3;
   static const double _sectionTopSpacing = 18;
   static const double _cardSpacing = 18;
+  static const String _practiceGoalMinutesKey = 'practice_goal_minutes';
+  static const List<int> _practiceGoalOptions = [5, 10, 20, 30, 60];
 
   final TextEditingController _sequenceTextController = TextEditingController();
   final TextEditingController _sequenceNameController = TextEditingController();
@@ -42,6 +47,7 @@ class _MainHomePageState extends State<MainHomePage> {
   String? _sequenceNameErrorText;
   NoteNotation _quickEntryNotation = NoteNotation.western;
   int _selectedTabIndex = 0;
+  int _practiceGoalMinutes = 10;
 
   @override
   void initState() {
@@ -52,6 +58,27 @@ class _MainHomePageState extends State<MainHomePage> {
     _quickEntryNotation =
         widget.noteSequenceController.notation ?? NoteNotation.western;
     _syncSequenceText();
+    unawaited(_loadPracticeGoal());
+  }
+
+  Future<void> _loadPracticeGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedGoal = prefs.getInt(_practiceGoalMinutesKey);
+    if (savedGoal == null || !_practiceGoalOptions.contains(savedGoal)) return;
+    if (!mounted) return;
+
+    setState(() {
+      _practiceGoalMinutes = savedGoal;
+    });
+  }
+
+  Future<void> _setPracticeGoal(int goalMinutes) async {
+    setState(() {
+      _practiceGoalMinutes = goalMinutes;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_practiceGoalMinutesKey, goalMinutes);
   }
 
   void _refreshPracticeHistory() {
@@ -397,6 +424,36 @@ class _MainHomePageState extends State<MainHomePage> {
     ).showSnackBar(SnackBar(content: Text(text.patternAppliedNotice)));
   }
 
+  // Applies a predefined example note sequence, updating the input fields and switching to the sequence editing tab.
+  Future<void> _applyExampleSequence(_ExampleSequence example) async {
+    final text = appTextFor(widget.appSettingsController.language);
+    final saved = await widget.noteSequenceController.setSequenceFromText(
+      example.sequenceText,
+      notation: example.notation,
+    );
+    if (!saved || !mounted) return;
+
+    setState(() {
+      _selectedTabIndex = 1;
+      _quickEntryNotation = example.notation;
+      _sequenceErrorText = null;
+      _sequenceNameErrorText = null;
+    });
+
+    _sequenceTextController.value = TextEditingValue(
+      text: example.sequenceText,
+      selection: TextSelection.collapsed(offset: example.sequenceText.length),
+    );
+    _sequenceNameController.value = TextEditingValue(
+      text: example.name,
+      selection: TextSelection.collapsed(offset: example.name.length),
+    );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(text.patternAppliedNotice)));
+  }
+
   // Saves the current note sequence with a user-provided name, validating the name first.
   Future<void> _saveNamedSequence() async {
     final text = appTextFor(widget.appSettingsController.language);
@@ -522,7 +579,6 @@ class _MainHomePageState extends State<MainHomePage> {
                       TextField(
                         controller: searchController,
                         decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
                           labelText: text.searchSequences,
                         ),
                         onChanged: (_) => refreshSheet(),
@@ -688,7 +744,6 @@ class _MainHomePageState extends State<MainHomePage> {
                     DropdownButtonFormField<AppLanguage>(
                       initialValue: widget.appSettingsController.language,
                       decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.language_rounded),
                       ),
                       items: [
@@ -747,22 +802,6 @@ class _MainHomePageState extends State<MainHomePage> {
     final scheme = Theme.of(context).colorScheme;
     final text = appTextFor(widget.appSettingsController.language);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
-    final gradientTint = isDark ? 0.18 : 0.12;
-    final gradientColors = [
-      Color.alphaBlend(
-        scheme.primary.withValues(alpha: gradientTint),
-        backgroundColor,
-      ),
-      Color.alphaBlend(
-        scheme.secondary.withValues(alpha: gradientTint * 0.85),
-        backgroundColor,
-      ),
-      Color.alphaBlend(
-        scheme.tertiary.withValues(alpha: gradientTint * 0.75),
-        backgroundColor,
-      ),
-    ];
     final pageTitles = [
       text.homeTitle,
       text.editNoteSequence,
@@ -774,7 +813,6 @@ class _MainHomePageState extends State<MainHomePage> {
       extendBody: true,
       bottomNavigationBar: _HomeTabBar(
         selectedIndex: _selectedTabIndex,
-        themeColor: widget.appSettingsController.themeColor,
         labels: [
           text.practiceTab,
           text.sequencesTab,
@@ -793,15 +831,7 @@ class _MainHomePageState extends State<MainHomePage> {
           });
         },
       ),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            // Background gradient
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradientColors,
-          ),
-        ),
+      body: GlassBackground(
         child: SizedBox.expand(
           child: SafeArea(
             child: SingleChildScrollView(
@@ -827,17 +857,20 @@ class _MainHomePageState extends State<MainHomePage> {
                       IconButton(
                         tooltip: text.settings,
                         onPressed: _openSettingsSheet,
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.white.withValues(alpha: 0.55),
+                        ),
                         icon: const Icon(Icons.settings_rounded),
                       ),
                     ],
                   ),
                   if (_selectedTabIndex == 0) ...[
                     const SizedBox(height: _sectionTopSpacing),
-                    Container(
+                    GlassCard(
                       // Main action card
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-                      decoration: _homeCardDecoration(scheme),
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -873,12 +906,15 @@ class _MainHomePageState extends State<MainHomePage> {
                     const SizedBox(height: _cardSpacing),
                     _PracticeHistoryCard(
                       title: text.practiceHistory,
-                      todayLabel: text.todayPractice,
+                      favoriteInstrumentLabel: text.favoriteInstrument,
                       last7DaysLabel: text.last7Days,
                       lastSessionLabel: text.lastSession,
                       mostUsedBpmLabel: text.mostUsedBpm,
                       emptyLabel: text.noPracticeYet,
                       controller: widget.practiceHistoryController,
+                      goalMinutes: _practiceGoalMinutes,
+                      goalOptions: _practiceGoalOptions,
+                      onGoalChanged: _setPracticeGoal,
                     ),
                     const SizedBox(height: _cardSpacing),
                   ],
@@ -886,10 +922,10 @@ class _MainHomePageState extends State<MainHomePage> {
                   // Custom note sequence input cards
                   if (_selectedTabIndex == 1) ...[
                     const SizedBox(height: _sectionTopSpacing),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                      decoration: _homeCardDecoration(scheme),
+                    _ExampleSequencesCard(onUseExample: _applyExampleSequence),
+                    const SizedBox(height: _cardSpacing),
+                    GlassCard(
+                      padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -912,7 +948,6 @@ class _MainHomePageState extends State<MainHomePage> {
                             minLines: 1,
                             maxLines: 4,
                             decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
                               errorText: _sequenceErrorText,
                               labelText: text.notesToPlay,
                               hintText: 'A B C D E F G F E D C B A',
@@ -965,7 +1000,6 @@ class _MainHomePageState extends State<MainHomePage> {
                             controller: _sequenceNameController,
                             textCapitalization: TextCapitalization.words,
                             decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
                               errorText: _sequenceNameErrorText,
                               labelText: text.sequenceName,
                             ),
@@ -1082,10 +1116,8 @@ class _MainHomePageState extends State<MainHomePage> {
                       ),
                     ),
                     const SizedBox(height: _cardSpacing),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                      decoration: _homeCardDecoration(scheme),
+                    GlassCard(
+                      padding: const EdgeInsets.all(18),
                       child: Builder(
                         builder: (context) {
                           final filteredSequences = _filteredSavedSequences();
@@ -1129,7 +1161,6 @@ class _MainHomePageState extends State<MainHomePage> {
                               TextField(
                                 controller: _savedSearchController,
                                 decoration: InputDecoration(
-                                  border: const OutlineInputBorder(),
                                   labelText: text.searchSequences,
                                 ),
                               ),
@@ -1191,21 +1222,17 @@ class _MainHomePageState extends State<MainHomePage> {
   }
 }
 
-BoxDecoration _homeCardDecoration(ColorScheme scheme) {
-  final isDark = scheme.brightness == Brightness.dark;
+Color _readableAccentColor(ColorScheme scheme) {
+  if (scheme.brightness == Brightness.dark) return scheme.primary;
 
-  return BoxDecoration(
-    color: isDark ? const Color(0xFF171A20) : Colors.white,
-    border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
-    borderRadius: BorderRadius.circular(18),
-    boxShadow: [
-      BoxShadow(
-        color: scheme.shadow.withValues(alpha: 0.09),
-        blurRadius: 18,
-        offset: const Offset(0, 8),
-      ),
-    ],
-  );
+  final primary = scheme.primary;
+  if (primary.computeLuminance() <= 0.32) return primary;
+
+  final hsl = HSLColor.fromColor(primary);
+  return hsl
+      .withLightness(0.34)
+      .withSaturation((hsl.saturation + 0.08).clamp(0.0, 1.0))
+      .toColor();
 }
 
 const List<String> _westernRootKeys = [
@@ -1253,8 +1280,180 @@ const List<String> _flatNoteNames = [
   'B',
 ];
 
+class _ExampleSequence {
+  const _ExampleSequence({
+    required this.name,
+    required this.description,
+    required this.sequenceText,
+    required this.notation,
+  });
+
+  final String name;
+  final String description;
+  final String sequenceText;
+  final NoteNotation notation;
+}
+
+const List<_ExampleSequence> _exampleSequences = [
+  _ExampleSequence(
+    name: 'Major Scale Up and Down',
+    description: 'A simple ascending and descending Western scale.',
+    sequenceText: "C D E F G A B C' B A G F E D C",
+    notation: NoteNotation.western,
+  ),
+  _ExampleSequence(
+    name: 'Chandrakaun Raga Cycle',
+    description:
+        'A compact aroha-avaroha loop: Sa, komal Ga, Ma, komal Dha, Ni.',
+    sequenceText: "S Gb M Db N S' N Db M Gb S -",
+    notation: NoteNotation.eastern,
+  ),
+];
+
 bool _usesFlatNames(String rootKey) {
   return rootKey.contains('b') || rootKey == 'F';
+}
+
+class _ExampleSequencesCard extends StatelessWidget {
+  const _ExampleSequencesCard({required this.onUseExample});
+
+  final ValueChanged<_ExampleSequence> onUseExample;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Example Sequences',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Start with a ready-made Western, Eastern, or raga pattern.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            children: [
+              for (int index = 0; index < _exampleSequences.length; index++)
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: index == _exampleSequences.length - 1 ? 0 : 10,
+                  ),
+                  child: _ExampleSequenceTile(
+                    example: _exampleSequences[index],
+                    onUse: () => onUseExample(_exampleSequences[index]),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExampleSequenceTile extends StatelessWidget {
+  const _ExampleSequenceTile({required this.example, required this.onUse});
+
+  final _ExampleSequence example;
+  final VoidCallback onUse;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final accentColor = _readableAccentColor(scheme);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      decoration: glassInnerDecoration(context, borderRadius: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  example.name,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              _NotationBadge(notation: example.notation),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            example.description,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            example.sequenceText,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accentColor,
+                side: BorderSide(color: accentColor.withValues(alpha: 0.65)),
+              ),
+              onPressed: onUse,
+              child: const Text('Use Pattern'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotationBadge extends StatelessWidget {
+  const _NotationBadge({required this.notation});
+
+  final NoteNotation? notation;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isEastern = notation == NoteNotation.eastern;
+    final label = isEastern ? 'Eastern' : 'Western';
+    final color = isEastern
+        ? _readableAccentColor(scheme.copyWith(primary: scheme.tertiary))
+        : _readableAccentColor(scheme);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        border: Border.all(color: color.withValues(alpha: 0.38)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
 }
 
 // A simple data class representing a musical scale pattern,
@@ -1423,10 +1622,8 @@ class _ScalePatternGeneratorCardState
       context,
     ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      decoration: _homeCardDecoration(scheme),
+    return GlassCard(
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1448,10 +1645,7 @@ class _ScalePatternGeneratorCardState
             initialValue: _selectedNotation,
             isExpanded: true,
             style: dropdownTextStyle,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              labelText: widget.text.notation,
-            ),
+            decoration: InputDecoration(labelText: widget.text.notation),
             items: [
               for (final notation in _ScaleNotation.values)
                 DropdownMenuItem(
@@ -1474,10 +1668,7 @@ class _ScalePatternGeneratorCardState
           DropdownButtonFormField<String>(
             initialValue: _selectedRootKey,
             style: dropdownTextStyle,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              labelText: widget.text.rootKey,
-            ),
+            decoration: InputDecoration(labelText: widget.text.rootKey),
             items: [
               for (final rootKey in _currentRootKeys)
                 DropdownMenuItem(
@@ -1497,10 +1688,7 @@ class _ScalePatternGeneratorCardState
             initialValue: _selectedScalePattern,
             isExpanded: true,
             style: dropdownTextStyle,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              labelText: widget.text.scale,
-            ),
+            decoration: InputDecoration(labelText: widget.text.scale),
             items: [
               for (final pattern in _scalePatterns)
                 DropdownMenuItem(
@@ -1523,10 +1711,7 @@ class _ScalePatternGeneratorCardState
             initialValue: _selectedDirection,
             isExpanded: true,
             style: dropdownTextStyle,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              labelText: widget.text.direction,
-            ),
+            decoration: InputDecoration(labelText: widget.text.direction),
             items: [
               for (final direction in _ScalePatternDirection.values)
                 DropdownMenuItem(
@@ -1555,10 +1740,7 @@ class _ScalePatternGeneratorCardState
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: scheme.outlineVariant),
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: glassInnerDecoration(context, borderRadius: 12),
             child: Text(
               _generatedPatternText,
               style: Theme.of(context).textTheme.bodyLarge,
@@ -1643,10 +1825,8 @@ class _JianpuConverterCardState extends State<_JianpuConverterCard> {
       context,
     ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      decoration: _homeCardDecoration(scheme),
+    return GlassCard(
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1667,10 +1847,7 @@ class _JianpuConverterCardState extends State<_JianpuConverterCard> {
           DropdownButtonFormField<String>(
             initialValue: _selectedRootKey,
             style: dropdownTextStyle,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              labelText: widget.text.rootKey,
-            ),
+            decoration: InputDecoration(labelText: widget.text.rootKey),
             items: [
               for (final rootKey in _westernRootKeys)
                 DropdownMenuItem(
@@ -1688,10 +1865,7 @@ class _JianpuConverterCardState extends State<_JianpuConverterCard> {
           const SizedBox(height: 12),
           TextField(
             controller: _jianpuController,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              labelText: widget.text.jianpuInput,
-            ),
+            decoration: InputDecoration(labelText: widget.text.jianpuInput),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 14),
@@ -1705,10 +1879,7 @@ class _JianpuConverterCardState extends State<_JianpuConverterCard> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: scheme.outlineVariant),
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: glassInnerDecoration(context, borderRadius: 12),
             child: Text(
               _convertedPatternText,
               style: Theme.of(context).textTheme.bodyLarge,
@@ -1735,114 +1906,225 @@ class _JianpuConverterCardState extends State<_JianpuConverterCard> {
 class _HomeTabBar extends StatelessWidget {
   const _HomeTabBar({
     required this.selectedIndex,
-    required this.themeColor,
     required this.labels,
     required this.icons,
     required this.onSelected,
   });
 
   final int selectedIndex;
-  final AppThemeColor themeColor;
   final List<String> labels;
   final List<IconData> icons;
   final ValueChanged<int> onSelected;
 
+  // Saturation-boost color matrix: the signature of Apple's liquid glass is
+  // that colors BEHIND the glass come through more vivid, not washed out.
+  static List<double> _saturationMatrix(double s) {
+    const lumR = 0.2126, lumG = 0.7152, lumB = 0.0722;
+    return [
+      lumR * (1 - s) + s,
+      lumG * (1 - s),
+      lumB * (1 - s),
+      0,
+      0,
+      lumR * (1 - s),
+      lumG * (1 - s) + s,
+      lumB * (1 - s),
+      0,
+      0,
+      lumR * (1 - s),
+      lumG * (1 - s),
+      lumB * (1 - s) + s,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final barColor = isDark
-        ? Colors.black.withValues(alpha: 0.22)
-        : Colors.white.withValues(alpha: 0.34);
-    final selectedColor =
-        !isDark &&
-            (themeColor == AppThemeColor.warm ||
-                themeColor == AppThemeColor.teal)
-        ? Color.alphaBlend(
-            scheme.primary.withValues(alpha: 0.14),
-            scheme.primaryContainer,
-          )
-        : scheme.primaryContainer;
 
+    // Approximation of Apple's Liquid Glass (the real material is a private
+    // system-compositor effect only native UIKit/SwiftUI apps get): an
+    // almost-fully-transparent fill over blur + saturation boost, a gradient
+    // rim that catches light on the top edge, and a specular streak.
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(20, 0, 20, 14),
       child: SizedBox(
         height: 64,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: barColor,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: scheme.onSurface.withValues(
-                    alpha: isDark ? 0.16 : 0.18,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.14),
+                blurRadius: 26,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: BackdropFilter(
+              // Blur + saturation boost composed together: the background
+              // stays visible and its colors get MORE vivid through the
+              // glass, which is what sells the liquid-glass look.
+              filter: ImageFilter.compose(
+                outer: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                inner: ColorFilter.matrix(_saturationMatrix(1.9)),
+              ),
+              child: Container(
+                // Gradient rim light (brightest at the top-left edge).
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDark
+                        ? [
+                            Colors.white.withValues(alpha: 0.30),
+                            Colors.white.withValues(alpha: 0.05),
+                          ]
+                        : [
+                            Colors.white.withValues(alpha: 0.70),
+                            Colors.white.withValues(alpha: 0.12),
+                          ],
                   ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: scheme.shadow.withValues(
-                      alpha: isDark ? 0.28 : 0.16,
+                padding: const EdgeInsets.all(1.2),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    // Nearly no fill — the material is the blurred,
+                    // saturated background itself, not a white wash.
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: isDark
+                          ? [
+                              Colors.white.withValues(alpha: 0.07),
+                              Colors.white.withValues(alpha: 0.02),
+                            ]
+                          : [
+                              Colors.white.withValues(alpha: 0.14),
+                              Colors.white.withValues(alpha: 0.03),
+                            ],
                     ),
-                    blurRadius: 30,
-                    offset: const Offset(0, 12),
                   ),
-                ],
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final segmentWidth = constraints.maxWidth / labels.length;
-                  return Stack(
+                  child: Stack(
                     children: [
-                      AnimatedPositioned(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        left: 6 + (segmentWidth * selectedIndex),
-                        top: 6,
-                        bottom: 6,
-                        width: segmentWidth - 12,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: selectedColor,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: scheme.primary.withValues(
-                                alpha: isDark ? 0.38 : 0.24,
+                      // Specular highlight along the top edge.
+                      Positioned(
+                        top: 1,
+                        left: 26,
+                        right: 26,
+                        height: 22,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.white.withValues(
+                                    alpha: isDark ? 0.10 : 0.26,
+                                  ),
+                                  Colors.white.withValues(alpha: 0),
+                                ],
                               ),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: scheme.primary.withValues(
-                                  alpha: isDark ? 0.18 : 0.14,
-                                ),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
                           ),
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Row(
-                          children: [
-                            for (int index = 0; index < labels.length; index++)
-                              Expanded(
-                                child: _HomeTabButton(
-                                  label: labels[index],
-                                  icon: icons[index],
-                                  selected: selectedIndex == index,
-                                  onTap: () => onSelected(index),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final segmentWidth =
+                              constraints.maxWidth / labels.length;
+                          return Stack(
+                            children: [
+                              AnimatedPositioned(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                left: 6 + (segmentWidth * selectedIndex),
+                                top: 6,
+                                bottom: 6,
+                                width: segmentWidth - 12,
+                                child: DecoratedBox(
+                                  // Floating glass lozenge for the selection:
+                                  // translucent, defined by its rim and
+                                  // shadow rather than a solid fill.
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: isDark
+                                          ? [
+                                              Colors.white.withValues(
+                                                alpha: 0.20,
+                                              ),
+                                              Colors.white.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                            ]
+                                          : [
+                                              Colors.white.withValues(
+                                                alpha: 0.42,
+                                              ),
+                                              Colors.white.withValues(
+                                                alpha: 0.16,
+                                              ),
+                                            ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: isDark ? 0.30 : 0.70,
+                                      ),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: isDark ? 0.28 : 0.12,
+                                        ),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                          ],
-                        ),
+                              Padding(
+                                padding: const EdgeInsets.all(6),
+                                child: Row(
+                                  children: [
+                                    for (
+                                      int index = 0;
+                                      index < labels.length;
+                                      index++
+                                    )
+                                      Expanded(
+                                        child: _HomeTabButton(
+                                          label: labels[index],
+                                          icon: icons[index],
+                                          selected: selectedIndex == index,
+                                          onTap: () => onSelected(index),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ),
@@ -1868,7 +2150,8 @@ class _HomeTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final selectedForeground = scheme.onPrimaryContainer;
+    // Accent-colored glyph on the glass lozenge, iOS-style.
+    final selectedForeground = _readableAccentColor(scheme);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -1917,21 +2200,27 @@ class _HomeTabButton extends StatelessWidget {
 class _PracticeHistoryCard extends StatelessWidget {
   const _PracticeHistoryCard({
     required this.title,
-    required this.todayLabel,
+    required this.favoriteInstrumentLabel,
     required this.last7DaysLabel,
     required this.lastSessionLabel,
     required this.mostUsedBpmLabel,
     required this.emptyLabel,
     required this.controller,
+    required this.goalMinutes,
+    required this.goalOptions,
+    required this.onGoalChanged,
   });
 
   final String title;
-  final String todayLabel;
+  final String favoriteInstrumentLabel;
   final String last7DaysLabel;
   final String lastSessionLabel;
   final String mostUsedBpmLabel;
   final String emptyLabel;
   final PracticeHistoryController controller;
+  final int goalMinutes;
+  final List<int> goalOptions;
+  final ValueChanged<int> onGoalChanged;
 
   List<_DailyPracticeTotal> _lastSevenDailyTotals() {
     final now = DateTime.now();
@@ -1955,17 +2244,25 @@ class _PracticeHistoryCard extends StatelessWidget {
         firstLocal.day == secondLocal.day;
   }
 
+  String _goalLabel(int minutes) {
+    if (minutes == 60) return '1 h';
+    return '$minutes min';
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final lastSession = controller.lastSession;
     final mostUsedBpm = controller.mostUsedBpm;
+    final mostUsedInstrument = controller.mostUsedInstrument;
     final dailyTotals = _lastSevenDailyTotals();
+    final goalSeconds = goalMinutes * 60;
+    final goalProgress = goalSeconds == 0
+        ? 0.0
+        : (controller.todayPracticeSeconds / goalSeconds).clamp(0.0, 1.0);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-      decoration: _homeCardDecoration(scheme),
+    return GlassCard(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1975,16 +2272,73 @@ class _PracticeHistoryCard extends StatelessWidget {
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            decoration: glassInnerDecoration(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Daily Goal',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: goalMinutes,
+                        borderRadius: BorderRadius.circular(12),
+                        items: [
+                          for (final option in goalOptions)
+                            DropdownMenuItem(
+                              value: option,
+                              child: Text(_goalLabel(option)),
+                            ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          onGoalChanged(value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: goalProgress,
+                    minHeight: 9,
+                    backgroundColor: scheme.surfaceContainerHighest,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${controller.formatDuration(controller.todayPracticeSeconds)} / ${_goalLabel(goalMinutes)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
               _PracticeStatPill(
-                label: todayLabel,
-                value: controller.formatDuration(
-                  controller.todayPracticeSeconds,
-                ),
+                label: favoriteInstrumentLabel,
+                value: mostUsedInstrument == null
+                    ? '--'
+                    : instrumentDisplayName(mostUsedInstrument),
               ),
               _PracticeStatPill(
                 label: mostUsedBpmLabel,
@@ -2226,10 +2580,7 @@ class _PracticeStatPill extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: glassInnerDecoration(context, borderRadius: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -2281,10 +2632,7 @@ class _SavedSequencesList extends StatelessWidget {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          border: Border.all(color: scheme.outlineVariant),
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: glassInnerDecoration(context, borderRadius: 14),
         child: Text(
           emptyLabel,
           style: Theme.of(
@@ -2295,10 +2643,7 @@ class _SavedSequencesList extends StatelessWidget {
     }
 
     return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: glassInnerDecoration(context, borderRadius: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2310,11 +2655,17 @@ class _SavedSequencesList extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    savedSequences[index].name,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          savedSequences[index].name,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      _NotationBadge(notation: savedSequences[index].notation),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(

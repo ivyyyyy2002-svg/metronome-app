@@ -98,6 +98,9 @@ class ChineseText implements AppLanguageText {
   String get mostUsedBpm => '常用 BPM';
 
   @override
+  String get favoriteInstrument => '最爱乐器';
+
+  @override
   String get noPracticeYet => '还没有练习记录';
 
   @override

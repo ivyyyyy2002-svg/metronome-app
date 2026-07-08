@@ -99,6 +99,9 @@ class EnglishText implements AppLanguageText {
   String get mostUsedBpm => 'Most used BPM';
 
   @override
+  String get favoriteInstrument => 'Favorite instrument';
+
+  @override
   String get noPracticeYet => 'No practice recorded yet';
 
   @override
