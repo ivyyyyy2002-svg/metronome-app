@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/glass.dart';
@@ -38,6 +37,8 @@ class _MainHomePageState extends State<MainHomePage> {
   static const double _sectionTopSpacing = 18;
   static const double _cardSpacing = 18;
   static const String _practiceGoalMinutesKey = 'practice_goal_minutes';
+  static const String _exampleSequencesExpandedKey =
+      'example_sequences_expanded';
   static const List<int> _practiceGoalOptions = [5, 10, 20, 30, 60];
 
   final TextEditingController _sequenceTextController = TextEditingController();
@@ -48,6 +49,7 @@ class _MainHomePageState extends State<MainHomePage> {
   NoteNotation _quickEntryNotation = NoteNotation.western;
   int _selectedTabIndex = 0;
   int _practiceGoalMinutes = 10;
+  bool _exampleSequencesExpanded = false;
 
   @override
   void initState() {
@@ -59,6 +61,7 @@ class _MainHomePageState extends State<MainHomePage> {
         widget.noteSequenceController.notation ?? NoteNotation.western;
     _syncSequenceText();
     unawaited(_loadPracticeGoal());
+    unawaited(_loadExampleSequencesExpanded());
   }
 
   Future<void> _loadPracticeGoal() async {
@@ -79,6 +82,26 @@ class _MainHomePageState extends State<MainHomePage> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_practiceGoalMinutesKey, goalMinutes);
+  }
+
+  Future<void> _loadExampleSequencesExpanded() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedExpanded = prefs.getBool(_exampleSequencesExpandedKey);
+    if (savedExpanded == null) return;
+    if (!mounted) return;
+
+    setState(() {
+      _exampleSequencesExpanded = savedExpanded;
+    });
+  }
+
+  Future<void> _setExampleSequencesExpanded(bool expanded) async {
+    setState(() {
+      _exampleSequencesExpanded = expanded;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_exampleSequencesExpandedKey, expanded);
   }
 
   void _refreshPracticeHistory() {
@@ -922,7 +945,11 @@ class _MainHomePageState extends State<MainHomePage> {
                   // Custom note sequence input cards
                   if (_selectedTabIndex == 1) ...[
                     const SizedBox(height: _sectionTopSpacing),
-                    _ExampleSequencesCard(onUseExample: _applyExampleSequence),
+                    _ExampleSequencesCard(
+                      expanded: _exampleSequencesExpanded,
+                      onExpandedChanged: _setExampleSequencesExpanded,
+                      onUseExample: _applyExampleSequence,
+                    ),
                     const SizedBox(height: _cardSpacing),
                     GlassCard(
                       padding: const EdgeInsets.all(18),
@@ -1315,8 +1342,14 @@ bool _usesFlatNames(String rootKey) {
 }
 
 class _ExampleSequencesCard extends StatelessWidget {
-  const _ExampleSequencesCard({required this.onUseExample});
+  const _ExampleSequencesCard({
+    required this.expanded,
+    required this.onExpandedChanged,
+    required this.onUseExample,
+  });
 
+  final bool expanded;
+  final ValueChanged<bool> onExpandedChanged;
   final ValueChanged<_ExampleSequence> onUseExample;
 
   @override
@@ -1324,37 +1357,67 @@ class _ExampleSequencesCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return GlassCard(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Example Sequences',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Example Sequences',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => onExpandedChanged(!expanded),
+                icon: Icon(
+                  expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 20,
+                ),
+                label: Text(expanded ? 'Hide' : 'Show'),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
-            'Start with a ready-made Western, Eastern, or raga pattern.',
+            expanded
+                ? 'Start with a ready-made Western, Eastern, or raga pattern.'
+                : 'Optional practice patterns are hidden.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
-          const SizedBox(height: 12),
-          Column(
-            children: [
-              for (int index = 0; index < _exampleSequences.length; index++)
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: index == _exampleSequences.length - 1 ? 0 : 10,
-                  ),
-                  child: _ExampleSequenceTile(
-                    example: _exampleSequences[index],
-                    onUse: () => onUseExample(_exampleSequences[index]),
-                  ),
-                ),
-            ],
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                children: [
+                  for (int index = 0; index < _exampleSequences.length; index++)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index == _exampleSequences.length - 1 ? 0 : 10,
+                      ),
+                      child: _ExampleSequenceTile(
+                        example: _exampleSequences[index],
+                        onUse: () => onUseExample(_exampleSequences[index]),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            crossFadeState: expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 180),
+            firstCurve: Curves.easeOut,
+            secondCurve: Curves.easeOut,
+            sizeCurve: Curves.easeOut,
           ),
         ],
       ),
@@ -1916,217 +1979,93 @@ class _HomeTabBar extends StatelessWidget {
   final List<IconData> icons;
   final ValueChanged<int> onSelected;
 
-  // Saturation-boost color matrix: the signature of Apple's liquid glass is
-  // that colors BEHIND the glass come through more vivid, not washed out.
-  static List<double> _saturationMatrix(double s) {
-    const lumR = 0.2126, lumG = 0.7152, lumB = 0.0722;
-    return [
-      lumR * (1 - s) + s,
-      lumG * (1 - s),
-      lumB * (1 - s),
-      0,
-      0,
-      lumR * (1 - s),
-      lumG * (1 - s) + s,
-      lumB * (1 - s),
-      0,
-      0,
-      lumR * (1 - s),
-      lumG * (1 - s),
-      lumB * (1 - s) + s,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Approximation of Apple's Liquid Glass (the real material is a private
-    // system-compositor effect only native UIKit/SwiftUI apps get): an
-    // almost-fully-transparent fill over blur + saturation boost, a gradient
-    // rim that catches light on the top edge, and a specular streak.
+    // Liquid glass via liquid_glass_renderer's FakeGlass: backdrop-filter
+    // based and clipped strictly to the pill shape. The full LiquidGlass
+    // shader layer rendered a visible rectangular texture around the pill,
+    // so we use the artifact-free variant.
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-      child: SizedBox(
-        height: 64,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.38 : 0.14),
-                blurRadius: 26,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: BackdropFilter(
-              // Blur + saturation boost composed together: the background
-              // stays visible and its colors get MORE vivid through the
-              // glass, which is what sells the liquid-glass look.
-              filter: ImageFilter.compose(
-                outer: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                inner: ColorFilter.matrix(_saturationMatrix(1.9)),
-              ),
-              child: Container(
-                // Gradient rim light (brightest at the top-left edge).
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isDark
-                        ? [
-                            Colors.white.withValues(alpha: 0.30),
-                            Colors.white.withValues(alpha: 0.05),
-                          ]
-                        : [
-                            Colors.white.withValues(alpha: 0.70),
-                            Colors.white.withValues(alpha: 0.12),
-                          ],
-                  ),
-                ),
-                padding: const EdgeInsets.all(1.2),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    // Nearly no fill — the material is the blurred,
-                    // saturated background itself, not a white wash.
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: isDark
-                          ? [
-                              Colors.white.withValues(alpha: 0.07),
-                              Colors.white.withValues(alpha: 0.02),
-                            ]
-                          : [
-                              Colors.white.withValues(alpha: 0.14),
-                              Colors.white.withValues(alpha: 0.03),
-                            ],
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Specular highlight along the top edge.
-                      Positioned(
-                        top: 1,
-                        left: 26,
-                        right: 26,
-                        height: 22,
-                        child: IgnorePointer(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(999),
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.white.withValues(
-                                    alpha: isDark ? 0.10 : 0.26,
-                                  ),
-                                  Colors.white.withValues(alpha: 0),
+      child: FakeGlass(
+        settings: LiquidGlassSettings(
+          blur: 8,
+          glassColor: isDark
+              ? const Color(0x22FFFFFF)
+              : const Color(0x2EFFFFFF),
+          saturation: 1.35,
+          lightIntensity: 1.2,
+        ),
+        shape: LiquidRoundedSuperellipse(borderRadius: 32),
+        child: SizedBox(
+          height: 64,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final segmentWidth = constraints.maxWidth / labels.length;
+              return Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    left: 6 + (segmentWidth * selectedIndex),
+                    top: 6,
+                    bottom: 6,
+                    width: segmentWidth - 12,
+                    child: DecoratedBox(
+                      // Floating translucent lozenge for the selection.
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: isDark
+                              ? [
+                                  Colors.white.withValues(alpha: 0.20),
+                                  Colors.white.withValues(alpha: 0.08),
+                                ]
+                              : [
+                                  Colors.white.withValues(alpha: 0.42),
+                                  Colors.white.withValues(alpha: 0.16),
                                 ],
-                              ),
-                            ),
+                        ),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: Colors.white.withValues(
+                            alpha: isDark ? 0.30 : 0.70,
                           ),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.28 : 0.12,
+                            ),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final segmentWidth =
-                              constraints.maxWidth / labels.length;
-                          return Stack(
-                            children: [
-                              AnimatedPositioned(
-                                duration: const Duration(milliseconds: 220),
-                                curve: Curves.easeOutCubic,
-                                left: 6 + (segmentWidth * selectedIndex),
-                                top: 6,
-                                bottom: 6,
-                                width: segmentWidth - 12,
-                                child: DecoratedBox(
-                                  // Floating glass lozenge for the selection:
-                                  // translucent, defined by its rim and
-                                  // shadow rather than a solid fill.
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: isDark
-                                          ? [
-                                              Colors.white.withValues(
-                                                alpha: 0.20,
-                                              ),
-                                              Colors.white.withValues(
-                                                alpha: 0.08,
-                                              ),
-                                            ]
-                                          : [
-                                              Colors.white.withValues(
-                                                alpha: 0.42,
-                                              ),
-                                              Colors.white.withValues(
-                                                alpha: 0.16,
-                                              ),
-                                            ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(
-                                        alpha: isDark ? 0.30 : 0.70,
-                                      ),
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: isDark ? 0.28 : 0.12,
-                                        ),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(6),
-                                child: Row(
-                                  children: [
-                                    for (
-                                      int index = 0;
-                                      index < labels.length;
-                                      index++
-                                    )
-                                      Expanded(
-                                        child: _HomeTabButton(
-                                          label: labels[index],
-                                          icon: icons[index],
-                                          selected: selectedIndex == index,
-                                          onTap: () => onSelected(index),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
+                  Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Row(
+                      children: [
+                        for (int index = 0; index < labels.length; index++)
+                          Expanded(
+                            child: _HomeTabButton(
+                              label: labels[index],
+                              icon: icons[index],
+                              selected: selectedIndex == index,
+                              onTap: () => onSelected(index),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

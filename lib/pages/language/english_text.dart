@@ -303,7 +303,13 @@ class EnglishText implements AppLanguageText {
   String get click => 'Click';
 
   @override
+  String get clickSound => 'Click sound';
+
+  @override
   String get sound => 'Sound';
+
+  @override
+  String get preview => 'Preview';
 
   @override
   String get instrument => 'Instrument';

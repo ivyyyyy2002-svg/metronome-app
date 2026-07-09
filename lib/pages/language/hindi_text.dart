@@ -305,7 +305,13 @@ class HindiText implements AppLanguageText {
   String get click => 'क्लिक';
 
   @override
+  String get clickSound => 'क्लिक साउंड';
+
+  @override
   String get sound => 'साउंड';
+
+  @override
+  String get preview => 'प्रिव्यू';
 
   @override
   String get instrument => 'वाद्य';

@@ -26,6 +26,20 @@ import 'widgets/transport_bar.dart';
 
 enum ClickAccent { strong, secondary, weak }
 
+class ClickSoundOption {
+  const ClickSoundOption({
+    required this.id,
+    required this.label,
+    required this.strongAsset,
+    required this.weakAsset,
+  });
+
+  final String id;
+  final String label;
+  final String strongAsset;
+  final String weakAsset;
+}
+
 enum _NoteSequenceEditorAction { applyText, saveText, importSaved }
 
 class _NoteSequenceEditorResult {
@@ -75,8 +89,83 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       'metronome_time_signature_note';
   static const String _savedBeatUnitKey = 'metronome_beat_unit';
   static const String _savedBaseOctaveKey = 'metronome_base_octave';
+  static const String _savedClickSoundKey = 'metronome_click_sound';
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
+  static const List<ClickSoundOption> _clickSoundOptions = [
+    ClickSoundOption(
+      id: 'default',
+      label: 'Classic',
+      strongAsset: _defaultStrongClickAsset,
+      weakAsset: _defaultWeakClickAsset,
+    ),
+    ClickSoundOption(
+      id: 'quartz',
+      label: 'Quartz',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_MetronomeQuartz_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_MetronomeQuartz_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'stick',
+      label: 'Stick',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_Stick_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_Stick_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'practicePad',
+      label: 'Practice Pad',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_PracticePad_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_PracticePad_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'glass',
+      label: 'Glass',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_Glass_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_Glass_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'metal',
+      label: 'Metal',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_Metal_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_Metal_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'snap',
+      label: 'Snap',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_Snap_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_Snap_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'clap',
+      label: 'Clap',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_Clap_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_Clap_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'tambourine',
+      label: 'Tambourine',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_Tamb_A_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_Tamb_A_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'can',
+      label: 'Can',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_Can_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_Can_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'clickToy',
+      label: 'Click Toy',
+      strongAsset: 'assets/sounds/metronome_clicks/Perc_ClickToy_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Perc_ClickToy_lo.wav',
+    ),
+    ClickSoundOption(
+      id: 'woodBlock',
+      label: 'Wood Block',
+      strongAsset: 'assets/sounds/metronome_clicks/Synth_Block_A_hi.wav',
+      weakAsset: 'assets/sounds/metronome_clicks/Synth_Block_A_lo.wav',
+    ),
+  ];
   static const int _initialBpm = 90;
   // Lower-bound floor for any instrument (A0). Each instrument's actual usable
   // range is read from its Sf2Spec at runtime via _instrumentMinOctave /
@@ -441,6 +530,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       );
   String clickStrongAsset = _defaultStrongClickAsset;
   String clickWeakAsset = _defaultWeakClickAsset;
+  String selectedClickSoundId = 'default';
 
   // Note player pool to allow overlapping notes without cutting off
   static const int notePoolSize = 12;
@@ -581,6 +671,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final savedNote = prefs.getInt(_savedTimeSignatureNoteKey);
     final savedBeatUnit = prefs.getString(_savedBeatUnitKey);
     final savedBaseOctave = prefs.getInt(_savedBaseOctaveKey);
+    final savedClickSound = prefs.getString(_savedClickSoundKey);
 
     setState(() {
       if (savedBpm != null) {
@@ -610,8 +701,23 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         _syncBaseFrequencyFromAnchor();
         _refreshCurrentSoundPreview();
       }
+      final clickOption = _clickSoundOptionById(savedClickSound);
+      if (clickOption != null) {
+        selectedClickSoundId = clickOption.id;
+        clickStrongAsset = clickOption.strongAsset;
+        clickWeakAsset = clickOption.weakAsset;
+        clickReady = false;
+      } else {
+        selectedClickSoundId = _clickSoundOptionForAssets(
+          clickStrongAsset,
+          clickWeakAsset,
+        ).id;
+      }
     });
     swingController.duration = Duration(milliseconds: _computeTickIntervalMs());
+    if (savedClickSound != null) {
+      unawaited(preloadClick());
+    }
   }
 
   Future<void> _saveMetronomeSettings() async {
@@ -622,6 +728,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await prefs.setInt(_savedTimeSignatureNoteKey, timeSignatureNote);
     await prefs.setString(_savedBeatUnitKey, beatUnitConfigValue(beatUnit));
     await prefs.setInt(_savedBaseOctaveKey, baseOctave);
+    await prefs.setString(_savedClickSoundKey, selectedClickSoundId);
   }
 
   // ---------- Audio Session ----------
@@ -917,6 +1024,26 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return (_defaultStrongClickAsset, _defaultWeakClickAsset);
   }
 
+  ClickSoundOption? _clickSoundOptionById(String? id) {
+    if (id == null) return null;
+    for (final option in _clickSoundOptions) {
+      if (option.id == id) return option;
+    }
+    return null;
+  }
+
+  ClickSoundOption _clickSoundOptionForAssets(String strong, String weak) {
+    for (final option in _clickSoundOptions) {
+      if (option.strongAsset == strong && option.weakAsset == weak) {
+        return option;
+      }
+    }
+    return _clickSoundOptions.first;
+  }
+
+  ClickSoundOption get _selectedClickSoundOption =>
+      _clickSoundOptionById(selectedClickSoundId) ?? _clickSoundOptions.first;
+
   // Get the index of the current time signature in the options list, for initializing the picker
   int _timeSignatureIndex() {
     final key = '$timeSignatureBeats/$timeSignatureNote';
@@ -987,6 +1114,101 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         _applyMeterSelection(selection.$1, selection.$2);
       },
     );
+  }
+
+  Future<void> _applyClickSound(ClickSoundOption option) async {
+    setState(() {
+      selectedClickSoundId = option.id;
+      clickStrongAsset = option.strongAsset;
+      clickWeakAsset = option.weakAsset;
+      clickReady = false;
+    });
+    await _pauseClickPlayers();
+    await preloadClick();
+    unawaited(_saveMetronomeSettings());
+  }
+
+  Future<void> _previewClickSound(ClickSoundOption option) async {
+    final previewPlayer = AudioPlayer();
+    try {
+      await previewPlayer.setAsset(option.strongAsset);
+      previewPlayer.setVolume(1.0);
+      await previewPlayer.play();
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+      await previewPlayer.setAsset(option.weakAsset);
+      previewPlayer.setVolume(0.65);
+      await previewPlayer.play();
+    } catch (e, st) {
+      debugPrint('Failed to preview click sound: $e');
+      debugPrintStack(stackTrace: st);
+    } finally {
+      unawaited(
+        Future<void>.delayed(
+          const Duration(milliseconds: 450),
+        ).then((_) => previewPlayer.dispose()),
+      );
+    }
+  }
+
+  Future<void> _openClickSoundPickerSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView.separated(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+            itemCount: _clickSoundOptions.length + 1,
+            separatorBuilder: (_, index) =>
+                index == 0 ? const SizedBox(height: 8) : const Divider(),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    _text.clickSound,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                );
+              }
+
+              final option = _clickSoundOptions[index - 1];
+              final selected = option.id == selectedClickSoundId;
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: Icon(
+                  selected
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                ),
+                title: Text(option.label),
+                trailing: IconButton(
+                  tooltip: _text.preview,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  onPressed: () => unawaited(_previewClickSound(option)),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  unawaited(_applyClickSound(option));
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openClickSoundPickerFromAdvancedSettings() async {
+    if (_scaffoldKey.currentState?.isEndDrawerOpen ?? false) {
+      Navigator.of(context).pop();
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+    }
+    if (!mounted) return;
+    await _openClickSoundPickerSheet();
   }
 
   int _computeTickIntervalMs() {
@@ -1489,11 +1711,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     required String token,
     required double durationBeats,
   }) async {
-    // Fire the click and the instrument note at the same instant instead of
-    // serializing them. Awaiting the click first made every note wait for
-    // the click's seek()+play() platform-channel round trips (tens of ms,
-    // with jitter), so notes lagged audibly behind the click — and the lag
-    // became a larger fraction of the beat as BPM increased.
+    // Fire the click and the instrument note from the same tick. The SF2 path
+    // applies its own small latencyOffsetMs so the faster MIDI note waits for
+    // the slower just_audio click output instead of landing ahead of it.
     Future<void>? clickFuture;
     if (enableClick) {
       clickFuture = playClickForBeat(beatInBar);
@@ -1726,6 +1946,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         minBaseOctave: _instrumentMinOctave,
         maxBaseOctave: _instrumentMaxOctave,
         titleLabel: _text.advancedSettings,
+        clickSoundLabel: _text.clickSound,
+        currentClickSoundName: _selectedClickSoundOption.label,
+        onClickSoundTap: _openClickSoundPickerFromAdvancedSettings,
         instrumentLabel: _text.instrument,
         instruments: instruments,
         instrumentAvailability: instrumentAvailability,
@@ -1751,6 +1974,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         minBaseOctave: _instrumentMinOctave,
         maxBaseOctave: _instrumentMaxOctave,
         titleLabel: _text.advancedSettings,
+        clickSoundLabel: _text.clickSound,
+        currentClickSoundName: _selectedClickSoundOption.label,
+        onClickSoundTap: _openClickSoundPickerFromAdvancedSettings,
         instrumentLabel: _text.instrument,
         instruments: instruments,
         instrumentAvailability: instrumentAvailability,

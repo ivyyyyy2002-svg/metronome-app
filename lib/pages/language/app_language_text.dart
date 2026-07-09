@@ -99,7 +99,9 @@ abstract class AppLanguageText {
   String get stop;
   String get reset;
   String get click;
+  String get clickSound;
   String get sound;
+  String get preview;
   String get instrument;
   String get notesLoaded;
   String get noSequenceLoaded;

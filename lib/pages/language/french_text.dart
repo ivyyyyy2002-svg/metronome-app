@@ -304,7 +304,13 @@ class FrenchText implements AppLanguageText {
   String get click => 'Clic';
 
   @override
+  String get clickSound => 'Son du clic';
+
+  @override
   String get sound => 'Son';
+
+  @override
+  String get preview => 'Aperçu';
 
   @override
   String get instrument => 'Instrument';

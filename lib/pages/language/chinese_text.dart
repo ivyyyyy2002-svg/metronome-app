@@ -295,7 +295,13 @@ class ChineseText implements AppLanguageText {
   String get click => '节拍声';
 
   @override
+  String get clickSound => '节拍音色';
+
+  @override
   String get sound => '音符声';
+
+  @override
+  String get preview => '试听';
 
   @override
   String get instrument => '乐器';

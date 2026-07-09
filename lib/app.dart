@@ -224,9 +224,8 @@ class _MyAppState extends State<MyApp> {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : colorScheme.onSurface.withValues(alpha: 0.035),
+        // White fill = editable. A grey fill reads as a disabled field.
+        fillColor: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
         border: inputBorder(inputBorderSide),
         enabledBorder: inputBorder(inputBorderSide),
         focusedBorder: inputBorder(

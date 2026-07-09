@@ -11,6 +11,9 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.maxBaseOctave,
     required this.onBaseOctaveChanged,
     required this.titleLabel,
+    required this.clickSoundLabel,
+    required this.currentClickSoundName,
+    required this.onClickSoundTap,
     required this.instrumentLabel,
     required this.instruments,
     required this.instrumentAvailability,
@@ -24,6 +27,9 @@ class AdvancedSettingsDrawer extends StatelessWidget {
   final int maxBaseOctave;
   final ValueChanged<int> onBaseOctaveChanged;
   final String titleLabel;
+  final String clickSoundLabel;
+  final String currentClickSoundName;
+  final VoidCallback onClickSoundTap;
   final String instrumentLabel;
   final List<String> instruments;
   final Map<String, bool> instrumentAvailability;
@@ -103,6 +109,20 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.surround_sound_rounded),
+            title: Text(
+              clickSoundLabel,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(currentClickSoundName),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: onClickSoundTap,
+          ),
+          const SizedBox(height: 10),
           Text(
             instrumentLabel,
             style: Theme.of(
