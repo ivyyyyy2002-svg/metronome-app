@@ -11,6 +11,10 @@ class MetronomeControlsPanel extends StatelessWidget {
     required this.currentSoundListenable,
     required this.sequencePreviewText,
     required this.onSequenceTap,
+    this.sequenceKey,
+    this.bpmKey,
+    this.toggleKey,
+    this.meterKey,
     required this.notesLoadedLabel,
     required this.clickLabel,
     required this.soundLabel,
@@ -29,6 +33,10 @@ class MetronomeControlsPanel extends StatelessWidget {
   final ValueListenable<String> currentSoundListenable;
   final String sequencePreviewText;
   final VoidCallback onSequenceTap;
+  final Key? sequenceKey;
+  final Key? bpmKey;
+  final Key? toggleKey;
+  final Key? meterKey;
   final String notesLoadedLabel;
   final String clickLabel;
   final String soundLabel;
@@ -52,6 +60,7 @@ class MetronomeControlsPanel extends StatelessWidget {
       children: [
         // Sequence display and tap area
         InkWell(
+          key: sequenceKey,
           borderRadius: BorderRadius.circular(16),
           onTap: onSequenceTap,
           child: Container(
@@ -106,6 +115,7 @@ class MetronomeControlsPanel extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Padding(
+          key: bpmKey,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             children: [
@@ -127,6 +137,7 @@ class MetronomeControlsPanel extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Wrap(
+          key: toggleKey,
           spacing: 8,
           runSpacing: 6,
           alignment: WrapAlignment.center,
@@ -171,6 +182,7 @@ class MetronomeControlsPanel extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         InkWell(
+          key: meterKey,
           borderRadius: BorderRadius.circular(999),
           onTap: onMeterTap,
           child: Container(

@@ -317,6 +317,202 @@ class HindiText implements AppLanguageText {
   String get instrument => 'वाद्य';
 
   @override
+  String get tutorialNext => 'आगे';
+
+  @override
+  String get tutorialSkip => 'सब skip करें';
+
+  @override
+  String get tutorialDone => 'पूरा';
+
+  @override
+  String get tutorialReplay => 'Tutorial फिर से देखें';
+
+  @override
+  String tutorialStepCount(int current, int total) => '$current / $total';
+
+  @override
+  String get tutorialTryIt => 'Try करें:';
+
+  @override
+  String get tutorialWellDone => 'बहुत बढ़िया!';
+
+  @override
+  String tutorialTapTabAction(String tabName) =>
+      'नीचे की bar में "$tabName" पर tap करें।';
+
+  @override
+  String get tutorialTempoTitle => 'Tempo, beat और pendulum';
+
+  @override
+  String get tutorialTempoBody =>
+      'Pendulum हर beat पर एक बार झूलता है, और बड़ा नंबर tempo है — BPM (beats per minute), यानी एक minute में कितने beats। ऊपर के dots बताते हैं कि आप bar में कहां हैं: सबसे चमकीला पहला dot accented downbeat है।';
+
+  @override
+  String get tutorialTempoExample =>
+      '60 BPM = हर second 1 beat\n120 BPM = हर second 2 beats (दुगना तेज़)';
+
+  @override
+  String get tutorialBpmDragTitle => 'अपना tempo set करें';
+
+  @override
+  String get tutorialBpmDragBody =>
+      'धीमी practice ही साफ बजाने का राज़ है: ऐसा tempo चुनें जहां हर note सही बजे, आसान लगने पर ही धीरे-धीरे बढ़ाएं। Slider 30 (बहुत धीमा) से 240 (बहुत तेज़) तक जाता है।';
+
+  @override
+  String get tutorialBpmDragAction =>
+      'tempo slider को खींचकर कोई भी value set करें।';
+
+  @override
+  String get tutorialSequenceTitle => 'आपका note pattern';
+
+  @override
+  String get tutorialSequenceBody =>
+      'यह metronome सिर्फ click नहीं करता — यह melody भी बजा सकता है: हर beat पर एक note, आपका pattern loop में। यह panel अभी loaded pattern दिखाता है; notes बदलने के लिए कभी भी इस पर tap करें।';
+
+  @override
+  String get tutorialToggleTitle => 'Click, notes, या दोनों';
+
+  @override
+  String get tutorialToggleBody =>
+      '"Click" classic टिक-टिक है जो time पकड़कर रखती है। "Sound" चुने हुए instrument पर आपका note pattern बजाता है। दोनों on रखें तो melody beat के ऊपर सुनाई देती है; focus करना हो तो एक बंद कर दें।';
+
+  @override
+  String get tutorialToggleAction => 'कोई एक switch off करके फिर on करें।';
+
+  @override
+  String get tutorialMeterTitle => 'Meter और subdivision';
+
+  @override
+  String get tutorialMeterBody =>
+      'Time signature beats को bars में बांटता है: 4/4 में आप 1-2-3-4 गिनकर फिर शुरू करते हैं, और beat 1 पर accent आता है। Beat unit हर beat को छोटे clicks में बांटता है — जब notes beat से तेज़ चलें तब काम आता है।';
+
+  @override
+  String get tutorialMeterExample =>
+      '4/4 = हर bar में 4 beats (सबसे common)\n3/4 = 3 की गिनती, waltz जैसा\nEighth beat unit = हर beat पर 2 clicks';
+
+  @override
+  String get tutorialTransportTitle => 'Live सुनें';
+
+  @override
+  String get tutorialTransportBody =>
+      'सब set है — Start दबाकर सुनें: accented पहला beat, फिर हर beat पर आपके notes। Stop session रोकता है; Reset pattern की शुरुआत पर वापस ले जाता है।';
+
+  @override
+  String get tutorialTransportAction => 'Start दबाएं और एक-दो bar सुनें।';
+
+  @override
+  String get tutorialAdvancedTitle => 'Advanced settings';
+
+  @override
+  String get tutorialAdvancedBody =>
+      'Defaults कम पड़ने लगें तो यह panel खोलें: click sound बदलें, notes बजाने वाला instrument चुनें, accents adjust करें, या base octave ऊपर-नीचे करें।';
+
+  @override
+  String get tutorialHomePracticeTitle => 'Welcome! Practice यहां शुरू होती है';
+
+  @override
+  String get tutorialHomePracticeBody =>
+      'Metrinote एक ऐसा metronome है जो आपके practice वाले notes भी बजा सकता है — beat और melody एक साथ सुनाई देती है। यह button practice page खोलता है, आपका current note pattern पहले से loaded होगा।';
+
+  @override
+  String get tutorialHomeHistoryTitle => 'आपकी practice history';
+
+  @override
+  String get tutorialHomeHistoryBody =>
+      'हर session यहां track होता है: पिछले 7 दिनों के practice minutes, सबसे ज्यादा use हुआ tempo, और favorite instrument। Daily goal set करें — progress ring आपको ईमानदार रखेगी।';
+
+  @override
+  String get tutorialHomeTabsTitle => 'चार tabs, एक workflow';
+
+  @override
+  String get tutorialHomeTabsBody =>
+      'Practice home base है। Sequences में note patterns बनते और save होते हैं। Tools आपके लिए patterns generate करता है। Basics app के music terms समझाता है। चलिए order में देखते हैं।';
+
+  @override
+  String get tutorialHomeExamplesTitle => 'Example से शुरू करें';
+
+  @override
+  String get tutorialHomeExamplesBody =>
+      'समझ नहीं आ रहा क्या practice करें? ये ready-made patterns एक tap में load होते हैं — Western major scale या Eastern raga cycle। एक load करें, फिर अपने हिसाब से बदलें।';
+
+  @override
+  String get tutorialHomeSequencesTitle => 'अपना pattern लिखें';
+
+  @override
+  String get tutorialHomeSequencesBody =>
+      'Note names spaces से अलग करके type करें, या field के नीचे chips पर tap करें। Western letters (A B C…) और Eastern sargam (S R G M…) दोनों चलते हैं। नाम देकर save करें, कभी भी reuse करें।';
+
+  @override
+  String get tutorialHomeSequencesExample =>
+      "C D E F → चार notes, हर beat पर एक\nG - → '-' G को एक beat और रोकता है\nE/F → '/' दो notes एक beat में\nC' ऊंचा octave · C, नीचा octave";
+
+  @override
+  String get tutorialHomeToolsTitle => 'Typing का काम Tools को दें';
+
+  @override
+  String get tutorialHomeToolsBody =>
+      'Tools में दो generators हैं जो आपके लिए patterns लिखते हैं: scale builder और jianpu (numbered notation) converter। दोनों पर एक नज़र डालते हैं।';
+
+  @override
+  String get tutorialHomeScaleGenTitle => 'Scale pattern generator';
+
+  @override
+  String get tutorialHomeScaleGenBody =>
+      'Root key, scale type, octave range और direction चुनें — पूरा pattern अपने आप लिख जाता है। "Use pattern" result को सीधे आपके sequence editor में डाल देता है।';
+
+  @override
+  String get tutorialHomeJianpuTitle => 'Jianpu converter';
+
+  @override
+  String get tutorialHomeJianpuBody =>
+      'अगर आप numbered notation पढ़ते हैं (1 2 3 = do re mi), तो उसे यहां paste करें — playable pattern बन जाएगा। Octave dots और held notes के dashes भी समझ में आते हैं।';
+
+  @override
+  String get tutorialHomeBasicsTitle => 'Terms सीखें';
+
+  @override
+  String get tutorialHomeBasicsBody =>
+      'एक आखिरी पड़ाव: Basics एक आसान glossary है जो app के हर term को समझाती है। चलिए चार सबसे ज़रूरी terms साथ में पढ़ते हैं।';
+
+  @override
+  String get tutorialBasicsBpmBody =>
+      'BPM मतलब beats per minute: 60 BPM यानी हर second ठीक एक beat। यही नंबर practice page के tempo slider से set होता है। Golden rule: जितना comfortable लगे उससे धीमा शुरू करें।';
+
+  @override
+  String get tutorialBasicsMeterBody =>
+      'ऊपर वाला नंबर बताता है हर bar में कितने beats हैं, और beat 1 पर हमेशा accent आता है। Practice page की meter chip से यह चुना जाता है — ज़्यादातर music के लिए 4/4 safe रहता है।';
+
+  @override
+  String get tutorialBasicsSubdivisionBody =>
+      'Subdivision हर beat को छोटे बराबर clicks में बांटता है: eighths से हर beat पर 2 clicks, sixteenths से 4। जब notes main beat से तेज़ चलें तब इसे use करें।';
+
+  @override
+  String get tutorialBasicsNotationBody =>
+      'App एक ही notes के दो naming systems समझता है: Western letters (C D E F G A B) और Eastern sargam (S R G M P D N)। आस-पास के cards octave marks, held notes और grouping समझाते हैं।';
+
+  @override
+  String get tutorialHomeReturnTitle => 'वापस home base पर';
+
+  @override
+  String get tutorialHomeReturnBody =>
+      'Tabs का tour पूरा हुआ। Practice पर वापस चलें — metronome खोलकर hands-on try करने से पहले एक आखिरी चीज़ देखनी है।';
+
+  @override
+  String get tutorialHomeSettingsTitle => 'Settings और tutorial';
+
+  @override
+  String get tutorialHomeSettingsBody =>
+      'Theme, colors और language इस gear के पीछे हैं। कभी कुछ भूल जाएं तो Settings खोलकर "Tutorial फिर से देखें" tap करें। अब "पूरा" दबाएं — metronome page पर असली try करते हैं।';
+
+  @override
+  String get tutorialScoreTitle => 'iPad score practice';
+
+  @override
+  String get tutorialScoreBody =>
+      'बड़ी screen पर landscape में यहां sheet-music image या PDF load करें — metronome बगल में दिखता रहेगा। Zoom, page बदलना और fullscreen सब available है।';
+
+  @override
   String get notesLoaded => 'नोट्स लोड हुए';
 
   @override

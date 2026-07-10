@@ -340,11 +340,17 @@ class _MyAppState extends State<MyApp> {
             practiceHistoryController: practiceHistoryController,
           ),
           routes: {
-            '/metronome': (context) => MetronomeDemo(
-              noteSequenceController: noteSequenceController,
-              appSettingsController: appSettingsController,
-              practiceHistoryController: practiceHistoryController,
-            ),
+            '/metronome': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              final showTutorial = args is Map && args['showTutorial'] == true;
+
+              return MetronomeDemo(
+                noteSequenceController: noteSequenceController,
+                appSettingsController: appSettingsController,
+                practiceHistoryController: practiceHistoryController,
+                showTutorialOnOpen: showTutorial,
+              );
+            },
             '/music-basics': (context) =>
                 MusicBasicsPage(appSettingsController: appSettingsController),
           },

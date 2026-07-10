@@ -15,6 +15,7 @@ import '../app_settings_controller.dart';
 import '../language/app_language_text.dart';
 import '../language/app_text.dart';
 import '../practice_history_controller.dart';
+import '../widgets/coach_mark_tutorial.dart';
 import 'note_sequence_controller.dart';
 import 'metronome_music.dart';
 import 'instrument_sf2_controller.dart';
@@ -65,11 +66,13 @@ class MetronomeDemo extends StatefulWidget {
     required this.noteSequenceController,
     required this.appSettingsController,
     required this.practiceHistoryController,
+    this.showTutorialOnOpen = false,
   });
 
   final NoteSequenceController noteSequenceController;
   final AppSettingsController appSettingsController;
   final PracticeHistoryController practiceHistoryController;
+  final bool showTutorialOnOpen;
 
   @override
   State<MetronomeDemo> createState() => _MetronomeDemoState();
@@ -661,6 +664,99 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await loadConfig();
     await _loadSavedMetronomeSettings();
     await loadNoteSequence();
+    if (widget.showTutorialOnOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _tutorialDialogOpen) return;
+        unawaited(_showMetronomeTutorial());
+      });
+    }
+  }
+
+  List<CoachMarkStep> _tutorialSteps(AppLanguageText text) {
+    return [
+      CoachMarkStep(
+        targetKey: _tutorialTempoKey,
+        title: text.tutorialTempoTitle,
+        body: text.tutorialTempoBody,
+        example: text.tutorialTempoExample,
+        icon: Icons.speed_rounded,
+      ),
+      // Interactive: actually drag the tempo slider.
+      CoachMarkStep(
+        targetKey: _tutorialBpmSliderKey,
+        title: text.tutorialBpmDragTitle,
+        body: text.tutorialBpmDragBody,
+        icon: Icons.swipe_rounded,
+        actionId: 'bpm',
+        actionHint: text.tutorialBpmDragAction,
+      ),
+      CoachMarkStep(
+        targetKey: _tutorialSequenceKey,
+        title: text.tutorialSequenceTitle,
+        body: text.tutorialSequenceBody,
+        icon: Icons.library_music_rounded,
+      ),
+      // Interactive: flip one of the click/sound switches.
+      CoachMarkStep(
+        targetKey: _tutorialToggleKey,
+        title: text.tutorialToggleTitle,
+        body: text.tutorialToggleBody,
+        icon: Icons.volume_up_rounded,
+        actionId: 'toggle',
+        actionHint: text.tutorialToggleAction,
+      ),
+      CoachMarkStep(
+        targetKey: _tutorialMeterKey,
+        title: text.tutorialMeterTitle,
+        body: text.tutorialMeterBody,
+        example: text.tutorialMeterExample,
+        icon: Icons.tune_rounded,
+      ),
+      // Interactive: press Start and hear the result.
+      CoachMarkStep(
+        targetKey: _tutorialStartKey,
+        title: text.tutorialTransportTitle,
+        body: text.tutorialTransportBody,
+        icon: Icons.play_arrow_rounded,
+        actionId: 'start',
+        actionHint: text.tutorialTransportAction,
+      ),
+      if (_tutorialScoreKey.currentContext != null)
+        CoachMarkStep(
+          targetKey: _tutorialScoreKey,
+          title: text.tutorialScoreTitle,
+          body: text.tutorialScoreBody,
+          icon: Icons.upload_file_rounded,
+        ),
+      CoachMarkStep(
+        targetKey: _tutorialAdvancedKey,
+        title: text.tutorialAdvancedTitle,
+        body: text.tutorialAdvancedBody,
+        icon: Icons.settings_rounded,
+      ),
+    ];
+  }
+
+  Future<void> _showMetronomeTutorial() async {
+    _tutorialDialogOpen = true;
+    final text = _text;
+    final steps = _tutorialSteps(text);
+
+    try {
+      await showCoachMarkTutorial(
+        context: context,
+        steps: steps,
+        nextLabel: text.tutorialNext,
+        doneLabel: text.tutorialDone,
+        skipLabel: text.tutorialSkip,
+        tryItLabel: text.tutorialTryIt,
+        wellDoneLabel: text.tutorialWellDone,
+        stepCountLabel: text.tutorialStepCount,
+        actions: _tutorialActions,
+      );
+    } finally {
+      _tutorialDialogOpen = false;
+    }
   }
 
   Future<void> _loadSavedMetronomeSettings() async {
@@ -1849,6 +1945,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     if (!configLoaded) return;
     if (noteSequence.isEmpty) return;
 
+    _tutorialActions.notify('start');
     _intervalMs = _computeTickIntervalMs();
     final int gen = ++_tickGen;
 
@@ -1928,6 +2025,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // ---------- UI ----------
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey _tutorialTempoKey = GlobalKey();
+  final GlobalKey _tutorialBpmSliderKey = GlobalKey();
+  final GlobalKey _tutorialSequenceKey = GlobalKey();
+  final GlobalKey _tutorialToggleKey = GlobalKey();
+  final GlobalKey _tutorialMeterKey = GlobalKey();
+  final GlobalKey _tutorialStartKey = GlobalKey();
+  final GlobalKey _tutorialAdvancedKey = GlobalKey();
+  final GlobalKey _tutorialScoreKey = GlobalKey();
+  final CoachMarkActionNotifier _tutorialActions = CoachMarkActionNotifier();
+  bool _tutorialDialogOpen = false;
 
   AppLanguageText get _text =>
       appTextFor(widget.appSettingsController.language);
@@ -3128,6 +3235,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             PlaybackStatusPanel(
+              key: _tutorialTempoKey,
               anim: swingAnim,
               isRunning: isRunning,
               beatNumerator: beatNumerator,
@@ -3145,6 +3253,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               currentSoundListenable: currentSoundVN,
               sequencePreviewText: _sequencePreviewText(),
               onSequenceTap: _openNoteSequenceEditor,
+              sequenceKey: _tutorialSequenceKey,
+              bpmKey: _tutorialBpmSliderKey,
+              toggleKey: _tutorialToggleKey,
+              meterKey: _tutorialMeterKey,
               notesLoadedLabel: text.notesLoaded,
               clickLabel: text.click,
               soundLabel: text.sound,
@@ -3156,15 +3268,18 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               },
               onBpmChangeEnd: (v) {
                 _applyBpm(v.round());
+                _tutorialActions.notify('bpm');
               },
               onClickToggle: (v) async {
                 setState(() => enableClick = v);
+                _tutorialActions.notify('toggle');
                 if (!v) {
                   await _pauseClickPlayers();
                 }
               },
               onSoundToggle: (v) async {
                 setState(() => enableSound = v);
+                _tutorialActions.notify('toggle');
                 if (!v) {
                   await _releaseAllNotePlayers();
                 }
@@ -3514,6 +3629,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                 startLabel: text.start,
                 stopLabel: text.stop,
                 resetLabel: text.reset,
+                startButtonKey: _tutorialStartKey,
               ),
             ],
           );
@@ -3543,9 +3659,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                     ),
                     const SizedBox(width: 18),
                     Expanded(
-                      child: _buildScorePracticePanel(
-                        text: text,
-                        colorScheme: colorScheme,
+                      child: KeyedSubtree(
+                        key: _tutorialScoreKey,
+                        child: _buildScorePracticePanel(
+                          text: text,
+                          colorScheme: colorScheme,
+                        ),
                       ),
                     ),
                   ],
@@ -3560,6 +3679,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               startLabel: text.start,
               stopLabel: text.stop,
               resetLabel: text.reset,
+              startButtonKey: _tutorialStartKey,
             ),
           ],
         );
@@ -3609,6 +3729,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         title: Text(text.metronomeTitle),
         actions: [
           IconButton(
+            tooltip: text.tutorialReplay,
+            onPressed: () {
+              if (_tutorialDialogOpen) return;
+              unawaited(_showMetronomeTutorial());
+            },
+            icon: const Icon(Icons.help_outline_rounded),
+          ),
+          IconButton(
+            key: _tutorialAdvancedKey,
             tooltip: text.advanced,
             onPressed: () => _openAdvancedSettingsPanel(
               theme: inheritedTheme,

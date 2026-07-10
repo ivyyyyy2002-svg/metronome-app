@@ -315,6 +315,203 @@ class EnglishText implements AppLanguageText {
   String get instrument => 'Instrument';
 
   @override
+  String get tutorialNext => 'Next';
+
+  @override
+  String get tutorialSkip => 'Skip all';
+
+  @override
+  String get tutorialDone => 'Done';
+
+  @override
+  String get tutorialReplay => 'Watch tutorial again';
+
+  @override
+  String tutorialStepCount(int current, int total) => '$current of $total';
+
+  @override
+  String get tutorialTryIt => 'Try it:';
+
+  @override
+  String get tutorialWellDone => 'Nice!';
+
+  @override
+  String tutorialTapTabAction(String tabName) =>
+      'tap "$tabName" in the bar below.';
+
+  @override
+  String get tutorialTempoTitle => 'Tempo, beats, and the pendulum';
+
+  @override
+  String get tutorialTempoBody =>
+      'The pendulum swings once per beat, and the big number is the tempo in BPM (beats per minute) — how many beats fit into one minute. The row of dots shows where you are inside the bar: the brighter first dot is the accented downbeat.';
+
+  @override
+  String get tutorialTempoExample =>
+      '60 BPM = 1 beat per second\n120 BPM = 2 beats per second (twice as fast)';
+
+  @override
+  String get tutorialBpmDragTitle => 'Set your own tempo';
+
+  @override
+  String get tutorialBpmDragBody =>
+      'Slow practice is the secret to clean playing: pick a tempo where you can play every note correctly, and only raise it once it feels easy. The slider goes from 30 (very slow) to 240 (very fast).';
+
+  @override
+  String get tutorialBpmDragAction => 'drag the tempo slider to any value.';
+
+  @override
+  String get tutorialSequenceTitle => 'Your note pattern';
+
+  @override
+  String get tutorialSequenceBody =>
+      'This metronome does more than click — it can play a melody, one note per beat, looping your pattern while you play along. This panel shows the pattern loaded right now. Tap it any time to edit the notes without leaving this page.';
+
+  @override
+  String get tutorialToggleTitle => 'Click, notes, or both';
+
+  @override
+  String get tutorialToggleBody =>
+      '"Click" is the classic tick that keeps time. "Sound" plays your note pattern on the selected instrument. Keep both on to hear the melody riding on top of the beat, or turn one off to focus.';
+
+  @override
+  String get tutorialToggleAction =>
+      'tap one of the switches off, then on again.';
+
+  @override
+  String get tutorialMeterTitle => 'Meter and subdivision';
+
+  @override
+  String get tutorialMeterBody =>
+      'The time signature groups beats into bars: in 4/4 you count 1-2-3-4 and start over, and beat 1 gets the accent. The beat unit subdivides each beat into smaller clicks, which helps when your notes move faster than the beat.';
+
+  @override
+  String get tutorialMeterExample =>
+      '4/4 = 4 beats per bar (most common)\n3/4 = counts in 3, like a waltz\nEighth beat unit = 2 clicks per beat';
+
+  @override
+  String get tutorialTransportTitle => 'Hear it live';
+
+  @override
+  String get tutorialTransportBody =>
+      'Everything is set — press Start and listen: the accented first beat, then your notes landing on each beat. Stop pauses the session; Reset jumps back to the beginning of your pattern.';
+
+  @override
+  String get tutorialTransportAction =>
+      'press Start and listen for a bar or two.';
+
+  @override
+  String get tutorialAdvancedTitle => 'Advanced settings';
+
+  @override
+  String get tutorialAdvancedBody =>
+      'When the defaults feel limiting, open this panel to change the click sound, choose the instrument that plays your notes, adjust accents, or shift the base octave up and down.';
+
+  @override
+  String get tutorialHomePracticeTitle => 'Welcome! Practice starts here';
+
+  @override
+  String get tutorialHomePracticeBody =>
+      'Metrinote is a metronome that can also play the notes you want to practice, so you hear the beat and the melody together. This button opens the practice page with your current note pattern already loaded.';
+
+  @override
+  String get tutorialHomeHistoryTitle => 'Your practice history';
+
+  @override
+  String get tutorialHomeHistoryBody =>
+      'Every session is tracked here: minutes practiced over the last 7 days, your most used tempo, and your favorite instrument. Set a daily goal and the progress ring keeps you honest.';
+
+  @override
+  String get tutorialHomeTabsTitle => 'Four tabs, one workflow';
+
+  @override
+  String get tutorialHomeTabsBody =>
+      'Practice is home base. Sequences is where you build and save note patterns. Tools generates patterns for you. Basics explains the music terms this app uses. Let\'s visit them in order.';
+
+  @override
+  String get tutorialHomeExamplesTitle => 'Start from an example';
+
+  @override
+  String get tutorialHomeExamplesBody =>
+      'Not sure what to practice? These ready-made patterns load with one tap — a Western major scale or an Eastern raga cycle. Load one, then tweak it to make it yours.';
+
+  @override
+  String get tutorialHomeSequencesTitle => 'Write your own pattern';
+
+  @override
+  String get tutorialHomeSequencesBody =>
+      'Type note names separated by spaces, or tap the note chips below the field. Both Western letters (A B C…) and Eastern sargam (S R G M…) work. Give the pattern a name and save it to reuse any time.';
+
+  @override
+  String get tutorialHomeSequencesExample =>
+      "C D E F → four notes, one per beat\nG - → '-' holds G for an extra beat\nE/F → '/' fits two notes into one beat\nC' high octave · C, low octave";
+
+  @override
+  String get tutorialHomeToolsTitle => 'Let Tools do the typing';
+
+  @override
+  String get tutorialHomeToolsBody =>
+      'Tools has two generators that write patterns for you: a scale builder and a jianpu (numbered notation) converter. Let\'s take a quick look at both.';
+
+  @override
+  String get tutorialHomeScaleGenTitle => 'Scale pattern generator';
+
+  @override
+  String get tutorialHomeScaleGenBody =>
+      'Pick a root key, scale type, octave range, and direction — it writes the full pattern for you. "Use pattern" drops the result straight into your sequence editor.';
+
+  @override
+  String get tutorialHomeJianpuTitle => 'Jianpu converter';
+
+  @override
+  String get tutorialHomeJianpuBody =>
+      'If you read numbered notation (1 2 3 = do re mi), paste it here and it becomes a playable pattern. Octave dots and dashes for held notes are understood too.';
+
+  @override
+  String get tutorialHomeBasicsTitle => 'Learn the words';
+
+  @override
+  String get tutorialHomeBasicsBody =>
+      'One more stop: Basics is a plain-language glossary of every term this app uses. Let\'s read the four most important ones together.';
+
+  @override
+  String get tutorialBasicsBpmBody =>
+      'BPM means beats per minute: 60 BPM is exactly one beat every second. This is the number you set with the tempo slider on the practice page. Golden rule: start slower than feels comfortable.';
+
+  @override
+  String get tutorialBasicsMeterBody =>
+      'The top number says how many beats each bar contains, and beat 1 always gets the accent. You choose this in the meter chip on the practice page — 4/4 is the safe default for most music.';
+
+  @override
+  String get tutorialBasicsSubdivisionBody =>
+      'Subdivision splits each beat into smaller equal clicks: eighths give 2 clicks per beat, sixteenths give 4. Turn it on when your notes move faster than the main beat.';
+
+  @override
+  String get tutorialBasicsNotationBody =>
+      'This app accepts two naming systems for the same notes: Western letters (C D E F G A B) and Eastern sargam (S R G M P D N). The nearby cards explain octave marks, held notes, and grouping.';
+
+  @override
+  String get tutorialHomeReturnTitle => 'Back to home base';
+
+  @override
+  String get tutorialHomeReturnBody =>
+      'That\'s the tour of the tabs. Head back to Practice — there\'s one last thing to see before we open the metronome for a hands-on tour.';
+
+  @override
+  String get tutorialHomeSettingsTitle => 'Settings and replay';
+
+  @override
+  String get tutorialHomeSettingsBody =>
+      'Theme, colors, and language live behind this gear. And if you ever forget how something works, open Settings and tap "Watch tutorial again". Press Done to open the metronome and try it for real.';
+
+  @override
+  String get tutorialScoreTitle => 'Score practice on iPad';
+
+  @override
+  String get tutorialScoreBody =>
+      'On larger screens in landscape, load a sheet-music image or PDF here and practice while the metronome stays visible beside it. You can zoom, flip pages, and go fullscreen.';
+
+  @override
   String get notesLoaded => 'notes loaded';
 
   @override

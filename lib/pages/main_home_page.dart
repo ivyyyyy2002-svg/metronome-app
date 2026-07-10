@@ -10,6 +10,7 @@ import 'metronome/metronome_music.dart';
 import 'metronome/note_sequence_controller.dart';
 import 'music_basics_page.dart';
 import 'practice_history_controller.dart';
+import 'widgets/coach_mark_tutorial.dart';
 import 'language/app_language_text.dart';
 import 'language/app_text.dart';
 
@@ -39,17 +40,34 @@ class _MainHomePageState extends State<MainHomePage> {
   static const String _practiceGoalMinutesKey = 'practice_goal_minutes';
   static const String _exampleSequencesExpandedKey =
       'example_sequences_expanded';
+  // v2: bumped so existing installs see the new interactive tutorial once.
+  static const String _appTutorialSeenKey = 'app_tutorial_seen_v2';
   static const List<int> _practiceGoalOptions = [5, 10, 20, 30, 60];
 
+  final ScrollController _homeScrollController = ScrollController();
   final TextEditingController _sequenceTextController = TextEditingController();
   final TextEditingController _sequenceNameController = TextEditingController();
   final TextEditingController _savedSearchController = TextEditingController();
+  final GlobalKey _tutorialSettingsKey = GlobalKey();
+  final GlobalKey _tutorialStartCardKey = GlobalKey();
+  final GlobalKey _tutorialHistoryCardKey = GlobalKey();
+  final GlobalKey _tutorialTabBarKey = GlobalKey();
+  final GlobalKey _tutorialExamplesCardKey = GlobalKey();
+  final GlobalKey _tutorialSequenceCardKey = GlobalKey();
+  final GlobalKey _tutorialToolsCardKey = GlobalKey();
+  final GlobalKey _tutorialJianpuCardKey = GlobalKey();
+  final GlobalKey _tutorialBasicsBpmKey = GlobalKey();
+  final GlobalKey _tutorialBasicsMeterKey = GlobalKey();
+  final GlobalKey _tutorialBasicsSubdivisionKey = GlobalKey();
+  final GlobalKey _tutorialBasicsNotationKey = GlobalKey();
+  final CoachMarkActionNotifier _tutorialActions = CoachMarkActionNotifier();
   String? _sequenceErrorText;
   String? _sequenceNameErrorText;
   NoteNotation _quickEntryNotation = NoteNotation.western;
   int _selectedTabIndex = 0;
   int _practiceGoalMinutes = 10;
   bool _exampleSequencesExpanded = false;
+  bool _appTutorialOpen = false;
 
   @override
   void initState() {
@@ -62,6 +80,17 @@ class _MainHomePageState extends State<MainHomePage> {
     _syncSequenceText();
     unawaited(_loadPracticeGoal());
     unawaited(_loadExampleSequencesExpanded());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_maybeShowFirstRunAppTutorial());
+    });
+  }
+
+  Future<void> _maybeShowFirstRunAppTutorial() async {
+    if (!mounted || _appTutorialOpen) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_appTutorialSeenKey) ?? false) return;
+
+    await _runAppTutorial(saveSeenOnClose: true);
   }
 
   Future<void> _loadPracticeGoal() async {
@@ -102,6 +131,150 @@ class _MainHomePageState extends State<MainHomePage> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_exampleSequencesExpandedKey, expanded);
+  }
+
+  Future<void> _goToTutorialTab(int index) async {
+    if (!mounted) return;
+    if (_selectedTabIndex != index) {
+      setState(() {
+        _selectedTabIndex = index;
+      });
+    }
+    // Force a frame so the await below can never hang when nothing else
+    // is scheduled (this is what made the settings replay unreliable).
+    WidgetsBinding.instance.scheduleFrame();
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  Future<bool> _showTutorialSegment(List<CoachMarkStep> steps) async {
+    final text = appTextFor(widget.appSettingsController.language);
+    final result = await showCoachMarkTutorial(
+      context: context,
+      steps: steps,
+      nextLabel: text.tutorialNext,
+      doneLabel: text.tutorialDone,
+      skipLabel: text.tutorialSkip,
+      tryItLabel: text.tutorialTryIt,
+      wellDoneLabel: text.tutorialWellDone,
+      stepCountLabel: text.tutorialStepCount,
+      actions: _tutorialActions,
+    );
+    return result == CoachMarkTutorialResult.completed;
+  }
+
+  // Kept deliberately short (6 steps): one interactive moment to learn the
+  // tab bar, high-value non-obvious info only, the rest is discoverable.
+  List<CoachMarkStep> _homeTutorialSteps(AppLanguageText text) {
+    return [
+      // 1. What the app is for, and that this tour is quick.
+      CoachMarkStep(
+        targetKey: _tutorialStartCardKey,
+        title: text.tutorialHomePracticeTitle,
+        body: text.tutorialHomePracticeBody,
+        icon: Icons.play_arrow_rounded,
+        onEnter: () => _goToTutorialTab(0),
+      ),
+      // 2. Practice history, kept short because it is useful but not urgent.
+      CoachMarkStep(
+        targetKey: _tutorialHistoryCardKey,
+        title: text.tutorialHomeHistoryTitle,
+        body: text.tutorialHomeHistoryBody,
+        icon: Icons.history_rounded,
+        onEnter: () => _goToTutorialTab(0),
+      ),
+      // 3. Interactive: learn the tab bar by actually using it once.
+      CoachMarkStep(
+        targetKey: _tutorialTabBarKey,
+        title: text.tutorialHomeTabsTitle,
+        body: text.tutorialHomeTabsBody,
+        icon: Icons.navigation_rounded,
+        actionId: 'tab:1',
+        actionHint: text.tutorialTapTabAction(text.sequencesTab),
+      ),
+      // 4. Example sequences make the first saved pattern easier.
+      CoachMarkStep(
+        targetKey: _tutorialExamplesCardKey,
+        title: text.tutorialHomeExamplesTitle,
+        body: text.tutorialHomeExamplesBody,
+        icon: Icons.auto_awesome_rounded,
+        onEnter: () => _goToTutorialTab(1),
+      ),
+      // 5. The pattern editor and its input syntax (non-obvious, high value).
+      CoachMarkStep(
+        targetKey: _tutorialSequenceCardKey,
+        title: text.tutorialHomeSequencesTitle,
+        body: text.tutorialHomeSequencesBody,
+        example: text.tutorialHomeSequencesExample,
+        icon: Icons.edit_note_rounded,
+        onEnter: () => _goToTutorialTab(1),
+      ),
+      // 6. Tools, both generators in one stop.
+      CoachMarkStep(
+        targetKey: _tutorialToolsCardKey,
+        title: text.tutorialHomeToolsTitle,
+        body: text.tutorialHomeToolsBody,
+        icon: Icons.apps_rounded,
+        onEnter: () => _goToTutorialTab(2),
+      ),
+      // 7. Basics: the glossary lives here whenever a term is unclear.
+      CoachMarkStep(
+        targetKey: _tutorialBasicsBpmKey,
+        title: text.tutorialHomeBasicsTitle,
+        body: text.tutorialHomeBasicsBody,
+        icon: Icons.school_rounded,
+        onEnter: () => _goToTutorialTab(3),
+      ),
+      // 8. Where to find this tour again, then straight into hands-on.
+      CoachMarkStep(
+        targetKey: _tutorialSettingsKey,
+        title: text.tutorialHomeSettingsTitle,
+        body: text.tutorialHomeSettingsBody,
+        icon: Icons.help_outline_rounded,
+        onEnter: () => _goToTutorialTab(0),
+      ),
+    ];
+  }
+
+  Future<void> _runAppTutorial({required bool saveSeenOnClose}) async {
+    if (!mounted || _appTutorialOpen) return;
+    _appTutorialOpen = true;
+    var completed = false;
+    var seenSaved = false;
+
+    try {
+      final text = appTextFor(widget.appSettingsController.language);
+
+      await _goToTutorialTab(0);
+      final keepGoing = await _showTutorialSegment(_homeTutorialSteps(text));
+      if (!keepGoing) return;
+
+      completed = true;
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      if (saveSeenOnClose) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_appTutorialSeenKey, true);
+        seenSaved = true;
+      }
+      // Release the guard before the (long-lived) metronome route so the
+      // replay entry in Settings can never be blocked by a stale flag.
+      _appTutorialOpen = false;
+      await navigator.pushNamed(
+        '/metronome',
+        arguments: {'showTutorial': true},
+      );
+    } finally {
+      if (saveSeenOnClose && !seenSaved) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_appTutorialSeenKey, true);
+      }
+      _appTutorialOpen = false;
+      if (completed && mounted) {
+        setState(() {
+          _selectedTabIndex = 0;
+        });
+      }
+    }
   }
 
   void _refreshPracticeHistory() {
@@ -649,10 +822,13 @@ class _MainHomePageState extends State<MainHomePage> {
 
   // Opens the settings bottom sheet, allowing the user to change
   // theme and language preferences.
-  void _openSettingsSheet() {
-    showModalBottomSheet<void>(
+  Future<void> _openSettingsSheet() async {
+    var replayRequested = false;
+
+    await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) {
         return AnimatedBuilder(
           animation: widget.appSettingsController,
@@ -660,142 +836,171 @@ class _MainHomePageState extends State<MainHomePage> {
             final text = appTextFor(widget.appSettingsController.language);
 
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      text.settings,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      text.appearance,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<ThemeMode>(
-                      // Theme mode selection segmented button
-                      segments: [
-                        ButtonSegment(
-                          value: ThemeMode.system,
-                          label: Text(text.system),
-                          icon: const Icon(Icons.brightness_auto_rounded),
+              // Scrollable so the content (and especially the tutorial
+              // replay button at the bottom) can never overflow the sheet:
+              // overflowing widgets are painted but not tappable.
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        text.settings,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
-                        ButtonSegment(
-                          value: ThemeMode.light,
-                          label: Text(text.light),
-                          icon: const Icon(Icons.light_mode_rounded),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.dark,
-                          label: Text(text.dark),
-                          icon: const Icon(Icons.dark_mode_rounded),
-                        ),
-                      ],
-                      selected: {widget.appSettingsController.themeMode},
-                      onSelectionChanged: (selection) {
-                        widget.appSettingsController.setThemeMode(
-                          selection.first,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      text.themeColor,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final themeColor in AppThemeColor.values)
-                          FilterChip(
-                            selected:
-                                widget.appSettingsController.themeColor ==
-                                themeColor,
-                            selectedColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF20242A)
-                                : Colors.white,
-                            backgroundColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF20242A)
-                                : Colors.white,
-                            checkmarkColor: Theme.of(
-                              context,
-                            ).colorScheme.onSurface,
-                            side: BorderSide(
-                              color:
-                                  widget.appSettingsController.themeColor ==
-                                      themeColor
-                                  ? Theme.of(context).colorScheme.onSurface
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.outlineVariant,
-                            ),
-                            avatar: CircleAvatar(
-                              radius: 8,
-                              backgroundColor: _colorForThemeChoice(themeColor),
-                            ),
-                            label: Text(_labelForThemeChoice(text, themeColor)),
-                            onSelected: (_) {
-                              widget.appSettingsController.setThemeColor(
-                                themeColor,
-                              );
-                            },
+                      const SizedBox(height: 16),
+                      Text(
+                        text.appearance,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<ThemeMode>(
+                        // Theme mode selection segmented button
+                        segments: [
+                          ButtonSegment(
+                            value: ThemeMode.system,
+                            label: Text(text.system),
+                            icon: const Icon(Icons.brightness_auto_rounded),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      text.language,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                          ButtonSegment(
+                            value: ThemeMode.light,
+                            label: Text(text.light),
+                            icon: const Icon(Icons.light_mode_rounded),
+                          ),
+                          ButtonSegment(
+                            value: ThemeMode.dark,
+                            label: Text(text.dark),
+                            icon: const Icon(Icons.dark_mode_rounded),
+                          ),
+                        ],
+                        selected: {widget.appSettingsController.themeMode},
+                        onSelectionChanged: (selection) {
+                          widget.appSettingsController.setThemeMode(
+                            selection.first,
+                          );
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<AppLanguage>(
-                      initialValue: widget.appSettingsController.language,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.language_rounded),
+                      const SizedBox(height: 18),
+                      Text(
+                        text.themeColor,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      items: [
-                        DropdownMenuItem(
-                          value: AppLanguage.english,
-                          child: Text(text.english),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final themeColor in AppThemeColor.values)
+                            FilterChip(
+                              selected:
+                                  widget.appSettingsController.themeColor ==
+                                  themeColor,
+                              selectedColor:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? const Color(0xFF20242A)
+                                  : Colors.white,
+                              backgroundColor:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? const Color(0xFF20242A)
+                                  : Colors.white,
+                              checkmarkColor: Theme.of(
+                                context,
+                              ).colorScheme.onSurface,
+                              side: BorderSide(
+                                color:
+                                    widget.appSettingsController.themeColor ==
+                                        themeColor
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.outlineVariant,
+                              ),
+                              avatar: CircleAvatar(
+                                radius: 8,
+                                backgroundColor: _colorForThemeChoice(
+                                  themeColor,
+                                ),
+                              ),
+                              label: Text(
+                                _labelForThemeChoice(text, themeColor),
+                              ),
+                              onSelected: (_) {
+                                widget.appSettingsController.setThemeColor(
+                                  themeColor,
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        text.language,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
-                        DropdownMenuItem(
-                          value: AppLanguage.chinese,
-                          child: Text(text.chinese),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<AppLanguage>(
+                        initialValue: widget.appSettingsController.language,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.language_rounded),
                         ),
-                        DropdownMenuItem(
-                          value: AppLanguage.french,
-                          child: Text(text.french),
+                        items: [
+                          DropdownMenuItem(
+                            value: AppLanguage.english,
+                            child: Text(text.english),
+                          ),
+                          DropdownMenuItem(
+                            value: AppLanguage.chinese,
+                            child: Text(text.chinese),
+                          ),
+                          DropdownMenuItem(
+                            value: AppLanguage.french,
+                            child: Text(text.french),
+                          ),
+                          DropdownMenuItem(
+                            value: AppLanguage.hindi,
+                            child: Text(text.hindi),
+                          ),
+                        ],
+                        onChanged: (language) {
+                          if (language == null) return;
+                          widget.appSettingsController.setLanguage(language);
+                          setState(() {
+                            _sequenceErrorText = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            replayRequested = true;
+                            Navigator.of(context).pop();
+                          },
+                          icon: const Icon(
+                            Icons.help_outline_rounded,
+                            size: 18,
+                          ),
+                          label: Text(text.tutorialReplay),
                         ),
-                        DropdownMenuItem(
-                          value: AppLanguage.hindi,
-                          child: Text(text.hindi),
-                        ),
-                      ],
-                      onChanged: (language) {
-                        if (language == null) return;
-                        widget.appSettingsController.setLanguage(language);
-                        setState(() {
-                          _sequenceErrorText = null;
-                        });
-                      },
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -803,6 +1008,12 @@ class _MainHomePageState extends State<MainHomePage> {
         );
       },
     );
+
+    // Start the replay only after the sheet has fully closed, so the
+    // tutorial overlay is inserted into a settled navigator.
+    if (!mounted || !replayRequested) return;
+    _appTutorialOpen = false; // Clear any stale guard from a previous run.
+    await _runAppTutorial(saveSeenOnClose: false);
   }
 
   @override
@@ -815,6 +1026,7 @@ class _MainHomePageState extends State<MainHomePage> {
     _sequenceTextController.dispose();
     _sequenceNameController.dispose();
     _savedSearchController.dispose();
+    _homeScrollController.dispose();
     super.dispose();
   }
 
@@ -835,6 +1047,7 @@ class _MainHomePageState extends State<MainHomePage> {
     return Scaffold(
       extendBody: true,
       bottomNavigationBar: _HomeTabBar(
+        key: _tutorialTabBarKey,
         selectedIndex: _selectedTabIndex,
         labels: [
           text.practiceTab,
@@ -852,12 +1065,14 @@ class _MainHomePageState extends State<MainHomePage> {
           setState(() {
             _selectedTabIndex = index;
           });
+          _tutorialActions.notify('tab:$index');
         },
       ),
       body: GlassBackground(
         child: SizedBox.expand(
           child: SafeArea(
             child: SingleChildScrollView(
+              controller: _homeScrollController,
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -878,6 +1093,21 @@ class _MainHomePageState extends State<MainHomePage> {
                         ),
                       ),
                       IconButton(
+                        tooltip: text.tutorialReplay,
+                        onPressed: () {
+                          _appTutorialOpen = false;
+                          unawaited(_runAppTutorial(saveSeenOnClose: false));
+                        },
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.white.withValues(alpha: 0.55),
+                        ),
+                        icon: const Icon(Icons.help_outline_rounded),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        key: _tutorialSettingsKey,
                         tooltip: text.settings,
                         onPressed: _openSettingsSheet,
                         style: IconButton.styleFrom(
@@ -892,6 +1122,7 @@ class _MainHomePageState extends State<MainHomePage> {
                   if (_selectedTabIndex == 0) ...[
                     const SizedBox(height: _sectionTopSpacing),
                     GlassCard(
+                      key: _tutorialStartCardKey,
                       // Main action card
                       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
                       child: Column(
@@ -927,17 +1158,20 @@ class _MainHomePageState extends State<MainHomePage> {
                       ),
                     ),
                     const SizedBox(height: _cardSpacing),
-                    _PracticeHistoryCard(
-                      title: text.practiceHistory,
-                      favoriteInstrumentLabel: text.favoriteInstrument,
-                      last7DaysLabel: text.last7Days,
-                      lastSessionLabel: text.lastSession,
-                      mostUsedBpmLabel: text.mostUsedBpm,
-                      emptyLabel: text.noPracticeYet,
-                      controller: widget.practiceHistoryController,
-                      goalMinutes: _practiceGoalMinutes,
-                      goalOptions: _practiceGoalOptions,
-                      onGoalChanged: _setPracticeGoal,
+                    KeyedSubtree(
+                      key: _tutorialHistoryCardKey,
+                      child: _PracticeHistoryCard(
+                        title: text.practiceHistory,
+                        favoriteInstrumentLabel: text.favoriteInstrument,
+                        last7DaysLabel: text.last7Days,
+                        lastSessionLabel: text.lastSession,
+                        mostUsedBpmLabel: text.mostUsedBpm,
+                        emptyLabel: text.noPracticeYet,
+                        controller: widget.practiceHistoryController,
+                        goalMinutes: _practiceGoalMinutes,
+                        goalOptions: _practiceGoalOptions,
+                        onGoalChanged: _setPracticeGoal,
+                      ),
                     ),
                     const SizedBox(height: _cardSpacing),
                   ],
@@ -945,13 +1179,17 @@ class _MainHomePageState extends State<MainHomePage> {
                   // Custom note sequence input cards
                   if (_selectedTabIndex == 1) ...[
                     const SizedBox(height: _sectionTopSpacing),
-                    _ExampleSequencesCard(
-                      expanded: _exampleSequencesExpanded,
-                      onExpandedChanged: _setExampleSequencesExpanded,
-                      onUseExample: _applyExampleSequence,
+                    KeyedSubtree(
+                      key: _tutorialExamplesCardKey,
+                      child: _ExampleSequencesCard(
+                        expanded: _exampleSequencesExpanded,
+                        onExpandedChanged: _setExampleSequencesExpanded,
+                        onUseExample: _applyExampleSequence,
+                      ),
                     ),
                     const SizedBox(height: _cardSpacing),
                     GlassCard(
+                      key: _tutorialSequenceCardKey,
                       padding: const EdgeInsets.all(18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1219,14 +1457,20 @@ class _MainHomePageState extends State<MainHomePage> {
                   ],
                   if (_selectedTabIndex == 2) ...[
                     const SizedBox(height: _sectionTopSpacing),
-                    _ScalePatternGeneratorCard(
-                      text: text,
-                      onUsePattern: _applyGeneratedPattern,
+                    KeyedSubtree(
+                      key: _tutorialToolsCardKey,
+                      child: _ScalePatternGeneratorCard(
+                        text: text,
+                        onUsePattern: _applyGeneratedPattern,
+                      ),
                     ),
                     const SizedBox(height: _cardSpacing),
-                    _JianpuConverterCard(
-                      text: text,
-                      onUsePattern: _applyGeneratedPattern,
+                    KeyedSubtree(
+                      key: _tutorialJianpuCardKey,
+                      child: _JianpuConverterCard(
+                        text: text,
+                        onUsePattern: _applyGeneratedPattern,
+                      ),
                     ),
                   ],
                   if (_selectedTabIndex == 3) ...[
@@ -1236,6 +1480,12 @@ class _MainHomePageState extends State<MainHomePage> {
                       padding: EdgeInsets.zero,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
+                      cardKeys: {
+                        0: _tutorialBasicsBpmKey,
+                        1: _tutorialBasicsMeterKey,
+                        2: _tutorialBasicsSubdivisionKey,
+                        4: _tutorialBasicsNotationKey,
+                      },
                     ),
                   ],
                   const SizedBox(height: 18),
@@ -1968,6 +2218,7 @@ class _JianpuConverterCardState extends State<_JianpuConverterCard> {
 // to switch between the Practice, Sequences, Tools, and Basics tabs.
 class _HomeTabBar extends StatelessWidget {
   const _HomeTabBar({
+    super.key,
     required this.selectedIndex,
     required this.labels,
     required this.icons,

@@ -11,6 +11,7 @@ class TransportBar extends StatelessWidget {
     required this.startLabel,
     required this.stopLabel,
     required this.resetLabel,
+    this.startButtonKey,
   });
 
   final bool isRunning;
@@ -20,6 +21,7 @@ class TransportBar extends StatelessWidget {
   final String startLabel;
   final String stopLabel;
   final String resetLabel;
+  final Key? startButtonKey;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,7 @@ class TransportBar extends StatelessWidget {
             const SizedBox(width: 14),
             // Primary action: a large pill-shaped start button.
             FilledButton.icon(
+              key: startButtonKey,
               onPressed: isRunning ? null : onStart,
               style: FilledButton.styleFrom(
                 minimumSize: const Size(150, 54),
