@@ -194,6 +194,10 @@ abstract class AppLanguageText {
   String noPlayableAssets(String instrument);
   String get scorePreview;
   String get addScore;
+  String get importScoreFromFiles;
+  String get importScoreFromPhotos;
+  String get deleteScore;
+  String get chooseScore;
   String get scorePlaceholderTitle;
   String get scorePlaceholderBody;
 }

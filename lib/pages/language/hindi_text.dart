@@ -622,6 +622,18 @@ class HindiText implements AppLanguageText {
   String get addScore => 'Score जोड़ें';
 
   @override
+  String get importScoreFromFiles => 'Files से चुनें';
+
+  @override
+  String get importScoreFromPhotos => 'Photos से चुनें';
+
+  @override
+  String get deleteScore => 'Score हटाएं';
+
+  @override
+  String get chooseScore => 'Score चुनें';
+
+  @override
   String get scorePlaceholderTitle => 'कोई score नहीं जोड़ा गया';
 
   @override

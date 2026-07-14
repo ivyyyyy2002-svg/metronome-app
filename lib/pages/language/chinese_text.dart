@@ -606,6 +606,18 @@ class ChineseText implements AppLanguageText {
   String get addScore => '添加谱子';
 
   @override
+  String get importScoreFromFiles => '从文件选择';
+
+  @override
+  String get importScoreFromPhotos => '从相册选择';
+
+  @override
+  String get deleteScore => '删除谱子';
+
+  @override
+  String get chooseScore => '选择谱子';
+
+  @override
   String get scorePlaceholderTitle => '还没有添加谱子';
 
   @override

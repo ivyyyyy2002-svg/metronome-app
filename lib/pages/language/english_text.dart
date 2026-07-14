@@ -621,6 +621,18 @@ class EnglishText implements AppLanguageText {
   String get addScore => 'Add score';
 
   @override
+  String get importScoreFromFiles => 'Choose from Files';
+
+  @override
+  String get importScoreFromPhotos => 'Choose from Photos';
+
+  @override
+  String get deleteScore => 'Delete score';
+
+  @override
+  String get chooseScore => 'Choose score';
+
+  @override
   String get scorePlaceholderTitle => 'No score added';
 
   @override

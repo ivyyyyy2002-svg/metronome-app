@@ -624,6 +624,18 @@ class FrenchText implements AppLanguageText {
   String get addScore => 'Ajouter';
 
   @override
+  String get importScoreFromFiles => 'Choisir dans Fichiers';
+
+  @override
+  String get importScoreFromPhotos => 'Choisir dans Photos';
+
+  @override
+  String get deleteScore => 'Supprimer la partition';
+
+  @override
+  String get chooseScore => 'Choisir une partition';
+
+  @override
   String get scorePlaceholderTitle => 'Aucune partition';
 
   @override

@@ -20,6 +20,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   pdfx: ^2.9.2
   file_picker: ^11.0.2
+  image_picker: ^1.2.1
   # Apple-style liquid glass (shader-based, Impeller only, experimental)
   liquid_glass_renderer: ^0.2.0-dev.4
 

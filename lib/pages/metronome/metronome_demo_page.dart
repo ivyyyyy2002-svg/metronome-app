@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
@@ -42,6 +43,18 @@ class ClickSoundOption {
 }
 
 enum _NoteSequenceEditorAction { applyText, saveText, importSaved }
+
+class _ScoreEntry {
+  const _ScoreEntry({
+    required this.name,
+    required this.bytes,
+    required this.isPdf,
+  });
+
+  final String name;
+  final Uint8List bytes;
+  final bool isPdf;
+}
 
 class _NoteSequenceEditorResult {
   const _NoteSequenceEditorResult({
@@ -185,6 +198,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   int bpm = _initialBpm; // Beats per minute
   Timer? timer;
   DateTime? practiceStartedAt;
+  final List<_ScoreEntry> _scores = [];
+  int _activeScoreIndex = -1;
   Uint8List? scoreImageBytes;
   String? scoreFileName;
   PdfDocument? scorePdfDocument;
@@ -2918,58 +2933,178 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await _renderScorePdfPage(nextPage);
   }
 
-  Future<void> _pickScoreFile() async {
+  Future<void> _activateScore(int index) async {
+    if (index < 0 || index >= _scores.length) return;
+
+    final entry = _scores[index];
+    final requestId = ++_scorePdfRenderRequestId;
+    PdfDocument? nextDocument;
+
+    try {
+      if (entry.isPdf) {
+        nextDocument = await PdfDocument.openData(entry.bytes);
+      }
+      if (!mounted || requestId != _scorePdfRenderRequestId) {
+        await nextDocument?.close();
+        return;
+      }
+
+      final previousDocument = scorePdfDocument;
+      setState(() {
+        _activeScoreIndex = index;
+        scorePdfDocument = nextDocument;
+        scoreImageBytes = entry.isPdf ? null : entry.bytes;
+        scorePdfPageBytes = null;
+        scoreFileName = entry.name;
+        scorePdfPage = 1;
+        scorePdfPages = nextDocument?.pagesCount ?? 0;
+        isScorePdfPageLoading = false;
+        _resetScoreZoom();
+      });
+      await previousDocument?.close();
+
+      if (entry.isPdf) {
+        await _renderScorePdfPage(1);
+      }
+    } catch (error) {
+      await nextDocument?.close();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _addScores(List<_ScoreEntry> scores) async {
+    if (scores.isEmpty || !mounted) return;
+    final firstNewIndex = _scores.length;
+    setState(() {
+      _scores.addAll(scores);
+    });
+    await _activateScore(firstNewIndex);
+  }
+
+  Future<void> _pickScoreFiles() async {
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-        allowMultiple: false,
+        allowMultiple: true,
         withData: true,
       );
       if (result == null || result.files.isEmpty || !mounted) return;
 
-      final file = result.files.single;
-      final extension = file.extension?.toLowerCase();
-      if (extension == 'pdf') {
-        final path = file.path;
-        if (path == null) return;
-
-        final previousDocument = scorePdfDocument;
-        final nextDocument = await PdfDocument.openFile(path);
-
-        setState(() {
-          scorePdfDocument = nextDocument;
-          scoreImageBytes = null;
-          scorePdfPageBytes = null;
-          scoreFileName = file.name;
-          scorePdfPage = 1;
-          scorePdfPages = nextDocument.pagesCount;
-          _resetScoreZoom();
-        });
-        await previousDocument?.close();
-        await _renderScorePdfPage(1);
-        return;
+      final scores = <_ScoreEntry>[];
+      for (final file in result.files) {
+        final bytes = file.bytes;
+        final extension = file.extension?.toLowerCase();
+        if (bytes == null || bytes.isEmpty || extension == null) continue;
+        scores.add(
+          _ScoreEntry(name: file.name, bytes: bytes, isPdf: extension == 'pdf'),
+        );
       }
-
-      final bytes = file.bytes;
-      if (bytes == null || bytes.isEmpty) return;
-
-      final previousDocument = scorePdfDocument;
-      setState(() {
-        scorePdfDocument = null;
-        scorePdfPageBytes = null;
-        scoreImageBytes = bytes;
-        scoreFileName = file.name;
-        scorePdfPage = 1;
-        scorePdfPages = 0;
-        _resetScoreZoom();
-      });
-      await previousDocument?.close();
+      await _addScores(scores);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _pickScorePhotos() async {
+    try {
+      final images = await ImagePicker().pickMultiImage();
+      if (images.isEmpty || !mounted) return;
+
+      final scores = <_ScoreEntry>[];
+      for (final image in images) {
+        final bytes = await image.readAsBytes();
+        if (bytes.isEmpty) continue;
+        scores.add(_ScoreEntry(name: image.name, bytes: bytes, isPdf: false));
+      }
+      await _addScores(scores);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _showScoreImportOptions(AppLanguageText text) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.folder_open_rounded),
+                title: Text(text.importScoreFromFiles),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_pickScoreFiles());
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded),
+                title: Text(text.importScoreFromPhotos),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  unawaited(_pickScorePhotos());
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteActiveScore(AppLanguageText text) async {
+    if (_activeScoreIndex < 0 || _activeScoreIndex >= _scores.length) return;
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(text.deleteScore),
+        content: Text(scoreFileName ?? text.scorePreview),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(text.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(text.deleteScore),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true || !mounted) return;
+
+    final removedIndex = _activeScoreIndex;
+    final previousDocument = scorePdfDocument;
+    _scorePdfRenderRequestId++;
+    setState(() {
+      _scores.removeAt(removedIndex);
+      _activeScoreIndex = -1;
+      scorePdfDocument = null;
+      scoreImageBytes = null;
+      scorePdfPageBytes = null;
+      scoreFileName = null;
+      scorePdfPage = 1;
+      scorePdfPages = 0;
+      isScorePdfPageLoading = false;
+      _resetScoreZoom();
+    });
+    await previousDocument?.close();
+
+    if (_scores.isNotEmpty && mounted) {
+      await _activateScore(removedIndex.clamp(0, _scores.length - 1));
     }
   }
 
@@ -3336,15 +3471,70 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                 Icon(Icons.library_music_rounded, color: colorScheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    text.scorePreview,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        text.scorePreview,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      if (scoreFileName != null)
+                        Text(
+                          scoreFileName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                    ],
                   ),
                 ),
+                if (_scores.length > 1)
+                  PopupMenuButton<int>(
+                    tooltip: text.chooseScore,
+                    icon: Badge(
+                      label: Text('${_scores.length}'),
+                      child: const Icon(Icons.library_books_rounded),
+                    ),
+                    initialValue: _activeScoreIndex,
+                    onSelected: (index) => unawaited(_activateScore(index)),
+                    itemBuilder: (context) => [
+                      for (var index = 0; index < _scores.length; index++)
+                        PopupMenuItem<int>(
+                          value: index,
+                          child: Row(
+                            children: [
+                              Icon(
+                                index == _activeScoreIndex
+                                    ? Icons.check_rounded
+                                    : _scores[index].isPdf
+                                    ? Icons.picture_as_pdf_rounded
+                                    : Icons.image_rounded,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  _scores[index].name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                if (_activeScoreIndex >= 0)
+                  IconButton(
+                    tooltip: text.deleteScore,
+                    onPressed: () => unawaited(_deleteActiveScore(text)),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
                 OutlinedButton.icon(
-                  onPressed: _pickScoreFile,
+                  onPressed: () => unawaited(_showScoreImportOptions(text)),
                   icon: const Icon(Icons.add_rounded),
                   label: Text(text.addScore),
                 ),
@@ -3465,21 +3655,22 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                               ],
                             ),
                           ),
-                          Positioned(
-                            top: 10,
-                            right: 10,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: scoreOverlayColor,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: scoreBorderColor),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isPdfScore) ...[
+                          if (isPdfScore)
+                            Positioned(
+                              top: 10,
+                              left: 10,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: scoreOverlayColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: scoreBorderColor),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
                                     IconButton(
                                       tooltip: 'Previous page',
+                                      visualDensity: VisualDensity.compact,
                                       onPressed: scorePdfPage <= 1
                                           ? null
                                           : () => _goToScorePdfPage(
@@ -3499,6 +3690,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                     ),
                                     IconButton(
                                       tooltip: 'Next page',
+                                      visualDensity: VisualDensity.compact,
                                       onPressed:
                                           scorePdfPages == 0 ||
                                               scorePdfPage >= scorePdfPages
@@ -3511,8 +3703,24 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: scoreOverlayColor,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: scoreBorderColor),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                                   IconButton(
                                     tooltip: 'Zoom out',
+                                    visualDensity: VisualDensity.compact,
                                     onPressed: () =>
                                         _setScoreZoom(scoreZoom - 0.25),
                                     icon: const Icon(Icons.zoom_out_rounded),
@@ -3525,12 +3733,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   ),
                                   IconButton(
                                     tooltip: 'Zoom in',
+                                    visualDensity: VisualDensity.compact,
                                     onPressed: () =>
                                         _setScoreZoom(scoreZoom + 0.25),
                                     icon: const Icon(Icons.zoom_in_rounded),
                                   ),
                                   IconButton(
                                     tooltip: 'Fullscreen',
+                                    visualDensity: VisualDensity.compact,
                                     onPressed: () => _openScoreFullScreen(
                                       text: text,
                                       colorScheme: colorScheme,
