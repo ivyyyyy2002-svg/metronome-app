@@ -107,4 +107,43 @@ void main() {
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump(const Duration(milliseconds: 300));
   });
+
+  testWidgets('completed home tour waits for user to start metronome', (
+    tester,
+  ) async {
+    _usePhoneSize(tester);
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(await _buildHome());
+    await _settle(tester);
+
+    await tester.tap(find.text('Next')); // Practice intro.
+    await _settle(tester, 5);
+    await tester.tap(find.text('Next')); // History.
+    await _settle(tester, 5);
+    await tester.tap(find.text('Sequences')); // Interactive navigation.
+    await _settle(tester, 12);
+    await tester.tap(find.text('Next')); // Examples.
+    await _settle(tester, 5);
+    await tester.tap(find.text('Next')); // Sequence editor.
+    await _settle(tester, 5);
+    await tester.tap(find.text('Next')); // Tools.
+    await _settle(tester, 5);
+    await tester.tap(find.text('Next')); // Basics.
+    await _settle(tester, 5);
+    await tester.tap(find.text('Done')); // Settings and replay.
+    await _settle(tester, 8);
+
+    expect(find.text('Back to home base'), findsOneWidget);
+    expect(find.text('metronome'), findsNothing);
+
+    await tester.tap(find.text('Practice'));
+    await _settle(tester, 12);
+    expect(find.text('Start when you are ready'), findsOneWidget);
+    expect(find.text('metronome'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('start-metronome-button')));
+    await _settle(tester, 15);
+
+    expect(find.text('metronome'), findsOneWidget);
+  });
 }

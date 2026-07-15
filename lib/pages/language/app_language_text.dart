@@ -100,6 +100,9 @@ abstract class AppLanguageText {
   String get reset;
   String get click;
   String get clickSound;
+  String get volumeBalance;
+  String get clickVolume;
+  String get instrumentVolume;
   String get sound;
   String get preview;
   String get instrument;
@@ -148,6 +151,8 @@ abstract class AppLanguageText {
   String get tutorialHomeJianpuBody;
   String get tutorialHomeReturnTitle;
   String get tutorialHomeReturnBody;
+  String get tutorialStartSessionTitle;
+  String get tutorialStartSessionBody;
   String get tutorialBasicsBpmBody;
   String get tutorialBasicsMeterBody;
   String get tutorialBasicsSubdivisionBody;

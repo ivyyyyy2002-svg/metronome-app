@@ -307,6 +307,15 @@ class FrenchText implements AppLanguageText {
   String get clickSound => 'Son du clic';
 
   @override
+  String get volumeBalance => 'Balance du volume';
+
+  @override
+  String get clickVolume => 'Volume du clic';
+
+  @override
+  String get instrumentVolume => 'Volume de l’instrument';
+
+  @override
   String get sound => 'Son';
 
   @override
@@ -498,14 +507,21 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get tutorialHomeReturnBody =>
-      'Le tour des onglets est terminé. Revenez sur Practice — une dernière chose à voir avant d\'ouvrir le métronome pour l\'essayer en vrai.';
+      'Le tour des onglets est terminé. Sélectionnez vous-même Practice pour savoir comment revenir à votre point de départ.';
+
+  @override
+  String get tutorialStartSessionTitle => 'Commencez quand vous êtes prêt';
+
+  @override
+  String get tutorialStartSessionBody =>
+      'Appuyez maintenant sur Démarrer le métronome. Le tutoriel pratique continuera ensuite dans l\'espace de pratique.';
 
   @override
   String get tutorialHomeSettingsTitle => 'Réglages et tutoriel';
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Thème, couleurs et langue se trouvent derrière cet engrenage. Et si vous oubliez comment quelque chose fonctionne, ouvrez les réglages et touchez « Revoir le tutoriel ». Appuyez sur Terminé pour ouvrir le métronome.';
+      'Thème, couleurs et langue se trouvent derrière cet engrenage. Si vous oubliez quelque chose, ouvrez les réglages et touchez « Revoir le tutoriel ». Appuyez sur Terminé, puis revenons à Practice.';
 
   @override
   String get tutorialScoreTitle => 'Partition sur iPad';

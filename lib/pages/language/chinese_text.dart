@@ -298,6 +298,15 @@ class ChineseText implements AppLanguageText {
   String get clickSound => '节拍音色';
 
   @override
+  String get volumeBalance => '音量平衡';
+
+  @override
+  String get clickVolume => 'Click 音量';
+
+  @override
+  String get instrumentVolume => '乐器音量';
+
+  @override
   String get sound => '音符声';
 
   @override
@@ -483,14 +492,21 @@ class ChineseText implements AppLanguageText {
 
   @override
   String get tutorialHomeReturnBody =>
-      '四个页面逛完了。回到 Practice——在打开节拍器实际操作之前，还有最后一样东西要给你看。';
+      '四个页面逛完了。请你亲自点一下 Practice 回到练习主页，这样以后随时都知道怎么回来。';
+
+  @override
+  String get tutorialStartSessionTitle => '准备好后亲自开始';
+
+  @override
+  String get tutorialStartSessionBody =>
+      '现在请你点「开始节拍器」。进入练习页面后，我们会接着进行节拍器的实际操作教程。';
 
   @override
   String get tutorialHomeSettingsTitle => '设置和重看教程';
 
   @override
   String get tutorialHomeSettingsBody =>
-      '主题、颜色和语言都在这个齿轮里。以后忘了怎么用，打开设置点「再看一遍新手教程」就行。点「完成」，我们去节拍器页面动手试试。';
+      '主题、颜色和语言都在这个齿轮里。以后忘了怎么用，打开设置点「再看一遍新手教程」就行。点「完成」后，我们一起回到 Practice。';
 
   @override
   String get tutorialScoreTitle => 'iPad 横屏乐谱练习';

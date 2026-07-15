@@ -306,6 +306,15 @@ class EnglishText implements AppLanguageText {
   String get clickSound => 'Click sound';
 
   @override
+  String get volumeBalance => 'Volume balance';
+
+  @override
+  String get clickVolume => 'Click volume';
+
+  @override
+  String get instrumentVolume => 'Instrument volume';
+
+  @override
   String get sound => 'Sound';
 
   @override
@@ -495,14 +504,21 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get tutorialHomeReturnBody =>
-      'That\'s the tour of the tabs. Head back to Practice — there\'s one last thing to see before we open the metronome for a hands-on tour.';
+      'That\'s the tour of the tabs. Select Practice yourself so you always know how to get back to your starting point.';
+
+  @override
+  String get tutorialStartSessionTitle => 'Start when you are ready';
+
+  @override
+  String get tutorialStartSessionBody =>
+      'Now press Start Metronome yourself. That opens the practice workspace, where the hands-on metronome tutorial will continue.';
 
   @override
   String get tutorialHomeSettingsTitle => 'Settings and replay';
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Theme, colors, and language live behind this gear. And if you ever forget how something works, open Settings and tap "Watch tutorial again". Press Done to open the metronome and try it for real.';
+      'Theme, colors, and language live behind this gear. If you ever forget how something works, open Settings and tap "Watch tutorial again". Press Done, then we\'ll return to Practice together.';
 
   @override
   String get tutorialScoreTitle => 'Score practice on iPad';

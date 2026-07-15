@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:just_audio/just_audio.dart';
@@ -106,6 +107,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   static const String _savedBeatUnitKey = 'metronome_beat_unit';
   static const String _savedBaseOctaveKey = 'metronome_base_octave';
   static const String _savedClickSoundKey = 'metronome_click_sound';
+  static const String _savedClickVolumeKey = 'metronome_click_volume';
+  static const String _savedInstrumentVolumeKey = 'metronome_instrument_volume';
   static const String _defaultStrongClickAsset = 'assets/sounds/click_hi.wav';
   static const String _defaultWeakClickAsset = 'assets/sounds/click_lo.wav';
   static const List<ClickSoundOption> _clickSoundOptions = [
@@ -549,6 +552,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   String clickStrongAsset = _defaultStrongClickAsset;
   String clickWeakAsset = _defaultWeakClickAsset;
   String selectedClickSoundId = 'default';
+  double clickVolume = 1.0;
+  double instrumentVolume = kIsWeb ? 0.20 : 0.70;
 
   // Note player pool to allow overlapping notes without cutting off
   static const int notePoolSize = 12;
@@ -574,9 +579,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   bool clickReady = false;
   Future<void>? _clickPreloadFuture;
 
-  // Available instruments
-  // SF2-only mode: only list instruments that have a SoundFont in assetSpecs.
-  final List<String> instruments = [
+  // Web cannot play the SF2 instruments. Keep its picker honest by exposing
+  // only instruments backed by bundled WAV note samples.
+  static const List<String> _webInstruments = ['piano', 'harmonium'];
+  static const List<String> _nativeInstruments = [
     'piano',
     'uprightPiano',
     'pipa',
@@ -604,6 +610,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     'bianzhong',
     'marimba',
   ];
+  List<String> get instruments => kIsWeb ? _webInstruments : _nativeInstruments;
   final Map<String, bool> instrumentAvailability = {};
   String selectedInstrument = 'piano';
 
@@ -783,6 +790,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final savedBeatUnit = prefs.getString(_savedBeatUnitKey);
     final savedBaseOctave = prefs.getInt(_savedBaseOctaveKey);
     final savedClickSound = prefs.getString(_savedClickSoundKey);
+    final savedClickVolume = prefs.getDouble(_savedClickVolumeKey);
+    final savedInstrumentVolume = prefs.getDouble(_savedInstrumentVolumeKey);
 
     setState(() {
       if (savedBpm != null) {
@@ -824,11 +833,20 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           clickWeakAsset,
         ).id;
       }
+      if (savedClickVolume != null) {
+        clickVolume = savedClickVolume.clamp(0.0, 1.0);
+      }
+      if (savedInstrumentVolume != null) {
+        instrumentVolume = savedInstrumentVolume.clamp(0.0, 1.0);
+      }
     });
+    await _applyClickVolumeToPlayers();
+    await _applyInstrumentVolumeToPlayers();
     swingController.duration = Duration(milliseconds: _computeTickIntervalMs());
-    if (savedClickSound != null) {
-      unawaited(preloadClick());
-    }
+    // Web browsers only allow reliable playback after audio sources have been
+    // prepared before the user's Start gesture. This must also run for a new
+    // user who has no saved click-sound preference yet.
+    await preloadClick();
   }
 
   Future<void> _saveMetronomeSettings() async {
@@ -840,6 +858,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     await prefs.setString(_savedBeatUnitKey, beatUnitConfigValue(beatUnit));
     await prefs.setInt(_savedBaseOctaveKey, baseOctave);
     await prefs.setString(_savedClickSoundKey, selectedClickSoundId);
+    await prefs.setDouble(_savedClickVolumeKey, clickVolume);
+    await prefs.setDouble(_savedInstrumentVolumeKey, instrumentVolume);
   }
 
   // ---------- Audio Session ----------
@@ -973,12 +993,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   // Per-instrument usable range derived from the active SF2 spec.
-  int get _instrumentMinOctave =>
-      instrumentSf2Controller.assetSpecs[selectedInstrument]?.minOctave ??
-      _absoluteMinOctave;
-  int get _instrumentMaxOctave =>
-      instrumentSf2Controller.assetSpecs[selectedInstrument]?.maxOctave ??
-      _absoluteMaxOctave;
+  int get _instrumentMinOctave => kIsWeb
+      ? 2
+      : instrumentSf2Controller.assetSpecs[selectedInstrument]?.minOctave ??
+            _absoluteMinOctave;
+  int get _instrumentMaxOctave => kIsWeb
+      ? selectedInstrument == 'harmonium'
+            ? 5
+            : 6
+      : instrumentSf2Controller.assetSpecs[selectedInstrument]?.maxOctave ??
+            _absoluteMaxOctave;
 
   void _syncOctaveBounds() {
     final lo = _instrumentMinOctave;
@@ -1055,7 +1079,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Check if the given instrument has at least one playable asset based on the current sequence (used to determine availability in the picker)
   Future<bool> _instrumentHasPlayableAsset(String instrument) async {
-    // SF2-only mode: an instrument is playable iff it has a SoundFont asset.
+    if (kIsWeb) return _webInstruments.contains(instrument);
+
+    // Native builds use SoundFonts for the full instrument library.
     return instrumentSf2Controller.assetSpecs.containsKey(instrument);
   }
 
@@ -1092,14 +1118,17 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     // SF2-only mode: ensure the SoundFont for the currently selected
     // instrument is loaded and ready, so notes play immediately.
-    if (prepareCurrentInstrument &&
+    if (!kIsWeb &&
+        prepareCurrentInstrument &&
         (instrumentAvailability[selectedInstrument] ?? false)) {
       await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
     }
   }
 
   Future<void> _prepareCurrentInstrumentForStartup() async {
-    await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
+    if (!kIsWeb) {
+      await instrumentSf2Controller.prepareForInstrument(selectedInstrument);
+    }
     if (!mounted) return;
     await _warmUpCurrentNote();
   }
@@ -1239,15 +1268,41 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     unawaited(_saveMetronomeSettings());
   }
 
+  Future<void> _applyClickVolumeToPlayers() async {
+    await Future.wait([
+      clickStrongPlayer.setVolume(clickVolume),
+      clickWeakPlayer.setVolume(clickVolume * 0.65),
+    ]);
+  }
+
+  Future<void> _applyInstrumentVolumeToPlayers() async {
+    await Future.wait([
+      for (final player in notePlayers) player.setVolume(instrumentVolume),
+      for (final player in _perNotePlayers.values)
+        player.setVolume(instrumentVolume),
+      instrumentSf2Controller.setVolumeScale(instrumentVolume),
+    ]);
+  }
+
+  void _onClickVolumeChanged(double value) {
+    setState(() => clickVolume = value.clamp(0.0, 1.0));
+    unawaited(_applyClickVolumeToPlayers());
+  }
+
+  void _onInstrumentVolumeChanged(double value) {
+    setState(() => instrumentVolume = value.clamp(0.0, 1.0));
+    unawaited(_applyInstrumentVolumeToPlayers());
+  }
+
   Future<void> _previewClickSound(ClickSoundOption option) async {
     final previewPlayer = AudioPlayer();
     try {
       await previewPlayer.setAsset(option.strongAsset);
-      previewPlayer.setVolume(1.0);
+      previewPlayer.setVolume(clickVolume);
       await previewPlayer.play();
       await Future<void>.delayed(const Duration(milliseconds: 180));
       await previewPlayer.setAsset(option.weakAsset);
-      previewPlayer.setVolume(0.65);
+      previewPlayer.setVolume(clickVolume * 0.65);
       await previewPlayer.play();
     } catch (e, st) {
       debugPrint('Failed to preview click sound: $e');
@@ -1349,8 +1404,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     try {
       await _loadClickWithFallback(clickStrongPlayer, clickStrongAsset);
       await _loadClickWithFallback(clickWeakPlayer, clickWeakAsset);
-      clickStrongPlayer.setVolume(1.0);
-      clickWeakPlayer.setVolume(0.65);
+      await _applyClickVolumeToPlayers();
       clickReady = true;
     } catch (e, st) {
       debugPrint('Click preload failed: $e');
@@ -1431,9 +1485,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     final accent = _accentForBeatPosition(beatInBar);
     final (AudioPlayer player, double volume) = switch (accent) {
-      ClickAccent.strong => (clickStrongPlayer, 1.0),
-      ClickAccent.secondary => (clickStrongPlayer, 0.82),
-      ClickAccent.weak => (clickWeakPlayer, 0.65),
+      ClickAccent.strong => (clickStrongPlayer, clickVolume),
+      ClickAccent.secondary => (clickStrongPlayer, clickVolume * 0.82),
+      ClickAccent.weak => (clickWeakPlayer, clickVolume * 0.65),
     };
 
     try {
@@ -1490,7 +1544,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       }
       await player.pause();
       await player.seek(Duration.zero);
-      player.setVolume(1.0);
+      player.setVolume(instrumentVolume);
     } catch (_) {}
   }
 
@@ -1541,6 +1595,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final path = 'assets/notes/$selectedInstrument/$fullNoteName.wav';
     try {
       await p.setAsset(path);
+      await p.setVolume(instrumentVolume);
       _perNotePlayers[fullNoteName] = p;
       _perNoteTokens[fullNoteName] = 0;
     } catch (e, st) {
@@ -1714,6 +1769,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       _perNoteTokens[fullNoteName] = token;
 
       try {
+        await player.setVolume(instrumentVolume);
         await player.seek(Duration.zero);
         await player.play();
 
@@ -1751,6 +1807,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       await _prepareNoteIfNeeded(player, '$note$octave', preload: false);
       if (!_noteReady) return;
 
+      await player.setVolume(instrumentVolume);
       await player.seek(Duration.zero);
       await player.play();
 
@@ -1876,7 +1933,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     // SF2-only mode: load the SoundFont for the new instrument up front
     // so the first note plays without delay.
-    await instrumentSf2Controller.prepareForInstrument(newInstrument);
+    if (!kIsWeb) {
+      await instrumentSf2Controller.prepareForInstrument(newInstrument);
+    }
 
     // Rebuild per-note players for the new instrument (only matters if the
     // wav fallback is ever re-enabled; harmless otherwise).
@@ -2071,6 +2130,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         clickSoundLabel: _text.clickSound,
         currentClickSoundName: _selectedClickSoundOption.label,
         onClickSoundTap: _openClickSoundPickerFromAdvancedSettings,
+        volumeBalanceLabel: _text.volumeBalance,
+        clickVolumeLabel: _text.clickVolume,
+        instrumentVolumeLabel: _text.instrumentVolume,
+        clickVolume: clickVolume,
+        instrumentVolume: instrumentVolume,
+        onClickVolumeChanged: _onClickVolumeChanged,
+        onInstrumentVolumeChanged: _onInstrumentVolumeChanged,
+        onVolumeChangeEnd: () => unawaited(_saveMetronomeSettings()),
         instrumentLabel: _text.instrument,
         instruments: instruments,
         instrumentAvailability: instrumentAvailability,
@@ -2099,6 +2166,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         clickSoundLabel: _text.clickSound,
         currentClickSoundName: _selectedClickSoundOption.label,
         onClickSoundTap: _openClickSoundPickerFromAdvancedSettings,
+        volumeBalanceLabel: _text.volumeBalance,
+        clickVolumeLabel: _text.clickVolume,
+        instrumentVolumeLabel: _text.instrumentVolume,
+        clickVolume: clickVolume,
+        instrumentVolume: instrumentVolume,
+        onClickVolumeChanged: _onClickVolumeChanged,
+        onInstrumentVolumeChanged: _onInstrumentVolumeChanged,
+        onVolumeChangeEnd: () => unawaited(_saveMetronomeSettings()),
         instrumentLabel: _text.instrument,
         instruments: instruments,
         instrumentAvailability: instrumentAvailability,
@@ -3358,6 +3433,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     required int beatNumerator,
     required int beatDenominator,
     required List<BeatIndicatorItem> beatIndicators,
+    bool compact = false,
     EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
       horizontal: 18,
       vertical: 16,
@@ -3369,17 +3445,39 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            PlaybackStatusPanel(
-              key: _tutorialTempoKey,
-              anim: swingAnim,
-              isRunning: isRunning,
-              beatNumerator: beatNumerator,
-              beatDenominator: beatDenominator,
-              bpm: bpm,
-              bpmLabel: text.bpm,
-              beatIndicators: beatIndicators,
-            ),
-            const SizedBox(height: 14),
+            if (compact)
+              SizedBox(
+                width: double.infinity,
+                height: 250,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SizedBox(
+                    width: 360,
+                    child: PlaybackStatusPanel(
+                      key: _tutorialTempoKey,
+                      anim: swingAnim,
+                      isRunning: isRunning,
+                      beatNumerator: beatNumerator,
+                      beatDenominator: beatDenominator,
+                      bpm: bpm,
+                      bpmLabel: text.bpm,
+                      beatIndicators: beatIndicators,
+                    ),
+                  ),
+                ),
+              )
+            else
+              PlaybackStatusPanel(
+                key: _tutorialTempoKey,
+                anim: swingAnim,
+                isRunning: isRunning,
+                beatNumerator: beatNumerator,
+                beatDenominator: beatDenominator,
+                bpm: bpm,
+                bpmLabel: text.bpm,
+                beatIndicators: beatIndicators,
+              ),
+            SizedBox(height: compact ? 8 : 14),
 
             // Metronome controls panel, including BPM slider,
             // click/sound toggles, meter picker, and instrument selector
@@ -3436,14 +3534,32 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     required ColorScheme colorScheme,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final scorePanelColor = isDark ? const Color(0xFF161616) : Colors.white;
-    final scorePaperColor = isDark
+    final scorePanelColor = kIsWeb
+        ? isDark
+              ? Colors.white.withValues(alpha: 0.065)
+              : Colors.white.withValues(alpha: 0.62)
+        : isDark
+        ? const Color(0xFF161616)
+        : Colors.white;
+    final scorePaperColor = kIsWeb
+        ? isDark
+              ? Colors.black.withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.48)
+        : isDark
         ? const Color(0xFF101010)
         : const Color(0xFFFFFEFB);
-    final scoreOverlayColor = isDark
+    final scoreOverlayColor = kIsWeb
+        ? isDark
+              ? const Color(0xFF1B2028).withValues(alpha: 0.90)
+              : Colors.white.withValues(alpha: 0.90)
+        : isDark
         ? const Color(0xFF1D1D1D).withValues(alpha: 0.94)
         : Colors.white.withValues(alpha: 0.96);
-    final scoreBorderColor = isDark
+    final scoreBorderColor = kIsWeb
+        ? isDark
+              ? Colors.white.withValues(alpha: 0.14)
+              : Colors.white.withValues(alpha: 0.82)
+        : isDark
         ? Colors.white.withValues(alpha: 0.12)
         : const Color(0xFFE7E0D4);
     final staffLineColor = isDark
@@ -3457,8 +3573,17 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     return Container(
       decoration: BoxDecoration(
         color: scorePanelColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(kIsWeb ? 24 : 20),
         border: Border.all(color: scoreBorderColor),
+        boxShadow: kIsWeb
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.07),
+                  blurRadius: 28,
+                  offset: const Offset(0, 12),
+                ),
+              ]
+            : null,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -3818,6 +3943,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         final isLandscapeTablet =
             constraints.maxWidth >= 840 &&
             constraints.maxWidth > constraints.maxHeight;
+        final isDesktopWeb = kIsWeb && constraints.maxWidth >= 900;
 
         if (!isLandscapeTablet) {
           return Column(
@@ -3845,29 +3971,51 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           );
         }
 
-        return Column(
+        final wideContent = Column(
           children: [
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
+                padding: EdgeInsets.fromLTRB(
+                  isDesktopWeb ? 28 : 18,
+                  14,
+                  isDesktopWeb ? 28 : 18,
+                  isDesktopWeb ? 8 : 10,
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(
                       width: math.min(430, constraints.maxWidth * 0.38),
-                      child: _buildMetronomeCore(
-                        text: text,
-                        isRunning: isRunning,
-                        beatNumerator: beatNumerator,
-                        beatDenominator: beatDenominator,
-                        beatIndicators: beatIndicators,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 8,
-                        ),
-                      ),
+                      child: isDesktopWeb
+                          ? GlassCard(
+                              padding: EdgeInsets.zero,
+                              borderRadius: 24,
+                              child: _buildMetronomeCore(
+                                text: text,
+                                isRunning: isRunning,
+                                beatNumerator: beatNumerator,
+                                beatDenominator: beatDenominator,
+                                beatIndicators: beatIndicators,
+                                compact: true,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 4,
+                                ),
+                              ),
+                            )
+                          : _buildMetronomeCore(
+                              text: text,
+                              isRunning: isRunning,
+                              beatNumerator: beatNumerator,
+                              beatDenominator: beatDenominator,
+                              beatIndicators: beatIndicators,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 8,
+                              ),
+                            ),
                     ),
-                    const SizedBox(width: 18),
+                    SizedBox(width: isDesktopWeb ? 22 : 18),
                     Expanded(
                       child: KeyedSubtree(
                         key: _tutorialScoreKey,
@@ -3881,17 +4029,51 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                 ),
               ),
             ),
-            TransportBar(
-              isRunning: isRunning,
-              onStart: start,
-              onStop: () => stop(),
-              onReset: reset,
-              startLabel: text.start,
-              stopLabel: text.stop,
-              resetLabel: text.reset,
-              startButtonKey: _tutorialStartKey,
-            ),
+            if (isDesktopWeb)
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 350),
+                  child: GlassCard(
+                    padding: EdgeInsets.zero,
+                    borderRadius: 36,
+                    child: TransportBar(
+                      isRunning: isRunning,
+                      onStart: start,
+                      onStop: () => stop(),
+                      onReset: reset,
+                      startLabel: text.start,
+                      stopLabel: text.stop,
+                      resetLabel: text.reset,
+                      startButtonKey: _tutorialStartKey,
+                    ),
+                  ),
+                ),
+              )
+            else
+              TransportBar(
+                isRunning: isRunning,
+                onStart: start,
+                onStop: () => stop(),
+                onReset: reset,
+                startLabel: text.start,
+                stopLabel: text.stop,
+                resetLabel: text.reset,
+                startButtonKey: _tutorialStartKey,
+              ),
           ],
+        );
+
+        if (!isDesktopWeb) return wideContent;
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1480),
+            child: SizedBox(
+              width: double.infinity,
+              height: constraints.maxHeight,
+              child: wideContent,
+            ),
+          ),
         );
       },
     );
@@ -3934,8 +4116,18 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       key: _scaffoldKey,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        toolbarHeight: kIsWeb ? 72 : null,
+        backgroundColor: kIsWeb
+            ? pageScheme.surface.withValues(alpha: 0.34)
+            : Colors.transparent,
         surfaceTintColor: Colors.transparent,
+        shape: kIsWeb
+            ? Border(
+                bottom: BorderSide(
+                  color: pageScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              )
+            : null,
         title: Text(text.metronomeTitle),
         actions: [
           IconButton(
@@ -3944,6 +4136,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               if (_tutorialDialogOpen) return;
               unawaited(_showMetronomeTutorial());
             },
+            style: kIsWeb
+                ? IconButton.styleFrom(
+                    backgroundColor: pageScheme.surface.withValues(alpha: 0.5),
+                  )
+                : null,
             icon: const Icon(Icons.help_outline_rounded),
           ),
           IconButton(
@@ -3954,6 +4151,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               colorScheme: pageScheme,
               useDialog: isLandscapeTablet,
             ),
+            style: kIsWeb
+                ? IconButton.styleFrom(
+                    backgroundColor: pageScheme.surface.withValues(alpha: 0.5),
+                  )
+                : null,
             icon: const Icon(Icons.tune_rounded),
           ),
         ],
@@ -3965,7 +4167,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       body: GlassBackground(
         // Keep this page near-plain (a whisper of theme color): controls and
         // the pendulum need to stand out clearly against the background.
-        tint: inheritedTheme.brightness == Brightness.dark ? 0.14 : 0.03,
+        tint: kIsWeb
+            ? null
+            : inheritedTheme.brightness == Brightness.dark
+            ? 0.14
+            : 0.03,
         child: SafeArea(
           child: _buildMetronomeBody(
             text: text,

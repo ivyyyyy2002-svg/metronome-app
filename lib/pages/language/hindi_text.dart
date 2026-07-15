@@ -308,6 +308,15 @@ class HindiText implements AppLanguageText {
   String get clickSound => 'क्लिक साउंड';
 
   @override
+  String get volumeBalance => 'वॉल्यूम बैलेंस';
+
+  @override
+  String get clickVolume => 'क्लिक वॉल्यूम';
+
+  @override
+  String get instrumentVolume => 'वाद्य वॉल्यूम';
+
+  @override
   String get sound => 'साउंड';
 
   @override
@@ -496,14 +505,21 @@ class HindiText implements AppLanguageText {
 
   @override
   String get tutorialHomeReturnBody =>
-      'Tabs का tour पूरा हुआ। Practice पर वापस चलें — metronome खोलकर hands-on try करने से पहले एक आखिरी चीज़ देखनी है।';
+      'Tabs का tour पूरा हुआ। अपने शुरुआती पेज पर लौटना सीखने के लिए खुद Practice चुनें।';
+
+  @override
+  String get tutorialStartSessionTitle => 'तैयार होने पर शुरू करें';
+
+  @override
+  String get tutorialStartSessionBody =>
+      'अब खुद Start Metronome दबाएं। Practice workspace खुलने के बाद metronome का hands-on tutorial जारी रहेगा।';
 
   @override
   String get tutorialHomeSettingsTitle => 'Settings और tutorial';
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Theme, colors और language इस gear के पीछे हैं। कभी कुछ भूल जाएं तो Settings खोलकर "Tutorial फिर से देखें" tap करें। अब "पूरा" दबाएं — metronome page पर असली try करते हैं।';
+      'Theme, colors और language इस gear के पीछे हैं। कभी कुछ भूल जाएं तो Settings खोलकर "Tutorial फिर से देखें" tap करें। "पूरा" दबाकर फिर Practice पर लौटें।';
 
   @override
   String get tutorialScoreTitle => 'iPad score practice';

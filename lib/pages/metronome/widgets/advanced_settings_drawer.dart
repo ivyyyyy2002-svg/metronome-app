@@ -14,6 +14,14 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.clickSoundLabel,
     required this.currentClickSoundName,
     required this.onClickSoundTap,
+    required this.volumeBalanceLabel,
+    required this.clickVolumeLabel,
+    required this.instrumentVolumeLabel,
+    required this.clickVolume,
+    required this.instrumentVolume,
+    required this.onClickVolumeChanged,
+    required this.onInstrumentVolumeChanged,
+    required this.onVolumeChangeEnd,
     required this.instrumentLabel,
     required this.instruments,
     required this.instrumentAvailability,
@@ -30,6 +38,14 @@ class AdvancedSettingsDrawer extends StatelessWidget {
   final String clickSoundLabel;
   final String currentClickSoundName;
   final VoidCallback onClickSoundTap;
+  final String volumeBalanceLabel;
+  final String clickVolumeLabel;
+  final String instrumentVolumeLabel;
+  final double clickVolume;
+  final double instrumentVolume;
+  final ValueChanged<double> onClickVolumeChanged;
+  final ValueChanged<double> onInstrumentVolumeChanged;
+  final VoidCallback onVolumeChangeEnd;
   final String instrumentLabel;
   final List<String> instruments;
   final Map<String, bool> instrumentAvailability;
@@ -109,6 +125,41 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
+          Text(
+            volumeBalanceLabel,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              border: Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                _VolumeSlider(
+                  icon: Icons.volume_up_rounded,
+                  label: clickVolumeLabel,
+                  value: clickVolume,
+                  onChanged: onClickVolumeChanged,
+                  onChangeEnd: onVolumeChangeEnd,
+                ),
+                const Divider(height: 18),
+                _VolumeSlider(
+                  icon: Icons.graphic_eq_rounded,
+                  label: instrumentVolumeLabel,
+                  value: instrumentVolume,
+                  onChanged: onInstrumentVolumeChanged,
+                  onChangeEnd: onVolumeChangeEnd,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.surround_sound_rounded),
@@ -139,6 +190,61 @@ class AdvancedSettingsDrawer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _VolumeSlider extends StatelessWidget {
+  const _VolumeSlider({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.onChangeEnd,
+  });
+
+  final IconData icon;
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final percentage = (value * 100).round();
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Text(
+              '$percentage%',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        Slider(
+          value: value,
+          min: 0,
+          max: 1,
+          divisions: 20,
+          label: '$percentage%',
+          onChanged: onChanged,
+          onChangeEnd: (_) => onChangeEnd(),
+        ),
+      ],
     );
   }
 }

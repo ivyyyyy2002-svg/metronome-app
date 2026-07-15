@@ -56,6 +56,7 @@ class InstrumentSf2Controller {
   final Map<String, bool> _assetAvailability = {};
   final Map<String, int> _soundfontIds = {};
   String? _loadedInstrument;
+  double _volumeScale = 1.0;
 
   bool isReadyFor(String instrument) => _loadedInstrument == instrument;
 
@@ -124,7 +125,7 @@ class InstrumentSf2Controller {
           sfId: sfId,
           channel: channel,
           controller: 7,
-          value: spec.volume,
+          value: _scaledVolume(spec.volume),
         );
         await _midiPro.controlChange(
           sfId: sfId,
@@ -144,6 +145,30 @@ class InstrumentSf2Controller {
       _loadedInstrument = null;
       debugPrint('Failed to prepare $instrument SF2: $e');
       debugPrintStack(stackTrace: st);
+    }
+  }
+
+  int _scaledVolume(int baseVolume) =>
+      (baseVolume * _volumeScale).round().clamp(0, 127);
+
+  Future<void> setVolumeScale(double value) async {
+    _volumeScale = value.clamp(0.0, 1.0);
+    final instrument = _loadedInstrument;
+    if (instrument == null) return;
+    final sfId = _soundfontIds[instrument];
+    final spec = assetSpecs[instrument];
+    if (sfId == null || spec == null) return;
+
+    final volume = _scaledVolume(spec.volume);
+    for (int channel = 0; channel < channelCount; channel++) {
+      try {
+        await _midiPro.controlChange(
+          sfId: sfId,
+          channel: channel,
+          controller: 7,
+          value: volume,
+        );
+      } catch (_) {}
     }
   }
 
@@ -204,7 +229,8 @@ class InstrumentSf2Controller {
 
     final stepDelayMs = (releaseMs / steps).round().clamp(1, releaseMs);
     for (int step = 1; step <= steps; step++) {
-      final volume = (spec.volume * (1.0 - step / steps)).round();
+      final volume = (_scaledVolume(spec.volume) * (1.0 - step / steps))
+          .round();
       final expression = (spec.expression * (1.0 - step / steps)).round();
       for (int channel = 0; channel < channelCount; channel++) {
         try {
@@ -232,7 +258,7 @@ class InstrumentSf2Controller {
           sfId: sfId,
           channel: channel,
           controller: 7,
-          value: spec.volume,
+          value: _scaledVolume(spec.volume),
         );
         await _midiPro.controlChange(
           sfId: sfId,
