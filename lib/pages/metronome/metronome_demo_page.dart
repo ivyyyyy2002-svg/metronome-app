@@ -26,6 +26,7 @@ import 'widgets/metronome_controls_panel.dart';
 import 'widgets/meter_picker_sheet.dart';
 import 'widgets/playback_status_panel.dart';
 import 'widgets/transport_bar.dart';
+import 'web_click_player.dart';
 
 enum ClickAccent { strong, secondary, weak }
 
@@ -218,6 +219,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // just_audio players
   final AudioPlayer clickStrongPlayer = AudioPlayer();
   final AudioPlayer clickWeakPlayer = AudioPlayer();
+  final WebClickPlayer _webClickPlayer = WebClickPlayer();
   final InstrumentSf2Controller instrumentSf2Controller =
       InstrumentSf2Controller(
         channelCount: notePoolSize,
@@ -1402,9 +1404,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final completer = Completer<void>();
     _clickPreloadFuture = completer.future;
     try {
-      await _loadClickWithFallback(clickStrongPlayer, clickStrongAsset);
-      await _loadClickWithFallback(clickWeakPlayer, clickWeakAsset);
-      await _applyClickVolumeToPlayers();
+      if (kIsWeb) {
+        _webClickPlayer.preload(
+          strongAsset: clickStrongAsset,
+          weakAsset: clickWeakAsset,
+        );
+      } else {
+        await _loadClickWithFallback(clickStrongPlayer, clickStrongAsset);
+        await _loadClickWithFallback(clickWeakPlayer, clickWeakAsset);
+        await _applyClickVolumeToPlayers();
+      }
       clickReady = true;
     } catch (e, st) {
       debugPrint('Click preload failed: $e');
@@ -1469,6 +1478,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   Future<void> _pauseClickPlayers() async {
+    if (kIsWeb) {
+      _webClickPlayer.stop();
+      return;
+    }
     for (final p in [clickStrongPlayer, clickWeakPlayer]) {
       try {
         await p.pause();
@@ -1491,6 +1504,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     };
 
     try {
+      if (kIsWeb) {
+        _webClickPlayer.play(
+          strong: accent != ClickAccent.weak,
+          volume: volume,
+        );
+        return;
+      }
+
       // more reliable for short sounds than just seek+play
       player.setVolume(volume);
       await player.seek(Duration.zero);
@@ -1879,6 +1900,21 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     required String token,
     required double durationBeats,
   }) async {
+    if (kIsWeb) {
+      // The click is a 170 ms transient. Starting the long instrument sample
+      // before the browser confirms that transient has begun can suppress it
+      // entirely. Keep the two sounds on the same beat while giving the click
+      // a tiny head start so both remain audible.
+      if (enableClick) {
+        await playClickForBeat(beatInBar);
+      }
+      if (enableSound && !isHoldBeatToken(token)) {
+        await Future<void>.delayed(const Duration(milliseconds: 18));
+        _playBeatToken(token, durationBeats: durationBeats);
+      }
+      return;
+    }
+
     // Fire the click and the instrument note from the same tick. The SF2 path
     // applies its own small latencyOffsetMs so the faster MIDI note waits for
     // the slower just_audio click output instead of landing ahead of it.
@@ -2030,7 +2066,13 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
     // Stable tick scheduling (avoids Timer.periodic jitter)
     final sw = Stopwatch()..start();
-    int tickCount = 0;
+    // Fire the first beat inside the Start interaction. On Web this preserves
+    // the browser's transient audio permission for the click AudioContext;
+    // putting even the first beat behind a zero-duration Timer can leave that
+    // short-sound context suspended while the already-unlocked note player
+    // continues normally.
+    _onTick();
+    int tickCount = 1;
 
     void scheduleNext() {
       if (_tickGen != gen) return;
@@ -4191,6 +4233,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     timer?.cancel();
     clickStrongPlayer.dispose();
     clickWeakPlayer.dispose();
+    _webClickPlayer.dispose();
     instrumentSf2Controller.dispose();
     for (final p in notePlayers) {
       p.dispose();
