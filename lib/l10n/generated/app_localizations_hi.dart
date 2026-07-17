@@ -1,8 +1,12 @@
-import 'app_language_text.dart';
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
 
-// Hindi language text implementation for the app
-class HindiText implements AppLanguageText {
-  const HindiText();
+// ignore_for_file: type=lint
+
+/// The translations for Hindi (`hi`).
+class AppLocalizationsHi extends AppLocalizations {
+  AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
   String get settings => 'सेटिंग्स';
@@ -51,6 +55,9 @@ class HindiText implements AppLanguageText {
 
   @override
   String get hindi => 'हिन्दी';
+
+  @override
+  String get spanish => 'स्पेनिश';
 
   @override
   String get homeTitle => 'होम';
@@ -162,7 +169,7 @@ class HindiText implements AppLanguageText {
 
   @override
   String get octaveNotationBasicsBody =>
-      "Higher octave के लिए ' और lower octave के लिए comma इस्तेमाल करें। जैसे C' C से ऊँचा है, और C, C से नीचे है।";
+      'Higher octave के लिए \' और lower octave के लिए comma इस्तेमाल करें। जैसे C\' C से ऊँचा है, और C, C से नीचे है।';
 
   @override
   String get groupedNotesBasicsTitle => 'Grouped Notes';
@@ -259,7 +266,7 @@ class HindiText implements AppLanguageText {
 
   @override
   String get noteInputHelper =>
-      "A-G या S R G M P D N इस्तेमाल करें। ', comma, / और - octave, grouped notes और holds के लिए हैं।";
+      'A-G या S R G M P D N इस्तेमाल करें। \', comma, / और - octave, grouped notes और holds के लिए हैं।';
 
   @override
   String get applySequence => 'पैटर्न लागू करें';
@@ -338,17 +345,10 @@ class HindiText implements AppLanguageText {
   String get tutorialReplay => 'Tutorial फिर से देखें';
 
   @override
-  String tutorialStepCount(int current, int total) => '$current / $total';
-
-  @override
   String get tutorialTryIt => 'Try करें:';
 
   @override
   String get tutorialWellDone => 'बहुत बढ़िया!';
-
-  @override
-  String tutorialTapTabAction(String tabName) =>
-      'नीचे की bar में "$tabName" पर tap करें।';
 
   @override
   String get tutorialTempoTitle => 'Tempo, beat और pendulum';
@@ -384,7 +384,7 @@ class HindiText implements AppLanguageText {
 
   @override
   String get tutorialToggleBody =>
-      '"Click" classic टिक-टिक है जो time पकड़कर रखती है। "Sound" चुने हुए instrument पर आपका note pattern बजाता है। दोनों on रखें तो melody beat के ऊपर सुनाई देती है; focus करना हो तो एक बंद कर दें।';
+      '\"Click\" classic टिक-टिक है जो time पकड़कर रखती है। \"Sound\" चुने हुए instrument पर आपका note pattern बजाता है। दोनों on रखें तो melody beat के ऊपर सुनाई देती है; focus करना हो तो एक बंद कर दें।';
 
   @override
   String get tutorialToggleAction => 'कोई एक switch off करके फिर on करें।';
@@ -454,7 +454,7 @@ class HindiText implements AppLanguageText {
 
   @override
   String get tutorialHomeSequencesExample =>
-      "C D E F → चार notes, हर beat पर एक\nG - → '-' G को एक beat और रोकता है\nE/F → '/' दो notes एक beat में\nC' ऊंचा octave · C, नीचा octave";
+      'C D E F → चार notes, हर beat पर एक\nG - → \'-\' G को एक beat और रोकता है\nE/F → \'/\' दो notes एक beat में\nC\' ऊंचा octave · C, नीचा octave';
 
   @override
   String get tutorialHomeToolsTitle => 'Typing का काम Tools को दें';
@@ -468,7 +468,7 @@ class HindiText implements AppLanguageText {
 
   @override
   String get tutorialHomeScaleGenBody =>
-      'Root key, scale type, octave range और direction चुनें — पूरा pattern अपने आप लिख जाता है। "Use pattern" result को सीधे आपके sequence editor में डाल देता है।';
+      'Root key, scale type, octave range और direction चुनें — पूरा pattern अपने आप लिख जाता है। \"Use pattern\" result को सीधे आपके sequence editor में डाल देता है।';
 
   @override
   String get tutorialHomeJianpuTitle => 'Jianpu converter';
@@ -519,7 +519,7 @@ class HindiText implements AppLanguageText {
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Theme, colors और language इस gear के पीछे हैं। कभी कुछ भूल जाएं तो Settings खोलकर "Tutorial फिर से देखें" tap करें। "पूरा" दबाकर फिर Practice पर लौटें।';
+      'Theme, colors और language इस gear के पीछे हैं। कभी कुछ भूल जाएं तो Settings खोलकर \"Tutorial फिर से देखें\" tap करें। \"पूरा\" दबाकर फिर Practice पर लौटें।';
 
   @override
   String get tutorialScoreTitle => 'iPad score practice';
@@ -574,18 +574,6 @@ class HindiText implements AppLanguageText {
   String get replace => 'बदलें';
 
   @override
-  String noteSequenceTooLong(int maxNotes) =>
-      'एक पैटर्न में $maxNotes या उससे कम नोट्स इस्तेमाल करें।';
-
-  @override
-  String replaceSequenceQuestion(String name) =>
-      '"$name" नाम का पैटर्न पहले से है। क्या इसे बदलना है?';
-
-  @override
-  String savedSequenceSummary(int visibleCount, int totalCount) =>
-      '$totalCount में से $visibleCount दिख रहे हैं';
-
-  @override
   String get cancel => 'रद्द करें';
 
   @override
@@ -628,10 +616,6 @@ class HindiText implements AppLanguageText {
   String get missingInstrument => 'नहीं मिला';
 
   @override
-  String noPlayableAssets(String instrument) =>
-      '$instrument के लिए कोई playable asset नहीं मिला';
-
-  @override
   String get scorePreview => 'Score';
 
   @override
@@ -655,4 +639,67 @@ class HindiText implements AppLanguageText {
   @override
   String get scorePlaceholderBody =>
       'यह जगह PDF या score image दिखाने के लिए है।';
+
+  @override
+  String tutorialStepCount(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String tutorialTapTabAction(String tabName) {
+    return 'नीचे की bar में \"$tabName\" पर tap करें।';
+  }
+
+  @override
+  String noteSequenceTooLong(int maxNotes) {
+    return 'एक पैटर्न में $maxNotes या उससे कम नोट्स इस्तेमाल करें।';
+  }
+
+  @override
+  String replaceSequenceQuestion(String name) {
+    return '\"$name\" नाम का पैटर्न पहले से है। क्या इसे बदलना है?';
+  }
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) {
+    return '$totalCount में से $visibleCount दिख रहे हैं';
+  }
+
+  @override
+  String get quickEntry => 'त्वरित इनपुट';
+
+  @override
+  String get notes => 'नोट्स';
+
+  @override
+  String get modifiers => 'संशोधक';
+
+  @override
+  String get zoomOut => 'ज़ूम आउट';
+
+  @override
+  String get zoomIn => 'ज़ूम इन';
+
+  @override
+  String get previousPage => 'पिछला पृष्ठ';
+
+  @override
+  String get nextPage => 'अगला पृष्ठ';
+
+  @override
+  String get fullscreen => 'पूर्ण स्क्रीन';
+
+  @override
+  String get show => 'दिखाएँ';
+
+  @override
+  String get hide => 'छिपाएँ';
+
+  @override
+  String get exampleSequences => 'उदाहरण पैटर्न';
+
+  @override
+  String noPlayableAssets(String instrument) {
+    return '$instrument के लिए कोई playable asset नहीं मिला';
+  }
 }

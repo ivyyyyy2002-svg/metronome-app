@@ -1,42 +1,41 @@
 import 'package:flutter/widgets.dart';
+import 'package:metronome_app/l10n/generated/app_localizations.dart';
+import 'package:metronome_app/l10n/generated/app_localizations_en.dart';
+import 'package:metronome_app/l10n/generated/app_localizations_es.dart';
+import 'package:metronome_app/l10n/generated/app_localizations_fr.dart';
+import 'package:metronome_app/l10n/generated/app_localizations_hi.dart';
+import 'package:metronome_app/l10n/generated/app_localizations_zh.dart';
 
 import '../app_settings_controller.dart';
-import 'app_language_text.dart';
-import 'chinese_text.dart';
-import 'english_text.dart';
-import 'french_text.dart';
-import 'hindi_text.dart';
 
 // Factory function to get the appropriate language text based
 // on the current app language setting
-AppLanguageText appTextFor(AppLanguage language) {
+AppLocalizations appTextFor(AppLanguage language) {
   if (language == AppLanguage.chinese) {
-    return const ChineseText();
+    return AppLocalizationsZh();
   }
 
   if (language == AppLanguage.english) {
-    return const EnglishText();
+    return AppLocalizationsEn();
   }
 
   if (language == AppLanguage.french) {
-    return const FrenchText();
+    return AppLocalizationsFr();
   }
 
   if (language == AppLanguage.hindi) {
-    return const HindiText();
+    return AppLocalizationsHi();
   }
 
-  // Fallback to system locale if no specific language is set
-  final locale = WidgetsBinding.instance.platformDispatcher.locale;
-  if (locale.languageCode == 'zh') {
-    return const ChineseText();
-  }
-  if (locale.languageCode == 'fr') {
-    return const FrenchText();
-  }
-  if (locale.languageCode == 'hi') {
-    return const HindiText();
+  if (language == AppLanguage.spanish) {
+    return AppLocalizationsEs();
   }
 
-  return const EnglishText();
+  final systemLanguage =
+      WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+  if (systemLanguage == 'zh') return AppLocalizationsZh();
+  if (systemLanguage == 'fr') return AppLocalizationsFr();
+  if (systemLanguage == 'hi') return AppLocalizationsHi();
+  if (systemLanguage == 'es') return AppLocalizationsEs();
+  return AppLocalizationsEn();
 }

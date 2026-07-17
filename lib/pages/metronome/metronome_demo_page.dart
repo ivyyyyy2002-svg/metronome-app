@@ -2631,7 +2631,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   // Quick edit chips for notes, accidentals, and small edit actions.
                                   const SizedBox(height: 10),
                                   _MetronomeQuickEntryGroup(
-                                    title: 'Quick entry',
+                                    title: _text.quickEntry,
                                     child: SegmentedButton<NoteNotation>(
                                       segments: [
                                         ButtonSegment(
@@ -2653,7 +2653,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   ),
                                   const SizedBox(height: 8),
                                   _MetronomeQuickEntryGroup(
-                                    title: 'Notes',
+                                    title: _text.notes,
                                     child: Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
@@ -2689,7 +2689,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   ),
                                   const SizedBox(height: 8),
                                   _MetronomeQuickEntryGroup(
-                                    title: 'Modifiers',
+                                    title: _text.modifiers,
                                     child: Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
@@ -3310,7 +3310,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                               ),
                             ),
                             IconButton.filledTonal(
-                              tooltip: 'Zoom out',
+                              tooltip: text.zoomOut,
                               onPressed: () =>
                                   setFullscreenZoom(fullscreenZoom - 0.25),
                               icon: const Icon(Icons.zoom_out_rounded),
@@ -3326,7 +3326,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                             ),
                             const SizedBox(width: 8),
                             IconButton.filledTonal(
-                              tooltip: 'Zoom in',
+                              tooltip: text.zoomIn,
                               onPressed: () =>
                                   setFullscreenZoom(fullscreenZoom + 0.25),
                               icon: const Icon(Icons.zoom_in_rounded),
@@ -3836,7 +3836,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      tooltip: 'Previous page',
+                                      tooltip: text.previousPage,
                                       visualDensity: VisualDensity.compact,
                                       onPressed: scorePdfPage <= 1
                                           ? null
@@ -3856,7 +3856,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                       ).textTheme.labelMedium,
                                     ),
                                     IconButton(
-                                      tooltip: 'Next page',
+                                      tooltip: text.nextPage,
                                       visualDensity: VisualDensity.compact,
                                       onPressed:
                                           scorePdfPages == 0 ||
@@ -3886,7 +3886,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    tooltip: 'Zoom out',
+                                    tooltip: text.zoomOut,
                                     visualDensity: VisualDensity.compact,
                                     onPressed: () =>
                                         _setScoreZoom(scoreZoom - 0.25),
@@ -3899,14 +3899,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                                     ).textTheme.labelMedium,
                                   ),
                                   IconButton(
-                                    tooltip: 'Zoom in',
+                                    tooltip: text.zoomIn,
                                     visualDensity: VisualDensity.compact,
                                     onPressed: () =>
                                         _setScoreZoom(scoreZoom + 0.25),
                                     icon: const Icon(Icons.zoom_in_rounded),
                                   ),
                                   IconButton(
-                                    tooltip: 'Fullscreen',
+                                    tooltip: text.fullscreen,
                                     visualDensity: VisualDensity.compact,
                                     onPressed: () => _openScoreFullScreen(
                                       text: text,

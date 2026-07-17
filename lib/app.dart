@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:metronome_app/l10n/generated/app_localizations.dart';
 
 import 'pages/app_settings_controller.dart';
 import 'pages/metronome/note_sequence_controller.dart';
@@ -24,6 +25,7 @@ class _MyAppState extends State<MyApp> {
     'PingFang SC',
     'Noto Sans CJK SC',
     'Microsoft YaHei',
+    'Noto Sans Devanagari',
     'Arial Unicode MS',
   ];
 
@@ -38,6 +40,23 @@ class _MyAppState extends State<MyApp> {
   static const Color _roseLightBackground = Color(0xFFFFF8FA);
   static const Color _warmLightBackground = Color(0xFFFFFCF5);
   static const Color _tealLightBackground = Color(0xFFF5FFFC);
+
+  Locale? _localeForLanguage(AppLanguage language) {
+    switch (language) {
+      case AppLanguage.system:
+        return null;
+      case AppLanguage.english:
+        return const Locale('en');
+      case AppLanguage.chinese:
+        return const Locale('zh');
+      case AppLanguage.french:
+        return const Locale('fr');
+      case AppLanguage.hindi:
+        return const Locale('hi');
+      case AppLanguage.spanish:
+        return const Locale('es');
+    }
+  }
 
   Color _seedColorForTheme(AppThemeColor themeColor) {
     switch (themeColor) {
@@ -322,7 +341,10 @@ class _MyAppState extends State<MyApp> {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Metrinote',
+          onGenerateTitle: (context) => AppLocalizations.of(context).appName,
+          locale: _localeForLanguage(appSettingsController.language),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
           themeMode: appSettingsController.themeMode,
           theme: _themeDataFor(
             appSettingsController.themeColor,

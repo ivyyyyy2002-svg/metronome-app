@@ -1,8 +1,12 @@
-import 'app_language_text.dart';
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
 
-// Chinese language text implementation for the app
-class ChineseText implements AppLanguageText {
-  const ChineseText();
+// ignore_for_file: type=lint
+
+/// The translations for Chinese (`zh`).
+class AppLocalizationsZh extends AppLocalizations {
+  AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
   String get settings => '设置';
@@ -51,6 +55,9 @@ class ChineseText implements AppLanguageText {
 
   @override
   String get hindi => '印地语';
+
+  @override
+  String get spanish => '西班牙语';
 
   @override
   String get homeTitle => '主页';
@@ -157,7 +164,7 @@ class ChineseText implements AppLanguageText {
 
   @override
   String get octaveNotationBasicsBody =>
-      "使用 ' 表示高八度，使用逗号表示低八度。例如 C' 比 C 高，C, 比 C 低。";
+      '使用 \' 表示高八度，使用逗号表示低八度。例如 C\' 比 C 高，C, 比 C 低。';
 
   @override
   String get groupedNotesBasicsTitle => '同拍音';
@@ -250,7 +257,7 @@ class ChineseText implements AppLanguageText {
 
   @override
   String get noteInputHelper =>
-      "可用 A-G 或 S R G M P D N。可用 '、逗号、/ 和 - 表示八度、同拍音和延长音。";
+      '可用 A-G 或 S R G M P D N。可用 \'、逗号、/ 和 - 表示八度、同拍音和延长音。';
 
   @override
   String get applySequence => '应用音符模式';
@@ -328,16 +335,10 @@ class ChineseText implements AppLanguageText {
   String get tutorialReplay => '再看一遍新手教程';
 
   @override
-  String tutorialStepCount(int current, int total) => '$current / $total';
-
-  @override
   String get tutorialTryIt => '试一试：';
 
   @override
   String get tutorialWellDone => '做得好！';
-
-  @override
-  String tutorialTapTabAction(String tabName) => '点击下方导航栏里的「$tabName」。';
 
   @override
   String get tutorialTempoTitle => '速度、拍子和摆锤';
@@ -441,7 +442,7 @@ class ChineseText implements AppLanguageText {
 
   @override
   String get tutorialHomeSequencesExample =>
-      "C D E F → 四个音，每拍一个\nG - → 「-」让 G 多延长一拍\nE/F → 「/」把两个音挤进一拍\nC' 高八度 · C, 低八度";
+      'C D E F → 四个音，每拍一个\nG - → 「-」让 G 多延长一拍\nE/F → 「/」把两个音挤进一拍\nC\' 高八度 · C, 低八度';
 
   @override
   String get tutorialHomeToolsTitle => '让工具替你动手';
@@ -561,16 +562,6 @@ class ChineseText implements AppLanguageText {
   String get replace => '替换';
 
   @override
-  String noteSequenceTooLong(int maxNotes) => '每个音符模式最多可以输入 $maxNotes 个音符。';
-
-  @override
-  String replaceSequenceQuestion(String name) => '名为 "$name" 的音符模式已存在。要替换它吗？';
-
-  @override
-  String savedSequenceSummary(int visibleCount, int totalCount) =>
-      '显示 $totalCount 个中的 $visibleCount 个';
-
-  @override
   String get cancel => '取消';
 
   @override
@@ -613,9 +604,6 @@ class ChineseText implements AppLanguageText {
   String get missingInstrument => '缺失';
 
   @override
-  String noPlayableAssets(String instrument) => '找不到 $instrument 的可播放资源';
-
-  @override
   String get scorePreview => '谱子';
 
   @override
@@ -638,4 +626,67 @@ class ChineseText implements AppLanguageText {
 
   @override
   String get scorePlaceholderBody => '这里会用于显示 PDF 或谱子图片。';
+
+  @override
+  String tutorialStepCount(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String tutorialTapTabAction(String tabName) {
+    return '点击下方导航栏里的「$tabName」。';
+  }
+
+  @override
+  String noteSequenceTooLong(int maxNotes) {
+    return '每个音符模式最多可以输入 $maxNotes 个音符。';
+  }
+
+  @override
+  String replaceSequenceQuestion(String name) {
+    return '名为 \"$name\" 的音符模式已存在。要替换它吗？';
+  }
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) {
+    return '显示 $totalCount 个中的 $visibleCount 个';
+  }
+
+  @override
+  String get quickEntry => '快速输入';
+
+  @override
+  String get notes => '音符';
+
+  @override
+  String get modifiers => '修饰符';
+
+  @override
+  String get zoomOut => '缩小';
+
+  @override
+  String get zoomIn => '放大';
+
+  @override
+  String get previousPage => '上一页';
+
+  @override
+  String get nextPage => '下一页';
+
+  @override
+  String get fullscreen => '全屏';
+
+  @override
+  String get show => '显示';
+
+  @override
+  String get hide => '隐藏';
+
+  @override
+  String get exampleSequences => '示例音符模式';
+
+  @override
+  String noPlayableAssets(String instrument) {
+    return '找不到 $instrument 的可播放资源';
+  }
 }

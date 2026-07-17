@@ -818,6 +818,8 @@ class _MainHomePageState extends State<MainHomePage> {
                             emptyLabel: text.noSavedSequences,
                             loadLabel: text.loadSequence,
                             deleteLabel: text.deleteNote,
+                            westernLabel: text.westernNotation,
+                            easternLabel: text.easternNotation,
                             onLoad: (savedSequence) async {
                               await _loadSavedSequence(savedSequence);
                               if (context.mounted) {
@@ -996,6 +998,10 @@ class _MainHomePageState extends State<MainHomePage> {
                         ),
                         items: [
                           DropdownMenuItem(
+                            value: AppLanguage.system,
+                            child: Text(text.system),
+                          ),
+                          DropdownMenuItem(
                             value: AppLanguage.english,
                             child: Text(text.english),
                           ),
@@ -1010,6 +1016,10 @@ class _MainHomePageState extends State<MainHomePage> {
                           DropdownMenuItem(
                             value: AppLanguage.hindi,
                             child: Text(text.hindi),
+                          ),
+                          DropdownMenuItem(
+                            value: AppLanguage.spanish,
+                            child: Text(text.spanish),
                           ),
                         ],
                         onChanged: (language) {
@@ -1312,6 +1322,7 @@ class _MainHomePageState extends State<MainHomePage> {
                                 KeyedSubtree(
                                   key: _tutorialExamplesCardKey,
                                   child: _ExampleSequencesCard(
+                                    text: text,
                                     expanded: _exampleSequencesExpanded,
                                     onExpandedChanged:
                                         _setExampleSequencesExpanded,
@@ -1597,6 +1608,8 @@ class _MainHomePageState extends State<MainHomePage> {
                                             emptyLabel: text.noSavedSequences,
                                             loadLabel: text.loadSequence,
                                             deleteLabel: text.deleteNote,
+                                            westernLabel: text.westernNotation,
+                                            easternLabel: text.easternNotation,
                                             onLoad: _loadSavedSequence,
                                             onDelete: _deleteSavedSequence,
                                           ),
@@ -1763,11 +1776,13 @@ bool _usesFlatNames(String rootKey) {
 
 class _ExampleSequencesCard extends StatelessWidget {
   const _ExampleSequencesCard({
+    required this.text,
     required this.expanded,
     required this.onExpandedChanged,
     required this.onUseExample,
   });
 
+  final AppLanguageText text;
   final bool expanded;
   final ValueChanged<bool> onExpandedChanged;
   final ValueChanged<_ExampleSequence> onUseExample;
@@ -1785,7 +1800,7 @@ class _ExampleSequencesCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Example Sequences',
+                  text.exampleSequences,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -1799,15 +1814,13 @@ class _ExampleSequencesCard extends StatelessWidget {
                       : Icons.keyboard_arrow_down_rounded,
                   size: 20,
                 ),
-                label: Text(expanded ? 'Hide' : 'Show'),
+                label: Text(expanded ? text.hide : text.show),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            expanded
-                ? 'Start with a ready-made Western, Eastern, or raga pattern.'
-                : 'Optional practice patterns are hidden.',
+            text.tutorialHomeExamplesBody,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
@@ -1824,6 +1837,7 @@ class _ExampleSequencesCard extends StatelessWidget {
                         bottom: index == _exampleSequences.length - 1 ? 0 : 10,
                       ),
                       child: _ExampleSequenceTile(
+                        text: text,
                         example: _exampleSequences[index],
                         onUse: () => onUseExample(_exampleSequences[index]),
                       ),
@@ -1846,8 +1860,13 @@ class _ExampleSequencesCard extends StatelessWidget {
 }
 
 class _ExampleSequenceTile extends StatelessWidget {
-  const _ExampleSequenceTile({required this.example, required this.onUse});
+  const _ExampleSequenceTile({
+    required this.text,
+    required this.example,
+    required this.onUse,
+  });
 
+  final AppLanguageText text;
   final _ExampleSequence example;
   final VoidCallback onUse;
 
@@ -1872,7 +1891,12 @@ class _ExampleSequenceTile extends StatelessWidget {
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
-              _NotationBadge(notation: example.notation),
+              _NotationBadge(
+                notation: example.notation,
+                label: example.notation == NoteNotation.eastern
+                    ? text.easternNotation
+                    : text.westernNotation,
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -1898,7 +1922,7 @@ class _ExampleSequenceTile extends StatelessWidget {
                 side: BorderSide(color: accentColor.withValues(alpha: 0.65)),
               ),
               onPressed: onUse,
-              child: const Text('Use Pattern'),
+              child: Text(text.useAsSequence),
             ),
           ),
         ],
@@ -1908,15 +1932,15 @@ class _ExampleSequenceTile extends StatelessWidget {
 }
 
 class _NotationBadge extends StatelessWidget {
-  const _NotationBadge({required this.notation});
+  const _NotationBadge({required this.notation, required this.label});
 
   final NoteNotation? notation;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isEastern = notation == NoteNotation.eastern;
-    final label = isEastern ? 'Eastern' : 'Western';
     final color = isEastern
         ? _readableAccentColor(scheme.copyWith(primary: scheme.tertiary))
         : _readableAccentColor(scheme);
@@ -3152,6 +3176,8 @@ class _SavedSequencesList extends StatelessWidget {
     required this.emptyLabel,
     required this.loadLabel,
     required this.deleteLabel,
+    required this.westernLabel,
+    required this.easternLabel,
     required this.onLoad,
     required this.onDelete,
   });
@@ -3160,6 +3186,8 @@ class _SavedSequencesList extends StatelessWidget {
   final String emptyLabel;
   final String loadLabel;
   final String deleteLabel;
+  final String westernLabel;
+  final String easternLabel;
   final ValueChanged<SavedNoteSequence> onLoad;
   final ValueChanged<SavedNoteSequence> onDelete;
 
@@ -3203,7 +3231,14 @@ class _SavedSequencesList extends StatelessWidget {
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      _NotationBadge(notation: savedSequences[index].notation),
+                      _NotationBadge(
+                        notation: savedSequences[index].notation,
+                        label:
+                            savedSequences[index].notation ==
+                                NoteNotation.eastern
+                            ? easternLabel
+                            : westernLabel,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),

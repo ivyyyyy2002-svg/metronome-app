@@ -1,8 +1,12 @@
-import 'app_language_text.dart';
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
 
-// English language text implementation for the app
-class EnglishText implements AppLanguageText {
-  const EnglishText();
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
   String get settings => 'Settings';
@@ -51,6 +55,9 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get hindi => 'हिन्दी';
+
+  @override
+  String get spanish => 'Español';
 
   @override
   String get homeTitle => 'Home';
@@ -161,7 +168,7 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get octaveNotationBasicsBody =>
-      "Use ' for a higher octave and comma for a lower octave. For example, C' is higher than C, and C, is lower than C.";
+      'Use \' for a higher octave and comma for a lower octave. For example, C\' is higher than C, and C, is lower than C.';
 
   @override
   String get groupedNotesBasicsTitle => 'Grouped Notes';
@@ -257,7 +264,7 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get noteInputHelper =>
-      "Use A-G or S R G M P D N. Use ', comma, /, and - for octave, grouped notes, and holds.";
+      'Use A-G or S R G M P D N. Use \', comma, /, and - for octave, grouped notes, and holds.';
 
   @override
   String get applySequence => 'Apply Sequence';
@@ -336,17 +343,10 @@ class EnglishText implements AppLanguageText {
   String get tutorialReplay => 'Watch tutorial again';
 
   @override
-  String tutorialStepCount(int current, int total) => '$current of $total';
-
-  @override
   String get tutorialTryIt => 'Try it:';
 
   @override
   String get tutorialWellDone => 'Nice!';
-
-  @override
-  String tutorialTapTabAction(String tabName) =>
-      'tap "$tabName" in the bar below.';
 
   @override
   String get tutorialTempoTitle => 'Tempo, beats, and the pendulum';
@@ -381,7 +381,7 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get tutorialToggleBody =>
-      '"Click" is the classic tick that keeps time. "Sound" plays your note pattern on the selected instrument. Keep both on to hear the melody riding on top of the beat, or turn one off to focus.';
+      '\"Click\" is the classic tick that keeps time. \"Sound\" plays your note pattern on the selected instrument. Keep both on to hear the melody riding on top of the beat, or turn one off to focus.';
 
   @override
   String get tutorialToggleAction =>
@@ -453,7 +453,7 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get tutorialHomeSequencesExample =>
-      "C D E F → four notes, one per beat\nG - → '-' holds G for an extra beat\nE/F → '/' fits two notes into one beat\nC' high octave · C, low octave";
+      'C D E F → four notes, one per beat\nG - → \'-\' holds G for an extra beat\nE/F → \'/\' fits two notes into one beat\nC\' high octave · C, low octave';
 
   @override
   String get tutorialHomeToolsTitle => 'Let Tools do the typing';
@@ -467,7 +467,7 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get tutorialHomeScaleGenBody =>
-      'Pick a root key, scale type, octave range, and direction — it writes the full pattern for you. "Use pattern" drops the result straight into your sequence editor.';
+      'Pick a root key, scale type, octave range, and direction — it writes the full pattern for you. \"Use pattern\" drops the result straight into your sequence editor.';
 
   @override
   String get tutorialHomeJianpuTitle => 'Jianpu converter';
@@ -518,7 +518,7 @@ class EnglishText implements AppLanguageText {
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Theme, colors, and language live behind this gear. If you ever forget how something works, open Settings and tap "Watch tutorial again". Press Done, then we\'ll return to Practice together.';
+      'Theme, colors, and language live behind this gear. If you ever forget how something works, open Settings and tap \"Watch tutorial again\". Press Done, then we\'ll return to Practice together.';
 
   @override
   String get tutorialScoreTitle => 'Score practice on iPad';
@@ -573,18 +573,6 @@ class EnglishText implements AppLanguageText {
   String get replace => 'Replace';
 
   @override
-  String noteSequenceTooLong(int maxNotes) =>
-      'Use $maxNotes notes or fewer for one sequence.';
-
-  @override
-  String replaceSequenceQuestion(String name) =>
-      'A sequence named "$name" already exists. Replace it?';
-
-  @override
-  String savedSequenceSummary(int visibleCount, int totalCount) =>
-      'Showing $visibleCount of $totalCount';
-
-  @override
   String get cancel => 'Cancel';
 
   @override
@@ -627,10 +615,6 @@ class EnglishText implements AppLanguageText {
   String get missingInstrument => 'missing';
 
   @override
-  String noPlayableAssets(String instrument) =>
-      'No playable assets found for $instrument';
-
-  @override
   String get scorePreview => 'Score';
 
   @override
@@ -654,4 +638,67 @@ class EnglishText implements AppLanguageText {
   @override
   String get scorePlaceholderBody =>
       'This space is reserved for a PDF or score image.';
+
+  @override
+  String tutorialStepCount(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String tutorialTapTabAction(String tabName) {
+    return 'tap \"$tabName\" in the bar below.';
+  }
+
+  @override
+  String noteSequenceTooLong(int maxNotes) {
+    return 'Use $maxNotes notes or fewer for one sequence.';
+  }
+
+  @override
+  String replaceSequenceQuestion(String name) {
+    return 'A sequence named \"$name\" already exists. Replace it?';
+  }
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) {
+    return 'Showing $visibleCount of $totalCount';
+  }
+
+  @override
+  String get quickEntry => 'Quick entry';
+
+  @override
+  String get notes => 'Notes';
+
+  @override
+  String get modifiers => 'Modifiers';
+
+  @override
+  String get zoomOut => 'Zoom out';
+
+  @override
+  String get zoomIn => 'Zoom in';
+
+  @override
+  String get previousPage => 'Previous page';
+
+  @override
+  String get nextPage => 'Next page';
+
+  @override
+  String get fullscreen => 'Fullscreen';
+
+  @override
+  String get show => 'Show';
+
+  @override
+  String get hide => 'Hide';
+
+  @override
+  String get exampleSequences => 'Example Sequences';
+
+  @override
+  String noPlayableAssets(String instrument) {
+    return 'No playable assets found for $instrument';
+  }
 }

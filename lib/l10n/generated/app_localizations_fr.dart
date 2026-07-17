@@ -1,8 +1,12 @@
-import 'app_language_text.dart';
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
 
-// French language text implementation for the app
-class FrenchText implements AppLanguageText {
-  const FrenchText();
+// ignore_for_file: type=lint
+
+/// The translations for French (`fr`).
+class AppLocalizationsFr extends AppLocalizations {
+  AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
   String get settings => 'Paramètres';
@@ -51,6 +55,9 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get hindi => 'हिन्दी';
+
+  @override
+  String get spanish => 'Espagnol';
 
   @override
   String get homeTitle => 'Accueil';
@@ -162,7 +169,7 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get octaveNotationBasicsBody =>
-      "Utilisez ' pour une octave plus haute et une virgule pour une octave plus basse. Par exemple, C' est plus haut que C, et C, est plus bas que C.";
+      'Utilisez \' pour une octave plus haute et une virgule pour une octave plus basse. Par exemple, C\' est plus haut que C, et C, est plus bas que C.';
 
   @override
   String get groupedNotesBasicsTitle => 'Notes groupées';
@@ -258,7 +265,7 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get noteInputHelper =>
-      "Utilisez A-G ou S R G M P D N. Utilisez ', virgule, / et - pour les octaves, notes groupées et tenues.";
+      'Utilisez A-G ou S R G M P D N. Utilisez \', virgule, / et - pour les octaves, notes groupées et tenues.';
 
   @override
   String get applySequence => 'Appliquer le motif';
@@ -337,17 +344,10 @@ class FrenchText implements AppLanguageText {
   String get tutorialReplay => 'Revoir le tutoriel';
 
   @override
-  String tutorialStepCount(int current, int total) => '$current sur $total';
-
-  @override
   String get tutorialTryIt => 'Essayez :';
 
   @override
   String get tutorialWellDone => 'Bravo !';
-
-  @override
-  String tutorialTapTabAction(String tabName) =>
-      'touchez « $tabName » dans la barre du bas.';
 
   @override
   String get tutorialTempoTitle => 'Tempo, temps et pendule';
@@ -456,7 +456,7 @@ class FrenchText implements AppLanguageText {
 
   @override
   String get tutorialHomeSequencesExample =>
-      "C D E F → quatre notes, une par temps\nG - → « - » tient G un temps de plus\nE/F → « / » place deux notes dans un temps\nC' octave aigu · C, octave grave";
+      'C D E F → quatre notes, une par temps\nG - → « - » tient G un temps de plus\nE/F → « / » place deux notes dans un temps\nC\' octave aigu · C, octave grave';
 
   @override
   String get tutorialHomeToolsTitle => 'Laissez Tools écrire pour vous';
@@ -576,18 +576,6 @@ class FrenchText implements AppLanguageText {
   String get replace => 'Remplacer';
 
   @override
-  String noteSequenceTooLong(int maxNotes) =>
-      'Utilisez $maxNotes notes ou moins pour un motif.';
-
-  @override
-  String replaceSequenceQuestion(String name) =>
-      'Un motif nommé "$name" existe déjà. Le remplacer ?';
-
-  @override
-  String savedSequenceSummary(int visibleCount, int totalCount) =>
-      '$visibleCount sur $totalCount affichés';
-
-  @override
   String get cancel => 'Annuler';
 
   @override
@@ -630,10 +618,6 @@ class FrenchText implements AppLanguageText {
   String get missingInstrument => 'manquant';
 
   @override
-  String noPlayableAssets(String instrument) =>
-      'Aucune ressource jouable trouvée pour $instrument';
-
-  @override
   String get scorePreview => 'Partition';
 
   @override
@@ -657,4 +641,67 @@ class FrenchText implements AppLanguageText {
   @override
   String get scorePlaceholderBody =>
       'Cet espace affichera un PDF ou une image de partition.';
+
+  @override
+  String tutorialStepCount(int current, int total) {
+    return '$current sur $total';
+  }
+
+  @override
+  String tutorialTapTabAction(String tabName) {
+    return 'touchez « $tabName » dans la barre du bas.';
+  }
+
+  @override
+  String noteSequenceTooLong(int maxNotes) {
+    return 'Utilisez $maxNotes notes ou moins pour un motif.';
+  }
+
+  @override
+  String replaceSequenceQuestion(String name) {
+    return 'Un motif nommé \"$name\" existe déjà. Le remplacer ?';
+  }
+
+  @override
+  String savedSequenceSummary(int visibleCount, int totalCount) {
+    return '$visibleCount sur $totalCount affichés';
+  }
+
+  @override
+  String get quickEntry => 'Saisie rapide';
+
+  @override
+  String get notes => 'Notes';
+
+  @override
+  String get modifiers => 'Modificateurs';
+
+  @override
+  String get zoomOut => 'Réduire';
+
+  @override
+  String get zoomIn => 'Agrandir';
+
+  @override
+  String get previousPage => 'Page précédente';
+
+  @override
+  String get nextPage => 'Page suivante';
+
+  @override
+  String get fullscreen => 'Plein écran';
+
+  @override
+  String get show => 'Afficher';
+
+  @override
+  String get hide => 'Masquer';
+
+  @override
+  String get exampleSequences => 'Motifs d’exemple';
+
+  @override
+  String noPlayableAssets(String instrument) {
+    return 'Aucune ressource jouable trouvée pour $instrument';
+  }
 }
