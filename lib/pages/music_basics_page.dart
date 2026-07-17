@@ -45,48 +45,16 @@ class MusicBasicsContent extends StatelessWidget {
     final text = appTextFor(appSettingsController.language);
     final scheme = Theme.of(context).colorScheme;
     final cards = [
-      (text.bpmBasicsTitle, text.bpmBasicsBody, Icons.speed_rounded),
-      (
-        text.timeSignatureBasicsTitle,
-        text.timeSignatureBasicsBody,
-        Icons.looks_4_rounded,
-      ),
-      (
-        text.subdivisionBasicsTitle,
-        text.subdivisionBasicsBody,
-        Icons.call_split_rounded,
-      ),
-      (
-        text.downbeatBasicsTitle,
-        text.downbeatBasicsBody,
-        Icons.keyboard_double_arrow_down_rounded,
-      ),
-      (
-        text.westernNotationBasicsTitle,
-        text.westernNotationBasicsBody,
-        Icons.music_note_rounded,
-      ),
-      (
-        text.easternNotationBasicsTitle,
-        text.easternNotationBasicsBody,
-        Icons.public_rounded,
-      ),
-      (
-        text.octaveNotationBasicsTitle,
-        text.octaveNotationBasicsBody,
-        Icons.swap_vert_rounded,
-      ),
-      (
-        text.groupedNotesBasicsTitle,
-        text.groupedNotesBasicsBody,
-        Icons.join_full_rounded,
-      ),
-      (
-        text.heldNotesBasicsTitle,
-        text.heldNotesBasicsBody,
-        Icons.horizontal_rule_rounded,
-      ),
-      (text.jianpuBasicsTitle, text.jianpuBasicsBody, Icons.pin_rounded),
+      (text.bpmBasicsTitle, text.bpmBasicsBody),
+      (text.timeSignatureBasicsTitle, text.timeSignatureBasicsBody),
+      (text.subdivisionBasicsTitle, text.subdivisionBasicsBody),
+      (text.downbeatBasicsTitle, text.downbeatBasicsBody),
+      (text.westernNotationBasicsTitle, text.westernNotationBasicsBody),
+      (text.easternNotationBasicsTitle, text.easternNotationBasicsBody),
+      (text.octaveNotationBasicsTitle, text.octaveNotationBasicsBody),
+      (text.groupedNotesBasicsTitle, text.groupedNotesBasicsBody),
+      (text.heldNotesBasicsTitle, text.heldNotesBasicsBody),
+      (text.jianpuBasicsTitle, text.jianpuBasicsBody),
     ];
 
     return ListView.separated(
@@ -102,38 +70,21 @@ class MusicBasicsContent extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
           borderRadius: 18,
           blur: false,
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(card.$3, size: 19, color: scheme.primary),
+              Text(
+                card.$1,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      card.$1,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      card.$2,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 5),
+              Text(
+                card.$2,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: 1.35,
                 ),
               ),
             ],

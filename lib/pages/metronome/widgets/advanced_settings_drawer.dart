@@ -65,19 +65,11 @@ class AdvancedSettingsDrawer extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         children: [
-          Row(
-            children: [
-              const Icon(Icons.tune_rounded),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  titleLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-            ],
+          Text(
+            titleLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
           Text(
@@ -142,7 +134,6 @@ class AdvancedSettingsDrawer extends StatelessWidget {
             child: Column(
               children: [
                 _VolumeSlider(
-                  icon: Icons.volume_up_rounded,
                   label: clickVolumeLabel,
                   value: clickVolume,
                   onChanged: onClickVolumeChanged,
@@ -150,7 +141,6 @@ class AdvancedSettingsDrawer extends StatelessWidget {
                 ),
                 const Divider(height: 18),
                 _VolumeSlider(
-                  icon: Icons.graphic_eq_rounded,
                   label: instrumentVolumeLabel,
                   value: instrumentVolume,
                   onChanged: onInstrumentVolumeChanged,
@@ -162,7 +152,6 @@ class AdvancedSettingsDrawer extends StatelessWidget {
           const SizedBox(height: 10),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.surround_sound_rounded),
             title: Text(
               clickSoundLabel,
               style: Theme.of(
@@ -196,14 +185,12 @@ class AdvancedSettingsDrawer extends StatelessWidget {
 
 class _VolumeSlider extends StatelessWidget {
   const _VolumeSlider({
-    required this.icon,
     required this.label,
     required this.value,
     required this.onChanged,
     required this.onChangeEnd,
   });
 
-  final IconData icon;
   final String label;
   final double value;
   final ValueChanged<double> onChanged;
@@ -216,8 +203,6 @@ class _VolumeSlider extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 20),
-            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
