@@ -157,7 +157,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get easternNotationBasicsBody =>
-      '东方记谱使用 Sa Re Ga Ma Pa Dha Ni，也可以写成 S R G M P D N。在这个 app 中对应 C D E F G A B。';
+      '东方记谱使用 Sa Re Ga Ma Pa Dha Ni，也可以写成 S R G M P D N。在本应用中对应 C D E F G A B。';
 
   @override
   String get octaveNotationBasicsTitle => '八度';
@@ -308,7 +308,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get volumeBalance => '音量平衡';
 
   @override
-  String get clickVolume => 'Click 音量';
+  String get clickVolume => '节拍声音量';
 
   @override
   String get instrumentVolume => '乐器音量';
@@ -332,189 +332,186 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tutorialDone => '完成';
 
   @override
-  String get tutorialReplay => '再看一遍新手教程';
+  String get tutorialReplay => '重看新手教程';
 
   @override
   String get tutorialTryIt => '试一试：';
 
   @override
-  String get tutorialWellDone => '做得好！';
+  String get tutorialWellDone => '很好！';
 
   @override
   String get tutorialTempoTitle => '速度、拍子和摆锤';
 
   @override
   String get tutorialTempoBody =>
-      '摆锤每摆动一次就是一拍，大数字是速度（BPM，每分钟拍数），表示一分钟里有多少拍。上方一排圆点显示你在小节里的位置：最亮的第一个点就是重拍。';
+      '摆锤每摆一次是一拍。中间的大数字是速度，单位 BPM，也就是每分钟多少拍。上方的圆点表示你在小节中的位置，最亮的那个是重拍。';
 
   @override
   String get tutorialTempoExample => '60 BPM = 每秒 1 拍\n120 BPM = 每秒 2 拍（快一倍）';
 
   @override
-  String get tutorialBpmDragTitle => '设置你自己的速度';
+  String get tutorialBpmDragTitle => '调整速度';
 
   @override
-  String get tutorialBpmDragBody =>
-      '慢练是练干净的秘诀：先选一个每个音都能弹对的速度，弹轻松了再一点点加快。滑块范围从 30（很慢）到 240（很快）。';
+  String get tutorialBpmDragBody => '先选一个每个音都能弹准的速度，弹熟之后再往上加。滑块范围是 30 到 240。';
 
   @override
-  String get tutorialBpmDragAction => '拖动速度滑块，改成任意一个数值。';
+  String get tutorialBpmDragAction => '拖动速度滑块，调到任意数值。';
 
   @override
   String get tutorialSequenceTitle => '你的音符模式';
 
   @override
   String get tutorialSequenceBody =>
-      '这个节拍器不只会打拍子——它还能按你的音符模式演奏旋律，每拍一个音、循环播放，让你跟着一起练。这个面板显示当前加载的模式，随时点击就能直接修改音符。';
+      '这个节拍器不只有滴答声，它可以按你的音符模式演奏旋律，每拍一个音，循环播放。这个面板显示当前加载的模式，点击即可修改音符。';
 
   @override
-  String get tutorialToggleTitle => '节拍声、音符声，或者都要';
+  String get tutorialToggleTitle => '节拍声和音符声';
 
   @override
   String get tutorialToggleBody =>
-      '「节拍声」是经典的滴答声，负责稳住时间；「音符声」用所选乐器演奏你的音符模式。两个都开，就能听到旋律叠在拍子上；想专注某一个就关掉另一个。';
+      '「节拍声」是经典的滴答声，用来稳住时间。「音符声」用所选乐器演奏你的音符模式。两个都开可以同时听到拍子和旋律，关掉一个可以单独练。';
 
   @override
-  String get tutorialToggleAction => '把其中一个开关关掉，再打开。';
+  String get tutorialToggleAction => '关掉其中一个开关，再打开。';
 
   @override
   String get tutorialMeterTitle => '拍号和细分';
 
   @override
   String get tutorialMeterBody =>
-      '拍号把拍子分组成小节：4/4 就是数 1-2-3-4 再重来，第 1 拍是重拍。细分单位把每一拍再切成更小的滴答，音符比拍子快的时候特别有用。';
+      '拍号把拍子分成小节。4/4 就是数 1-2-3-4 再循环，第 1 拍是重拍。细分把每一拍再切成更小的滴答，音符比拍子快的时候用得上。';
 
   @override
   String get tutorialMeterExample =>
-      '4/4 = 每小节 4 拍（最常见）\n3/4 = 三拍一循环，像圆舞曲\n八分音符细分 = 每拍响 2 下';
+      '4/4 = 每小节 4 拍，最常见\n3/4 = 三拍一循环，圆舞曲节奏\n八分细分 = 每拍响 2 下';
 
   @override
-  String get tutorialTransportTitle => '实际听一听';
+  String get tutorialTransportTitle => '听一听';
 
   @override
   String get tutorialTransportBody =>
-      '一切就绪——点开始听听看：先是重拍，然后你的音符会落在每一拍上。「停止」暂停练习，「重置」回到模式的开头。';
+      '设置好了，点「开始」试试。先响的是重拍，然后音符落在每一拍上。「停止」暂停练习，「重置」回到模式开头。';
 
   @override
-  String get tutorialTransportAction => '点击开始，听一两个小节。';
+  String get tutorialTransportAction => '点击「开始」，听一两个小节。';
 
   @override
   String get tutorialAdvancedTitle => '高级设置';
 
   @override
   String get tutorialAdvancedBody =>
-      '觉得默认设置不够用时，从这里可以更换节拍音色、选择演奏音符的乐器、调整重音，还能整体升降八度。';
+      '默认设置不够用时，在这里可以更换节拍音色、选择演奏音符的乐器、调整重音，或者整体升降八度。';
 
   @override
-  String get tutorialHomePracticeTitle => '欢迎！练习从这里开始';
+  String get tutorialHomePracticeTitle => '欢迎，练习从这里开始';
 
   @override
   String get tutorialHomePracticeBody =>
-      'Metrinote 是一个会「唱谱」的节拍器：除了打拍子，还能演奏你想练的音符，让你同时听到拍子和旋律。点这个按钮进入练习页，你当前的音符模式会自动带过去。';
+      'Metrinote 是一个能演奏音符的节拍器，拍子和旋律可以同时听到。点这个按钮进入练习页面，当前的音符模式会一起带过去。';
 
   @override
-  String get tutorialHomeHistoryTitle => '你的练习记录';
+  String get tutorialHomeHistoryTitle => '练习记录';
 
   @override
   String get tutorialHomeHistoryBody =>
-      '每次练习都会记录在这里：最近 7 天的练习时长、最常用的速度、最喜欢的乐器。设一个每日目标，进度环会帮你坚持下去。';
+      '每次练习都会记录在这里：最近 7 天的练习时长、常用速度、常用乐器。设定每日目标后，进度环会显示完成情况。';
 
   @override
-  String get tutorialHomeTabsTitle => '四个页面，一条流程';
+  String get tutorialHomeTabsTitle => '四个页面';
 
   @override
   String get tutorialHomeTabsBody =>
-      'Practice 是主页；Sequences 用来创建和保存音符模式；Tools 帮你自动生成模式；Basics 解释 app 里用到的音乐名词。我们按顺序逛一遍。';
+      '「练习」是主页面。「音符模式」用来创建和保存模式。「工具」可以自动生成模式。「基础」解释应用里用到的音乐名词。下面按顺序看一遍。';
 
   @override
   String get tutorialHomeExamplesTitle => '从示例开始';
 
   @override
   String get tutorialHomeExamplesBody =>
-      '不知道练什么？这里有现成的模式，一键加载——西方大调音阶，或东方拉格循环。先加载一个，再改成你自己的。';
+      '不知道练什么？这里有现成的模式，点一下就能加载，包括西方大调音阶和东方拉格循环。先加载一个，再改成自己的。';
 
   @override
-  String get tutorialHomeSequencesTitle => '写你自己的模式';
+  String get tutorialHomeSequencesTitle => '写自己的模式';
 
   @override
   String get tutorialHomeSequencesBody =>
-      '在输入框里用空格分隔音名，或直接点下方的音符按钮。西方音名（A B C…）和东方唱名（S R G M…）都支持。起个名字保存，以后随时能用。';
+      '在输入框里用空格分隔音名，或者直接点下方的音符按钮。西方音名（A B C…）和东方唱名（S R G M…）都支持。起个名字保存，之后随时可以加载。';
 
   @override
   String get tutorialHomeSequencesExample =>
-      'C D E F → 四个音，每拍一个\nG - → 「-」让 G 多延长一拍\nE/F → 「/」把两个音挤进一拍\nC\' 高八度 · C, 低八度';
+      'C D E F → 四个音，每拍一个\nG - → 「-」把 G 延长一拍\nE/F → 「/」把两个音放进一拍\nC\' 高八度 · C, 低八度';
 
   @override
-  String get tutorialHomeToolsTitle => '让工具替你动手';
+  String get tutorialHomeToolsTitle => '用工具自动生成';
 
   @override
   String get tutorialHomeToolsBody =>
-      'Tools 页有两个自动生成器：音阶生成器和简谱转换器，都能直接帮你写好模式。我们去看看。';
+      '「工具」页有两个生成器：音阶生成器和简谱转换器，都能直接写好模式。下面各看一下。';
 
   @override
   String get tutorialHomeScaleGenTitle => '音阶模式生成器';
 
   @override
   String get tutorialHomeScaleGenBody =>
-      '选好主音、音阶类型、八度范围和方向，它会自动写出完整模式。点「Use Pattern」就能直接放进你的模式编辑器。';
+      '选好主音、音阶类型、八度范围和方向，它会写出完整的模式。点「作为音符模式使用」就能放进模式编辑器。';
 
   @override
   String get tutorialHomeJianpuTitle => '简谱转换器';
 
   @override
   String get tutorialHomeJianpuBody =>
-      '习惯看简谱（1 2 3 = do re mi）的话，把谱子粘贴到这里就能变成可播放的模式。八度点和延音线「-」也都能识别。';
+      '习惯看简谱（1 2 3 = do re mi）的话，把谱子粘贴进来就能变成可播放的模式。八度点和延音线「-」也能识别。';
 
   @override
-  String get tutorialHomeBasicsTitle => '认识这些名词';
+  String get tutorialHomeBasicsTitle => '名词解释';
 
   @override
   String get tutorialHomeBasicsBody =>
-      '最后一站：Basics 是一本小词典，用大白话解释 app 里的每个音乐名词。我们一起读最重要的四个。';
+      '最后一站。「基础」是一本小词典，用日常语言解释应用里的每个音乐名词。下面看最重要的四个。';
 
   @override
   String get tutorialBasicsBpmBody =>
-      'BPM 就是每分钟拍数：60 BPM 正好每秒一拍。它就是练习页大滑块上调的那个数字。黄金法则：起步速度要比你觉得舒服的再慢一点。';
+      'BPM 是每分钟拍数，60 BPM 正好每秒一拍。这就是练习页速度滑块上的那个数字。原则是：起步速度比你觉得舒服的再慢一点。';
 
   @override
   String get tutorialBasicsMeterBody =>
-      '拍号上面的数字表示每小节有几拍，每小节第 1 拍永远是重拍。练习页的拍号按钮就是选这个的——大多数音乐用 4/4 就很稳。';
+      '拍号上面的数字表示每小节有几拍，第 1 拍永远是重拍。在练习页的拍号按钮里选择，大多数音乐用 4/4 就够了。';
 
   @override
   String get tutorialBasicsSubdivisionBody =>
-      '细分是把每一拍再切成更小的等分：八分音符 = 每拍 2 响，十六分音符 = 每拍 4 响。当音符比拍子跑得快时就用它。';
+      '细分把每一拍切成更小的等份：八分是每拍 2 响，十六分是每拍 4 响。音符比主拍快的时候打开它。';
 
   @override
   String get tutorialBasicsNotationBody =>
-      '同样的音有两套记法，app 都认：西方字母（C D E F G A B）和东方唱名（S R G M P D N）。旁边几张卡片还讲了八度记号、延音和一拍多音。';
+      '同一个音有两套记法，应用都支持：西方字母（C D E F G A B）和东方唱名（S R G M P D N）。旁边的卡片还讲了八度记号、延音和一拍多音。';
 
   @override
-  String get tutorialHomeReturnTitle => '回到主页';
+  String get tutorialHomeReturnTitle => '回到主页面';
 
   @override
-  String get tutorialHomeReturnBody =>
-      '四个页面逛完了。请你亲自点一下 Practice 回到练习主页，这样以后随时都知道怎么回来。';
+  String get tutorialHomeReturnBody => '四个页面看完了。请自己点一下「练习」回到主页面，这样以后就知道怎么回来。';
 
   @override
-  String get tutorialStartSessionTitle => '准备好后亲自开始';
+  String get tutorialStartSessionTitle => '准备好就开始';
 
   @override
-  String get tutorialStartSessionBody =>
-      '现在请你点「开始节拍器」。进入练习页面后，我们会接着进行节拍器的实际操作教程。';
+  String get tutorialStartSessionBody => '请点击「开始节拍器」。进入练习页面后，接着是节拍器的实际操作教程。';
 
   @override
   String get tutorialHomeSettingsTitle => '设置和重看教程';
 
   @override
   String get tutorialHomeSettingsBody =>
-      '主题、颜色和语言都在这个齿轮里。以后忘了怎么用，打开设置点「再看一遍新手教程」就行。点「完成」后，我们一起回到 Practice。';
+      '主题、颜色和语言都在这个齿轮里。以后忘了怎么用，打开设置点「重看新手教程」。点「完成」后回到「练习」页面。';
 
   @override
-  String get tutorialScoreTitle => 'iPad 横屏乐谱练习';
+  String get tutorialScoreTitle => '横屏看谱练习';
 
   @override
   String get tutorialScoreBody =>
-      '在较大屏幕横屏时，可以在这里加载乐谱图片或 PDF，节拍器就在旁边一边响一边看谱练。支持缩放、翻页和全屏。';
+      '在大屏幕上横屏时，可以在这里加载谱子图片或 PDF，一边听节拍器一边看谱练习。支持缩放、翻页和全屏。';
 
   @override
   String get notesLoaded => '个音符已加载';
@@ -689,4 +686,148 @@ class AppLocalizationsZh extends AppLocalizations {
   String noPlayableAssets(String instrument) {
     return '找不到 $instrument 的可播放资源';
   }
+
+  @override
+  String get instrumentPiano => '钢琴 A';
+
+  @override
+  String get instrumentUprightPiano => '钢琴 B';
+
+  @override
+  String get instrumentPipa => '琵琶';
+
+  @override
+  String get instrumentRuan => '阮';
+
+  @override
+  String get instrumentGuzheng => '古筝';
+
+  @override
+  String get instrumentErhu => '二胡';
+
+  @override
+  String get instrumentFlute => '竹笛';
+
+  @override
+  String get instrumentShamisen => '三味线';
+
+  @override
+  String get instrumentHarmonium => '簧风琴';
+
+  @override
+  String get instrumentTabla => '塔布拉鼓';
+
+  @override
+  String get instrumentOud => '乌德琴';
+
+  @override
+  String get instrumentQanun => '卡龙琴';
+
+  @override
+  String get instrumentDuduk => '都都克管';
+
+  @override
+  String get instrumentNey => '奈伊笛';
+
+  @override
+  String get instrumentTanbur => '坦布尔琴';
+
+  @override
+  String get instrumentCelesta => '钢片琴';
+
+  @override
+  String get instrumentHarp => '竖琴';
+
+  @override
+  String get instrumentClarinet => '单簧管';
+
+  @override
+  String get instrumentOboe => '双簧管';
+
+  @override
+  String get instrumentTrumpet => '小号';
+
+  @override
+  String get instrumentFrenchHorn => '圆号';
+
+  @override
+  String get instrumentAcousticGuitar => '木吉他';
+
+  @override
+  String get instrumentElectricGuitar => '电吉他';
+
+  @override
+  String get instrumentAcousticBass => '原声贝斯';
+
+  @override
+  String get instrumentBianzhong => '编钟';
+
+  @override
+  String get instrumentMarimba => '马林巴';
+
+  @override
+  String get regionWestern => '西方';
+
+  @override
+  String get regionEastAsian => '东亚';
+
+  @override
+  String get regionMiddleEastern => '中东';
+
+  @override
+  String get regionSouthAsian => '南亚';
+
+  @override
+  String get regionOther => '其他';
+
+  @override
+  String get clickSoundClassic => '经典';
+
+  @override
+  String get clickSoundQuartz => '石英';
+
+  @override
+  String get clickSoundStick => '鼓棒';
+
+  @override
+  String get clickSoundPracticePad => '练习垫';
+
+  @override
+  String get clickSoundGlass => '玻璃';
+
+  @override
+  String get clickSoundMetal => '金属';
+
+  @override
+  String get clickSoundSnap => '响指';
+
+  @override
+  String get clickSoundClap => '拍手';
+
+  @override
+  String get clickSoundTambourine => '铃鼓';
+
+  @override
+  String get clickSoundCan => '易拉罐';
+
+  @override
+  String get clickSoundClickToy => '响片';
+
+  @override
+  String get clickSoundWoodBlock => '木块';
+
+  @override
+  String get dailyGoal => '每日目标';
+
+  @override
+  String get exampleMajorScaleName => '大调音阶上下行';
+
+  @override
+  String get exampleMajorScaleDescription => '一条简单的西方音阶，先上行再下行。';
+
+  @override
+  String get exampleChandrakaunName => '钱德拉考恩斯拉格循环';
+
+  @override
+  String get exampleChandrakaunDescription => '简短的上下行循环：Sa、降 Ga、Ma、降 Dha、Ni。';
 }

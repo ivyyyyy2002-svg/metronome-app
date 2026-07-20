@@ -44,12 +44,12 @@ void main() {
     await tester.pumpWidget(await _buildHome());
     await _settle(tester);
 
-    expect(find.text('Welcome! Practice starts here'), findsOneWidget);
+    expect(find.text('Welcome. Practice starts here'), findsOneWidget);
 
     // Close it so no tickers/timers leak into teardown.
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Welcome! Practice starts here'), findsNothing);
+    expect(find.text('Welcome. Practice starts here'), findsNothing);
   });
 
   testWidgets('settings replay starts the tutorial again', (tester) async {
@@ -59,20 +59,20 @@ void main() {
     await _settle(tester);
 
     // Seen flag set: no tutorial on open.
-    expect(find.text('Welcome! Practice starts here'), findsNothing);
+    expect(find.text('Welcome. Practice starts here'), findsNothing);
 
     // Open settings sheet.
     await tester.tap(find.byIcon(Icons.settings_rounded));
     await _settle(tester, 8);
-    expect(find.text('Watch tutorial again'), findsOneWidget);
+    expect(find.text('Replay tutorial'), findsOneWidget);
 
     // Tap replay (scroll it into view first in case the sheet scrolls).
-    await tester.ensureVisible(find.text('Watch tutorial again'));
+    await tester.ensureVisible(find.text('Replay tutorial'));
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.text('Watch tutorial again'));
+    await tester.tap(find.text('Replay tutorial'));
     await _settle(tester, 15);
 
-    expect(find.text('Welcome! Practice starts here'), findsOneWidget);
+    expect(find.text('Welcome. Practice starts here'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump(const Duration(milliseconds: 300));
@@ -85,12 +85,12 @@ void main() {
     SharedPreferences.setMockInitialValues({'app_tutorial_seen_v2': true});
     await tester.pumpWidget(await _buildHome());
     await _settle(tester);
-    expect(find.text('Welcome! Practice starts here'), findsNothing);
+    expect(find.text('Welcome. Practice starts here'), findsNothing);
 
     await tester.tap(find.byIcon(Icons.help_outline_rounded));
     await _settle(tester);
 
-    expect(find.text('Welcome! Practice starts here'), findsOneWidget);
+    expect(find.text('Welcome. Practice starts here'), findsOneWidget);
 
     // Interactive tab step: highlight allows real taps on the tab bar.
     await tester.tap(find.text('Next')); // to history step

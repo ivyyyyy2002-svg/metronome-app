@@ -737,7 +737,7 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialReplay.
   ///
   /// In en, this message translates to:
-  /// **'Watch tutorial again'**
+  /// **'Replay tutorial'**
   String get tutorialReplay;
 
   /// No description provided for @tutorialTryIt.
@@ -761,7 +761,7 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialTempoBody.
   ///
   /// In en, this message translates to:
-  /// **'The pendulum swings once per beat, and the big number is the tempo in BPM (beats per minute) — how many beats fit into one minute. The row of dots shows where you are inside the bar: the brighter first dot is the accented downbeat.'**
+  /// **'The pendulum swings once per beat. The big number is the tempo in BPM, or beats per minute. The row of dots shows where you are in the bar, and the brightest dot is the accented downbeat.'**
   String get tutorialTempoBody;
 
   /// No description provided for @tutorialTempoExample.
@@ -773,13 +773,13 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialBpmDragTitle.
   ///
   /// In en, this message translates to:
-  /// **'Set your own tempo'**
+  /// **'Set the tempo'**
   String get tutorialBpmDragTitle;
 
   /// No description provided for @tutorialBpmDragBody.
   ///
   /// In en, this message translates to:
-  /// **'Slow practice is the secret to clean playing: pick a tempo where you can play every note correctly, and only raise it once it feels easy. The slider goes from 30 (very slow) to 240 (very fast).'**
+  /// **'Pick a tempo where you can play every note correctly, then raise it once that feels easy. The slider runs from 30 to 240.'**
   String get tutorialBpmDragBody;
 
   /// No description provided for @tutorialBpmDragAction.
@@ -797,25 +797,25 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialSequenceBody.
   ///
   /// In en, this message translates to:
-  /// **'This metronome does more than click — it can play a melody, one note per beat, looping your pattern while you play along. This panel shows the pattern loaded right now. Tap it any time to edit the notes without leaving this page.'**
+  /// **'This metronome does more than click. It plays your note pattern as a melody, one note per beat, looping while you play along. This panel shows the pattern loaded right now. Tap it to edit the notes.'**
   String get tutorialSequenceBody;
 
   /// No description provided for @tutorialToggleTitle.
   ///
   /// In en, this message translates to:
-  /// **'Click, notes, or both'**
+  /// **'Click and Sound'**
   String get tutorialToggleTitle;
 
   /// No description provided for @tutorialToggleBody.
   ///
   /// In en, this message translates to:
-  /// **'\"Click\" is the classic tick that keeps time. \"Sound\" plays your note pattern on the selected instrument. Keep both on to hear the melody riding on top of the beat, or turn one off to focus.'**
+  /// **'\"Click\" is the classic tick that keeps time. \"Sound\" plays your note pattern on the selected instrument. Keep both on to hear the melody over the beat, or turn one off to focus on the other.'**
   String get tutorialToggleBody;
 
   /// No description provided for @tutorialToggleAction.
   ///
   /// In en, this message translates to:
-  /// **'tap one of the switches off, then on again.'**
+  /// **'turn one switch off, then on again.'**
   String get tutorialToggleAction;
 
   /// No description provided for @tutorialMeterTitle.
@@ -827,25 +827,25 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialMeterBody.
   ///
   /// In en, this message translates to:
-  /// **'The time signature groups beats into bars: in 4/4 you count 1-2-3-4 and start over, and beat 1 gets the accent. The beat unit subdivides each beat into smaller clicks, which helps when your notes move faster than the beat.'**
+  /// **'The time signature groups beats into bars. In 4/4 you count 1-2-3-4 and start over, and beat 1 gets the accent. Subdivision splits each beat into smaller clicks, which helps when your notes move faster than the beat.'**
   String get tutorialMeterBody;
 
   /// No description provided for @tutorialMeterExample.
   ///
   /// In en, this message translates to:
-  /// **'4/4 = 4 beats per bar (most common)\n3/4 = counts in 3, like a waltz\nEighth beat unit = 2 clicks per beat'**
+  /// **'4/4 = 4 beats per bar, the most common\n3/4 = counts in 3, like a waltz\nEighth subdivision = 2 clicks per beat'**
   String get tutorialMeterExample;
 
   /// No description provided for @tutorialTransportTitle.
   ///
   /// In en, this message translates to:
-  /// **'Hear it live'**
+  /// **'Hear it'**
   String get tutorialTransportTitle;
 
   /// No description provided for @tutorialTransportBody.
   ///
   /// In en, this message translates to:
-  /// **'Everything is set — press Start and listen: the accented first beat, then your notes landing on each beat. Stop pauses the session; Reset jumps back to the beginning of your pattern.'**
+  /// **'Everything is set. Press Start and listen: the accented first beat, then your notes landing on each beat. Stop pauses the session, and Reset returns to the beginning of your pattern.'**
   String get tutorialTransportBody;
 
   /// No description provided for @tutorialTransportAction.
@@ -863,43 +863,43 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialAdvancedBody.
   ///
   /// In en, this message translates to:
-  /// **'When the defaults feel limiting, open this panel to change the click sound, choose the instrument that plays your notes, adjust accents, or shift the base octave up and down.'**
+  /// **'When the defaults feel limiting, open this panel to change the click sound, choose the instrument that plays your notes, adjust accents, or shift the base octave.'**
   String get tutorialAdvancedBody;
 
   /// No description provided for @tutorialHomePracticeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Welcome! Practice starts here'**
+  /// **'Welcome. Practice starts here'**
   String get tutorialHomePracticeTitle;
 
   /// No description provided for @tutorialHomePracticeBody.
   ///
   /// In en, this message translates to:
-  /// **'Metrinote is a metronome that can also play the notes you want to practice, so you hear the beat and the melody together. This button opens the practice page with your current note pattern already loaded.'**
+  /// **'Metrinote is a metronome that also plays the notes you want to practice, so you hear the beat and the melody together. This button opens the practice page with your current note pattern loaded.'**
   String get tutorialHomePracticeBody;
 
   /// No description provided for @tutorialHomeHistoryTitle.
   ///
   /// In en, this message translates to:
-  /// **'Your practice history'**
+  /// **'Practice history'**
   String get tutorialHomeHistoryTitle;
 
   /// No description provided for @tutorialHomeHistoryBody.
   ///
   /// In en, this message translates to:
-  /// **'Every session is tracked here: minutes practiced over the last 7 days, your most used tempo, and your favorite instrument. Set a daily goal and the progress ring keeps you honest.'**
+  /// **'Every session is recorded here: minutes practiced over the last 7 days, your most used tempo, and your most used instrument. Set a daily goal and the progress ring shows how far along you are.'**
   String get tutorialHomeHistoryBody;
 
   /// No description provided for @tutorialHomeTabsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Four tabs, one workflow'**
+  /// **'Four tabs'**
   String get tutorialHomeTabsTitle;
 
   /// No description provided for @tutorialHomeTabsBody.
   ///
   /// In en, this message translates to:
-  /// **'Practice is home base. Sequences is where you build and save note patterns. Tools generates patterns for you. Basics explains the music terms this app uses. Let\'s visit them in order.'**
+  /// **'Practice is the main page. Sequences is where you create and save note patterns. Tools generates patterns for you. Basics explains the music terms this app uses. Let\'s go through them in order.'**
   String get tutorialHomeTabsBody;
 
   /// No description provided for @tutorialHomeExamplesTitle.
@@ -911,7 +911,7 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialHomeExamplesBody.
   ///
   /// In en, this message translates to:
-  /// **'Not sure what to practice? These ready-made patterns load with one tap — a Western major scale or an Eastern raga cycle. Load one, then tweak it to make it yours.'**
+  /// **'Not sure what to practice? These ready-made patterns load with one tap, including a Western major scale and an Eastern raga cycle. Load one, then change it into your own.'**
   String get tutorialHomeExamplesBody;
 
   /// No description provided for @tutorialHomeSequencesTitle.
@@ -923,7 +923,7 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialHomeSequencesBody.
   ///
   /// In en, this message translates to:
-  /// **'Type note names separated by spaces, or tap the note chips below the field. Both Western letters (A B C…) and Eastern sargam (S R G M…) work. Give the pattern a name and save it to reuse any time.'**
+  /// **'Type note names separated by spaces, or tap the note buttons below the field. Western letters (A B C…) and Eastern sargam (S R G M…) both work. Give the pattern a name and save it to load again later.'**
   String get tutorialHomeSequencesBody;
 
   /// No description provided for @tutorialHomeSequencesExample.
@@ -935,13 +935,13 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialHomeToolsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Let Tools do the typing'**
+  /// **'Let Tools generate patterns'**
   String get tutorialHomeToolsTitle;
 
   /// No description provided for @tutorialHomeToolsBody.
   ///
   /// In en, this message translates to:
-  /// **'Tools has two generators that write patterns for you: a scale builder and a jianpu (numbered notation) converter. Let\'s take a quick look at both.'**
+  /// **'The Tools tab has two generators: a scale builder and a jianpu converter. Both write patterns for you. Let\'s look at each.'**
   String get tutorialHomeToolsBody;
 
   /// No description provided for @tutorialHomeScaleGenTitle.
@@ -953,7 +953,7 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialHomeScaleGenBody.
   ///
   /// In en, this message translates to:
-  /// **'Pick a root key, scale type, octave range, and direction — it writes the full pattern for you. \"Use pattern\" drops the result straight into your sequence editor.'**
+  /// **'Pick a root key, scale type, octave range, and direction, and it writes the full pattern. \"Use as Sequence\" drops the result into your sequence editor.'**
   String get tutorialHomeScaleGenBody;
 
   /// No description provided for @tutorialHomeJianpuTitle.
@@ -965,31 +965,31 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialHomeJianpuBody.
   ///
   /// In en, this message translates to:
-  /// **'If you read numbered notation (1 2 3 = do re mi), paste it here and it becomes a playable pattern. Octave dots and dashes for held notes are understood too.'**
+  /// **'If you read numbered notation (1 2 3 = do re mi), paste it here and it becomes a playable pattern. Octave dots and dashes for held notes are recognized too.'**
   String get tutorialHomeJianpuBody;
 
   /// No description provided for @tutorialHomeBasicsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Learn the words'**
+  /// **'Learn the terms'**
   String get tutorialHomeBasicsTitle;
 
   /// No description provided for @tutorialHomeBasicsBody.
   ///
   /// In en, this message translates to:
-  /// **'One more stop: Basics is a plain-language glossary of every term this app uses. Let\'s read the four most important ones together.'**
+  /// **'One more stop. Basics is a plain-language glossary of every music term this app uses. Let\'s read the four most important ones.'**
   String get tutorialHomeBasicsBody;
 
   /// No description provided for @tutorialBasicsBpmBody.
   ///
   /// In en, this message translates to:
-  /// **'BPM means beats per minute: 60 BPM is exactly one beat every second. This is the number you set with the tempo slider on the practice page. Golden rule: start slower than feels comfortable.'**
+  /// **'BPM means beats per minute, so 60 BPM is exactly one beat every second. This is the number you set with the tempo slider on the practice page. The rule of thumb is to start slower than feels comfortable.'**
   String get tutorialBasicsBpmBody;
 
   /// No description provided for @tutorialBasicsMeterBody.
   ///
   /// In en, this message translates to:
-  /// **'The top number says how many beats each bar contains, and beat 1 always gets the accent. You choose this in the meter chip on the practice page — 4/4 is the safe default for most music.'**
+  /// **'The top number says how many beats each bar contains, and beat 1 always gets the accent. You choose it with the meter button on the practice page. For most music 4/4 is a safe default.'**
   String get tutorialBasicsMeterBody;
 
   /// No description provided for @tutorialBasicsSubdivisionBody.
@@ -1001,31 +1001,31 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialBasicsNotationBody.
   ///
   /// In en, this message translates to:
-  /// **'This app accepts two naming systems for the same notes: Western letters (C D E F G A B) and Eastern sargam (S R G M P D N). The nearby cards explain octave marks, held notes, and grouping.'**
+  /// **'The same notes have two naming systems, and this app accepts both: Western letters (C D E F G A B) and Eastern sargam (S R G M P D N). The nearby cards also cover octave marks, held notes, and grouping.'**
   String get tutorialBasicsNotationBody;
 
   /// No description provided for @tutorialHomeReturnTitle.
   ///
   /// In en, this message translates to:
-  /// **'Back to home base'**
+  /// **'Back to the main page'**
   String get tutorialHomeReturnTitle;
 
   /// No description provided for @tutorialHomeReturnBody.
   ///
   /// In en, this message translates to:
-  /// **'That\'s the tour of the tabs. Select Practice yourself so you always know how to get back to your starting point.'**
+  /// **'That\'s all four tabs. Tap Practice yourself to return to the main page, so you always know how to get back.'**
   String get tutorialHomeReturnBody;
 
   /// No description provided for @tutorialStartSessionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Start when you are ready'**
+  /// **'Start when you\'re ready'**
   String get tutorialStartSessionTitle;
 
   /// No description provided for @tutorialStartSessionBody.
   ///
   /// In en, this message translates to:
-  /// **'Now press Start Metronome yourself. That opens the practice workspace, where the hands-on metronome tutorial will continue.'**
+  /// **'Now press Start Metronome. That opens the practice page, where the hands-on metronome tutorial continues.'**
   String get tutorialStartSessionBody;
 
   /// No description provided for @tutorialHomeSettingsTitle.
@@ -1037,19 +1037,19 @@ abstract class AppLocalizations {
   /// No description provided for @tutorialHomeSettingsBody.
   ///
   /// In en, this message translates to:
-  /// **'Theme, colors, and language live behind this gear. If you ever forget how something works, open Settings and tap \"Watch tutorial again\". Press Done, then we\'ll return to Practice together.'**
+  /// **'Theme, colors, and language live behind this gear. If you ever forget how something works, open Settings and tap \"Replay tutorial\". Press Done and we\'ll return to Practice.'**
   String get tutorialHomeSettingsBody;
 
   /// No description provided for @tutorialScoreTitle.
   ///
   /// In en, this message translates to:
-  /// **'Score practice on iPad'**
+  /// **'Sheet music in landscape'**
   String get tutorialScoreTitle;
 
   /// No description provided for @tutorialScoreBody.
   ///
   /// In en, this message translates to:
-  /// **'On larger screens in landscape, load a sheet-music image or PDF here and practice while the metronome stays visible beside it. You can zoom, flip pages, and go fullscreen.'**
+  /// **'On larger screens in landscape, load a sheet-music image or PDF here and practice with the metronome beside it. You can zoom, flip pages, and go fullscreen.'**
   String get tutorialScoreBody;
 
   /// No description provided for @notesLoaded.
@@ -1375,6 +1375,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No playable assets found for {instrument}'**
   String noPlayableAssets(String instrument);
+
+  /// No description provided for @instrumentPiano.
+  ///
+  /// In en, this message translates to:
+  /// **'Piano A'**
+  String get instrumentPiano;
+
+  /// No description provided for @instrumentUprightPiano.
+  ///
+  /// In en, this message translates to:
+  /// **'Piano B'**
+  String get instrumentUprightPiano;
+
+  /// No description provided for @instrumentPipa.
+  ///
+  /// In en, this message translates to:
+  /// **'Pipa'**
+  String get instrumentPipa;
+
+  /// No description provided for @instrumentRuan.
+  ///
+  /// In en, this message translates to:
+  /// **'Ruan'**
+  String get instrumentRuan;
+
+  /// No description provided for @instrumentGuzheng.
+  ///
+  /// In en, this message translates to:
+  /// **'Guzheng'**
+  String get instrumentGuzheng;
+
+  /// No description provided for @instrumentErhu.
+  ///
+  /// In en, this message translates to:
+  /// **'Erhu'**
+  String get instrumentErhu;
+
+  /// No description provided for @instrumentFlute.
+  ///
+  /// In en, this message translates to:
+  /// **'Bamboo Flute'**
+  String get instrumentFlute;
+
+  /// No description provided for @instrumentShamisen.
+  ///
+  /// In en, this message translates to:
+  /// **'Shamisen'**
+  String get instrumentShamisen;
+
+  /// No description provided for @instrumentHarmonium.
+  ///
+  /// In en, this message translates to:
+  /// **'Harmonium'**
+  String get instrumentHarmonium;
+
+  /// No description provided for @instrumentTabla.
+  ///
+  /// In en, this message translates to:
+  /// **'Tabla'**
+  String get instrumentTabla;
+
+  /// No description provided for @instrumentOud.
+  ///
+  /// In en, this message translates to:
+  /// **'Oud'**
+  String get instrumentOud;
+
+  /// No description provided for @instrumentQanun.
+  ///
+  /// In en, this message translates to:
+  /// **'Qanun'**
+  String get instrumentQanun;
+
+  /// No description provided for @instrumentDuduk.
+  ///
+  /// In en, this message translates to:
+  /// **'Duduk'**
+  String get instrumentDuduk;
+
+  /// No description provided for @instrumentNey.
+  ///
+  /// In en, this message translates to:
+  /// **'Ney'**
+  String get instrumentNey;
+
+  /// No description provided for @instrumentTanbur.
+  ///
+  /// In en, this message translates to:
+  /// **'Tanbur'**
+  String get instrumentTanbur;
+
+  /// No description provided for @instrumentCelesta.
+  ///
+  /// In en, this message translates to:
+  /// **'Celesta'**
+  String get instrumentCelesta;
+
+  /// No description provided for @instrumentHarp.
+  ///
+  /// In en, this message translates to:
+  /// **'Harp'**
+  String get instrumentHarp;
+
+  /// No description provided for @instrumentClarinet.
+  ///
+  /// In en, this message translates to:
+  /// **'Clarinet'**
+  String get instrumentClarinet;
+
+  /// No description provided for @instrumentOboe.
+  ///
+  /// In en, this message translates to:
+  /// **'Oboe'**
+  String get instrumentOboe;
+
+  /// No description provided for @instrumentTrumpet.
+  ///
+  /// In en, this message translates to:
+  /// **'Trumpet'**
+  String get instrumentTrumpet;
+
+  /// No description provided for @instrumentFrenchHorn.
+  ///
+  /// In en, this message translates to:
+  /// **'French Horn'**
+  String get instrumentFrenchHorn;
+
+  /// No description provided for @instrumentAcousticGuitar.
+  ///
+  /// In en, this message translates to:
+  /// **'Acoustic Guitar'**
+  String get instrumentAcousticGuitar;
+
+  /// No description provided for @instrumentElectricGuitar.
+  ///
+  /// In en, this message translates to:
+  /// **'Electric Guitar'**
+  String get instrumentElectricGuitar;
+
+  /// No description provided for @instrumentAcousticBass.
+  ///
+  /// In en, this message translates to:
+  /// **'Acoustic Bass'**
+  String get instrumentAcousticBass;
+
+  /// No description provided for @instrumentBianzhong.
+  ///
+  /// In en, this message translates to:
+  /// **'Bianzhong'**
+  String get instrumentBianzhong;
+
+  /// No description provided for @instrumentMarimba.
+  ///
+  /// In en, this message translates to:
+  /// **'Marimba'**
+  String get instrumentMarimba;
+
+  /// No description provided for @regionWestern.
+  ///
+  /// In en, this message translates to:
+  /// **'Western'**
+  String get regionWestern;
+
+  /// No description provided for @regionEastAsian.
+  ///
+  /// In en, this message translates to:
+  /// **'East Asian'**
+  String get regionEastAsian;
+
+  /// No description provided for @regionMiddleEastern.
+  ///
+  /// In en, this message translates to:
+  /// **'Middle Eastern'**
+  String get regionMiddleEastern;
+
+  /// No description provided for @regionSouthAsian.
+  ///
+  /// In en, this message translates to:
+  /// **'South Asian'**
+  String get regionSouthAsian;
+
+  /// No description provided for @regionOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get regionOther;
+
+  /// No description provided for @clickSoundClassic.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get clickSoundClassic;
+
+  /// No description provided for @clickSoundQuartz.
+  ///
+  /// In en, this message translates to:
+  /// **'Quartz'**
+  String get clickSoundQuartz;
+
+  /// No description provided for @clickSoundStick.
+  ///
+  /// In en, this message translates to:
+  /// **'Stick'**
+  String get clickSoundStick;
+
+  /// No description provided for @clickSoundPracticePad.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Pad'**
+  String get clickSoundPracticePad;
+
+  /// No description provided for @clickSoundGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass'**
+  String get clickSoundGlass;
+
+  /// No description provided for @clickSoundMetal.
+  ///
+  /// In en, this message translates to:
+  /// **'Metal'**
+  String get clickSoundMetal;
+
+  /// No description provided for @clickSoundSnap.
+  ///
+  /// In en, this message translates to:
+  /// **'Snap'**
+  String get clickSoundSnap;
+
+  /// No description provided for @clickSoundClap.
+  ///
+  /// In en, this message translates to:
+  /// **'Clap'**
+  String get clickSoundClap;
+
+  /// No description provided for @clickSoundTambourine.
+  ///
+  /// In en, this message translates to:
+  /// **'Tambourine'**
+  String get clickSoundTambourine;
+
+  /// No description provided for @clickSoundCan.
+  ///
+  /// In en, this message translates to:
+  /// **'Can'**
+  String get clickSoundCan;
+
+  /// No description provided for @clickSoundClickToy.
+  ///
+  /// In en, this message translates to:
+  /// **'Click Toy'**
+  String get clickSoundClickToy;
+
+  /// No description provided for @clickSoundWoodBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Wood Block'**
+  String get clickSoundWoodBlock;
+
+  /// No description provided for @dailyGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Goal'**
+  String get dailyGoal;
+
+  /// No description provided for @exampleMajorScaleName.
+  ///
+  /// In en, this message translates to:
+  /// **'Major Scale Up and Down'**
+  String get exampleMajorScaleName;
+
+  /// No description provided for @exampleMajorScaleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A simple ascending and descending Western scale.'**
+  String get exampleMajorScaleDescription;
+
+  /// No description provided for @exampleChandrakaunName.
+  ///
+  /// In en, this message translates to:
+  /// **'Chandrakaun Raga Cycle'**
+  String get exampleChandrakaunName;
+
+  /// No description provided for @exampleChandrakaunDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A compact aroha-avaroha loop: Sa, komal Ga, Ma, komal Dha, Ni.'**
+  String get exampleChandrakaunDescription;
 }
 
 class _AppLocalizationsDelegate

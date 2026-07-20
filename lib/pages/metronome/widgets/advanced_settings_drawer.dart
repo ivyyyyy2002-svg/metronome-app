@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../language/app_language_text.dart';
 import '../instrument_names.dart';
 
 // Drawer widget for advanced metronome settings like base pitch
 class AdvancedSettingsDrawer extends StatelessWidget {
   const AdvancedSettingsDrawer({
     super.key,
+    required this.text,
     required this.baseOctave,
     required this.minBaseOctave,
     required this.maxBaseOctave,
@@ -30,6 +32,7 @@ class AdvancedSettingsDrawer extends StatelessWidget {
     required this.missingInstrumentLabel,
   });
 
+  final AppLanguageText text;
   final int baseOctave;
   final int minBaseOctave;
   final int maxBaseOctave;
@@ -171,6 +174,7 @@ class AdvancedSettingsDrawer extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           _InstrumentChipSelector(
+            text: text,
             instruments: instruments,
             instrumentAvailability: instrumentAvailability,
             selectedInstrument: selectedInstrument,
@@ -236,6 +240,7 @@ class _VolumeSlider extends StatelessWidget {
 
 class _InstrumentChipSelector extends StatelessWidget {
   const _InstrumentChipSelector({
+    required this.text,
     required this.instruments,
     required this.instrumentAvailability,
     required this.selectedInstrument,
@@ -243,6 +248,7 @@ class _InstrumentChipSelector extends StatelessWidget {
     required this.missingInstrumentLabel,
   });
 
+  final AppLanguageText text;
   final List<String> instruments;
   final Map<String, bool> instrumentAvailability;
   final String selectedInstrument;
@@ -251,7 +257,7 @@ class _InstrumentChipSelector extends StatelessWidget {
 
   static const List<_InstrumentRegion> _instrumentRegions = [
     _InstrumentRegion(
-      label: 'Western',
+      id: 'western',
       instruments: [
         'piano',
         'uprightPiano',
@@ -268,7 +274,7 @@ class _InstrumentChipSelector extends StatelessWidget {
       ],
     ),
     _InstrumentRegion(
-      label: 'East Asian',
+      id: 'eastAsian',
       instruments: [
         'pipa',
         'ruan',
@@ -280,16 +286,32 @@ class _InstrumentChipSelector extends StatelessWidget {
       ],
     ),
     _InstrumentRegion(
-      label: 'Middle Eastern',
+      id: 'middleEastern',
       instruments: ['oud', 'qanun', 'duduk', 'ney', 'tanbur'],
     ),
     _InstrumentRegion(
-      label: 'South Asian',
+      id: 'southAsian',
       instruments: ['harmonium', 'tabla'],
     ),
   ];
 
-  String _displayName(String instrument) => instrumentDisplayName(instrument);
+  String _displayName(String instrument) =>
+      instrumentDisplayName(text, instrument);
+
+  String _regionLabel(_InstrumentRegion region) {
+    switch (region.id) {
+      case 'western':
+        return text.regionWestern;
+      case 'eastAsian':
+        return text.regionEastAsian;
+      case 'middleEastern':
+        return text.regionMiddleEastern;
+      case 'southAsian':
+        return text.regionSouthAsian;
+      default:
+        return text.regionOther;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +326,7 @@ class _InstrumentChipSelector extends StatelessWidget {
       ..._instrumentRegions,
       if (uncategorizedInstruments.isNotEmpty)
         _InstrumentRegion(
-          label: 'Other',
+          id: 'other',
           instruments: uncategorizedInstruments,
         ),
     ];
@@ -327,7 +349,7 @@ class _InstrumentChipSelector extends StatelessWidget {
     if (visibleInstruments.isEmpty) return const SizedBox.shrink();
 
     return ExpansionTile(
-      key: PageStorageKey<String>('instrument-region-${region.label}'),
+      key: PageStorageKey<String>('instrument-region-${region.id}'),
       initiallyExpanded: visibleInstruments.contains(selectedInstrument),
       tilePadding: EdgeInsets.zero,
       childrenPadding: const EdgeInsets.only(bottom: 12),
@@ -339,7 +361,7 @@ class _InstrumentChipSelector extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              region.label,
+              _regionLabel(region),
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -398,8 +420,10 @@ class _InstrumentChipSelector extends StatelessWidget {
 }
 
 class _InstrumentRegion {
-  const _InstrumentRegion({required this.label, required this.instruments});
+  const _InstrumentRegion({required this.id, required this.instruments});
 
-  final String label;
+  /// Stable, non-localized identifier. Used for the [PageStorageKey] so that
+  /// expansion state survives a language change.
+  final String id;
   final List<String> instruments;
 }

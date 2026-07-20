@@ -299,13 +299,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bpm => 'BPM';
 
   @override
-  String get start => 'Start';
+  String get start => 'Démarrer';
 
   @override
-  String get stop => 'Stop';
+  String get stop => 'Arrêter';
 
   @override
-  String get reset => 'Reset';
+  String get reset => 'Réinitialiser';
 
   @override
   String get click => 'Clic';
@@ -347,188 +347,187 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tutorialTryIt => 'Essayez :';
 
   @override
-  String get tutorialWellDone => 'Bravo !';
+  String get tutorialWellDone => 'Bien !';
 
   @override
-  String get tutorialTempoTitle => 'Tempo, temps et pendule';
+  String get tutorialTempoTitle => 'Tempo, temps et balancier';
 
   @override
   String get tutorialTempoBody =>
-      'Le pendule oscille une fois par temps, et le grand nombre est le tempo en BPM (battements par minute) — le nombre de temps dans une minute. La rangée de points montre votre position dans la mesure : le premier point, plus lumineux, est le temps fort accentué.';
+      'Le balancier oscille une fois par temps. Le grand nombre est le tempo en BPM, c\'est-à-dire le nombre de temps par minute. La rangée de points indique où vous en êtes dans la mesure, et le point le plus lumineux est le temps fort.';
 
   @override
   String get tutorialTempoExample =>
       '60 BPM = 1 temps par seconde\n120 BPM = 2 temps par seconde (deux fois plus vite)';
 
   @override
-  String get tutorialBpmDragTitle => 'Choisissez votre tempo';
+  String get tutorialBpmDragTitle => 'Réglez le tempo';
 
   @override
   String get tutorialBpmDragBody =>
-      'Travailler lentement est le secret d\'un jeu propre : choisissez un tempo où chaque note est juste, puis augmentez petit à petit. Le curseur va de 30 (très lent) à 240 (très rapide).';
+      'Choisissez un tempo où vous jouez chaque note correctement, puis augmentez-le une fois que c\'est facile. Le curseur va de 30 à 240.';
 
   @override
   String get tutorialBpmDragAction =>
-      'glissez le curseur de tempo vers une autre valeur.';
+      'faites glisser le curseur de tempo sur n\'importe quelle valeur.';
 
   @override
   String get tutorialSequenceTitle => 'Votre motif de notes';
 
   @override
   String get tutorialSequenceBody =>
-      'Ce métronome ne fait pas que cliquer — il peut jouer une mélodie, une note par temps, en boucle, pendant que vous jouez avec lui. Ce panneau montre le motif chargé actuellement ; touchez-le à tout moment pour modifier les notes.';
+      'Ce métronome ne fait pas que cliquer. Il joue votre motif de notes comme une mélodie, une note par temps, en boucle pendant que vous jouez. Ce panneau affiche le motif chargé actuellement. Touchez-le pour modifier les notes.';
 
   @override
-  String get tutorialToggleTitle => 'Clic, notes, ou les deux';
+  String get tutorialToggleTitle => 'Clic et Son';
 
   @override
   String get tutorialToggleBody =>
-      '« Clic » est le tic-tac classique qui tient le tempo. « Notes » joue votre motif avec l\'instrument choisi. Gardez les deux pour entendre la mélodie posée sur la pulsation, ou coupez-en un pour vous concentrer.';
+      '« Clic » est le tic classique qui donne le tempo. « Son » joue votre motif de notes avec l\'instrument choisi. Laissez les deux activés pour entendre la mélodie par-dessus le temps, ou désactivez-en un pour vous concentrer sur l\'autre.';
 
   @override
   String get tutorialToggleAction =>
-      'désactivez puis réactivez l\'un des boutons.';
+      'désactivez un interrupteur, puis réactivez-le.';
 
   @override
   String get tutorialMeterTitle => 'Mesure et subdivision';
 
   @override
   String get tutorialMeterBody =>
-      'La signature rythmique groupe les temps en mesures : en 4/4 on compte 1-2-3-4 puis on recommence, et le temps 1 est accentué. L\'unité de temps subdivise chaque temps en clics plus fins, utile quand les notes vont plus vite que la pulsation.';
+      'La mesure regroupe les temps. En 4/4, vous comptez 1-2-3-4 puis recommencez, et le temps 1 est accentué. La subdivision découpe chaque temps en clics plus petits, utile quand vos notes vont plus vite que le temps.';
 
   @override
   String get tutorialMeterExample =>
-      '4/4 = 4 temps par mesure (le plus courant)\n3/4 = on compte à 3, comme une valse\nCroche = 2 clics par temps';
+      '4/4 = 4 temps par mesure, la plus courante\n3/4 = compte à 3, comme une valse\nSubdivision en croches = 2 clics par temps';
 
   @override
-  String get tutorialTransportTitle => 'Écoutez le résultat';
+  String get tutorialTransportTitle => 'Écoutez';
 
   @override
   String get tutorialTransportBody =>
-      'Tout est prêt — appuyez sur Start et écoutez : le temps fort accentué, puis vos notes sur chaque temps. Stop met en pause ; Reset revient au début du motif.';
+      'Tout est prêt. Appuyez sur Démarrer et écoutez : le premier temps accentué, puis vos notes sur chaque temps. Arrêter met la séance en pause et Réinitialiser revient au début du motif.';
 
   @override
   String get tutorialTransportAction =>
-      'appuyez sur Start et écoutez une mesure ou deux.';
+      'appuyez sur Démarrer et écoutez une ou deux mesures.';
 
   @override
-  String get tutorialAdvancedTitle => 'Paramètres avancés';
+  String get tutorialAdvancedTitle => 'Réglages avancés';
 
   @override
   String get tutorialAdvancedBody =>
       'Quand les réglages par défaut ne suffisent plus, ouvrez ce panneau pour changer le son du clic, choisir l\'instrument qui joue vos notes, ajuster les accents ou décaler l\'octave de base.';
 
   @override
-  String get tutorialHomePracticeTitle =>
-      'Bienvenue ! La pratique commence ici';
+  String get tutorialHomePracticeTitle => 'Bienvenue. La pratique commence ici';
 
   @override
   String get tutorialHomePracticeBody =>
-      'Metrinote est un métronome qui peut aussi jouer les notes que vous voulez travailler : vous entendez la pulsation et la mélodie ensemble. Ce bouton ouvre la page de pratique avec votre motif actuel déjà chargé.';
+      'Metrinote est un métronome qui joue aussi les notes que vous voulez travailler, pour entendre le temps et la mélodie ensemble. Ce bouton ouvre la page de pratique avec votre motif de notes déjà chargé.';
 
   @override
-  String get tutorialHomeHistoryTitle => 'Votre historique de pratique';
+  String get tutorialHomeHistoryTitle => 'Historique de pratique';
 
   @override
   String get tutorialHomeHistoryBody =>
-      'Chaque session est suivie ici : minutes de pratique sur les 7 derniers jours, tempo le plus utilisé et instrument favori. Fixez un objectif quotidien et l\'anneau de progression vous garde motivé.';
+      'Chaque séance est enregistrée ici : minutes travaillées sur les 7 derniers jours, votre tempo le plus utilisé et votre instrument le plus utilisé. Fixez un objectif quotidien et l\'anneau de progression montre où vous en êtes.';
 
   @override
-  String get tutorialHomeTabsTitle => 'Quatre onglets, un seul parcours';
+  String get tutorialHomeTabsTitle => 'Quatre onglets';
 
   @override
   String get tutorialHomeTabsBody =>
-      'Practice est la base. Sequences sert à créer et sauvegarder vos motifs de notes. Tools génère des motifs pour vous. Basics explique les termes musicaux de l\'app. Visitons-les dans l\'ordre.';
+      '« Pratique » est la page principale. « Motifs » sert à créer et enregistrer des motifs de notes. « Outils » les génère pour vous. « Bases » explique les termes musicaux utilisés par l\'application. Parcourons-les dans l\'ordre.';
 
   @override
-  String get tutorialHomeExamplesTitle => 'Partir d\'un exemple';
+  String get tutorialHomeExamplesTitle => 'Commencez par un exemple';
 
   @override
   String get tutorialHomeExamplesBody =>
-      'Vous ne savez pas quoi travailler ? Ces motifs prêts à l\'emploi se chargent en un geste — gamme majeure occidentale ou cycle de raga oriental. Chargez-en un, puis adaptez-le.';
+      'Vous ne savez pas quoi travailler ? Ces motifs prêts à l\'emploi se chargent en un geste, dont une gamme majeure occidentale et un cycle de raga oriental. Chargez-en un, puis adaptez-le.';
 
   @override
-  String get tutorialHomeSequencesTitle => 'Écrire votre propre motif';
+  String get tutorialHomeSequencesTitle => 'Écrivez votre propre motif';
 
   @override
   String get tutorialHomeSequencesBody =>
-      'Saisissez les noms de notes séparés par des espaces, ou touchez les pastilles sous le champ. Les lettres occidentales (A B C…) et le sargam oriental (S R G M…) fonctionnent. Nommez le motif et sauvegardez-le pour le réutiliser.';
+      'Saisissez les noms de notes séparés par des espaces, ou touchez les boutons de note sous le champ. Les lettres occidentales (A B C…) et le sargam oriental (S R G M…) fonctionnent. Donnez un nom au motif et enregistrez-le pour le recharger plus tard.';
 
   @override
   String get tutorialHomeSequencesExample =>
-      'C D E F → quatre notes, une par temps\nG - → « - » tient G un temps de plus\nE/F → « / » place deux notes dans un temps\nC\' octave aigu · C, octave grave';
+      'C D E F → quatre notes, une par temps\nG - → « - » tient G un temps de plus\nE/F → « / » place deux notes sur un temps\nC\' octave haute · C, octave basse';
 
   @override
-  String get tutorialHomeToolsTitle => 'Laissez Tools écrire pour vous';
+  String get tutorialHomeToolsTitle => 'Laissez Outils générer les motifs';
 
   @override
   String get tutorialHomeToolsBody =>
-      'Tools contient deux générateurs : un constructeur de gammes et un convertisseur de jianpu (notation chiffrée). Jetons-y un coup d\'œil.';
+      'L\'onglet « Outils » contient deux générateurs : un constructeur de gammes et un convertisseur jianpu. Les deux écrivent des motifs pour vous. Regardons chacun.';
 
   @override
-  String get tutorialHomeScaleGenTitle => 'Générateur de gammes';
+  String get tutorialHomeScaleGenTitle => 'Générateur de motifs de gamme';
 
   @override
   String get tutorialHomeScaleGenBody =>
-      'Choisissez la tonique, le type de gamme, les octaves et la direction — il écrit le motif complet. « Use pattern » l\'envoie directement dans votre éditeur.';
+      'Choisissez la tonique, le type de gamme, l\'étendue d\'octaves et la direction : il écrit le motif complet. « Utiliser comme motif » l\'envoie directement dans votre éditeur.';
 
   @override
-  String get tutorialHomeJianpuTitle => 'Convertisseur de jianpu';
+  String get tutorialHomeJianpuTitle => 'Convertisseur jianpu';
 
   @override
   String get tutorialHomeJianpuBody =>
-      'Si vous lisez la notation chiffrée (1 2 3 = do ré mi), collez-la ici et elle devient un motif jouable. Les points d\'octave et les tirets de tenue sont compris.';
+      'Si vous lisez la notation chiffrée (1 2 3 = do ré mi), collez-la ici et elle devient un motif jouable. Les points d\'octave et les tirets de notes tenues sont aussi reconnus.';
 
   @override
-  String get tutorialHomeBasicsTitle => 'Apprendre le vocabulaire';
+  String get tutorialHomeBasicsTitle => 'Apprenez les termes';
 
   @override
   String get tutorialHomeBasicsBody =>
-      'Dernière étape : Basics est un petit glossaire qui explique simplement chaque terme de l\'app. Lisons ensemble les quatre plus importants.';
+      'Encore une étape. « Bases » est un glossaire en langage simple de chaque terme musical utilisé par l\'application. Lisons les quatre plus importants.';
 
   @override
   String get tutorialBasicsBpmBody =>
-      'BPM signifie battements par minute : 60 BPM, c\'est exactement un temps par seconde. C\'est le nombre que règle le grand curseur de la page de pratique. Règle d\'or : commencez plus lentement que confortable.';
+      'BPM signifie battements par minute : 60 BPM, c\'est exactement un temps par seconde. C\'est le nombre que vous réglez avec le curseur de tempo sur la page de pratique. La règle générale : commencez plus lentement que ce qui paraît confortable.';
 
   @override
   String get tutorialBasicsMeterBody =>
-      'Le nombre du haut indique combien de temps contient chaque mesure ; le temps 1 est toujours accentué. Vous le choisissez via la pastille de mesure sur la page de pratique — 4/4 est le choix sûr.';
+      'Le chiffre du haut indique combien de temps contient chaque mesure, et le temps 1 est toujours accentué. Vous le choisissez avec le bouton de mesure sur la page de pratique. Pour la plupart des musiques, 4/4 est la valeur sûre.';
 
   @override
   String get tutorialBasicsSubdivisionBody =>
-      'La subdivision découpe chaque temps en clics égaux plus fins : les croches donnent 2 clics par temps, les doubles croches 4. Activez-la quand vos notes vont plus vite que la pulsation.';
+      'La subdivision découpe chaque temps en clics égaux plus petits : les croches donnent 2 clics par temps, les doubles croches 4. Activez-la quand vos notes vont plus vite que le temps principal.';
 
   @override
   String get tutorialBasicsNotationBody =>
-      'L\'app accepte deux systèmes pour nommer les mêmes notes : les lettres occidentales (C D E F G A B) et le sargam oriental (S R G M P D N). Les cartes voisines expliquent octaves, tenues et regroupements.';
+      'Les mêmes notes ont deux systèmes de noms, et l\'application accepte les deux : lettres occidentales (C D E F G A B) et sargam oriental (S R G M P D N). Les cartes voisines expliquent aussi les marques d\'octave, les notes tenues et les groupements.';
 
   @override
-  String get tutorialHomeReturnTitle => 'Retour à la base';
+  String get tutorialHomeReturnTitle => 'Retour à la page principale';
 
   @override
   String get tutorialHomeReturnBody =>
-      'Le tour des onglets est terminé. Sélectionnez vous-même Practice pour savoir comment revenir à votre point de départ.';
+      'Voilà les quatre onglets. Touchez « Pratique » vous-même pour revenir à la page principale, afin de toujours savoir comment y retourner.';
 
   @override
-  String get tutorialStartSessionTitle => 'Commencez quand vous êtes prêt';
+  String get tutorialStartSessionTitle => 'Commencez quand vous voulez';
 
   @override
   String get tutorialStartSessionBody =>
-      'Appuyez maintenant sur Démarrer le métronome. Le tutoriel pratique continuera ensuite dans l\'espace de pratique.';
+      'Appuyez maintenant sur « Démarrer le métronome ». Cela ouvre la page de pratique, où le tutoriel pratique du métronome continue.';
 
   @override
-  String get tutorialHomeSettingsTitle => 'Réglages et tutoriel';
+  String get tutorialHomeSettingsTitle => 'Réglages et relecture';
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Thème, couleurs et langue se trouvent derrière cet engrenage. Si vous oubliez quelque chose, ouvrez les réglages et touchez « Revoir le tutoriel ». Appuyez sur Terminé, puis revenons à Practice.';
+      'Le thème, les couleurs et la langue se trouvent derrière cet engrenage. Si vous oubliez comment quelque chose fonctionne, ouvrez les Paramètres et touchez « Revoir le tutoriel ». Appuyez sur Terminé et nous reviendrons à « Pratique ».';
 
   @override
-  String get tutorialScoreTitle => 'Partition sur iPad';
+  String get tutorialScoreTitle => 'Partitions en mode paysage';
 
   @override
   String get tutorialScoreBody =>
-      'Sur grand écran en paysage, chargez ici une partition (image ou PDF) et pratiquez avec le métronome visible à côté. Zoom, changement de page et plein écran sont disponibles.';
+      'Sur les grands écrans en mode paysage, chargez ici une image ou un PDF de partition et travaillez avec le métronome à côté. Vous pouvez zoomer, tourner les pages et passer en plein écran.';
 
   @override
   String get notesLoaded => 'notes chargées';
@@ -704,4 +703,150 @@ class AppLocalizationsFr extends AppLocalizations {
   String noPlayableAssets(String instrument) {
     return 'Aucune ressource jouable trouvée pour $instrument';
   }
+
+  @override
+  String get instrumentPiano => 'Piano A';
+
+  @override
+  String get instrumentUprightPiano => 'Piano B';
+
+  @override
+  String get instrumentPipa => 'Pipa';
+
+  @override
+  String get instrumentRuan => 'Ruan';
+
+  @override
+  String get instrumentGuzheng => 'Guzheng';
+
+  @override
+  String get instrumentErhu => 'Erhu';
+
+  @override
+  String get instrumentFlute => 'Flûte de bambou';
+
+  @override
+  String get instrumentShamisen => 'Shamisen';
+
+  @override
+  String get instrumentHarmonium => 'Harmonium';
+
+  @override
+  String get instrumentTabla => 'Tabla';
+
+  @override
+  String get instrumentOud => 'Oud';
+
+  @override
+  String get instrumentQanun => 'Qanûn';
+
+  @override
+  String get instrumentDuduk => 'Doudouk';
+
+  @override
+  String get instrumentNey => 'Ney';
+
+  @override
+  String get instrumentTanbur => 'Tanbur';
+
+  @override
+  String get instrumentCelesta => 'Célesta';
+
+  @override
+  String get instrumentHarp => 'Harpe';
+
+  @override
+  String get instrumentClarinet => 'Clarinette';
+
+  @override
+  String get instrumentOboe => 'Hautbois';
+
+  @override
+  String get instrumentTrumpet => 'Trompette';
+
+  @override
+  String get instrumentFrenchHorn => 'Cor d\'harmonie';
+
+  @override
+  String get instrumentAcousticGuitar => 'Guitare acoustique';
+
+  @override
+  String get instrumentElectricGuitar => 'Guitare électrique';
+
+  @override
+  String get instrumentAcousticBass => 'Basse acoustique';
+
+  @override
+  String get instrumentBianzhong => 'Bianzhong';
+
+  @override
+  String get instrumentMarimba => 'Marimba';
+
+  @override
+  String get regionWestern => 'Occidental';
+
+  @override
+  String get regionEastAsian => 'Asie de l\'Est';
+
+  @override
+  String get regionMiddleEastern => 'Moyen-Orient';
+
+  @override
+  String get regionSouthAsian => 'Asie du Sud';
+
+  @override
+  String get regionOther => 'Autres';
+
+  @override
+  String get clickSoundClassic => 'Classique';
+
+  @override
+  String get clickSoundQuartz => 'Quartz';
+
+  @override
+  String get clickSoundStick => 'Baguette';
+
+  @override
+  String get clickSoundPracticePad => 'Pad d\'entraînement';
+
+  @override
+  String get clickSoundGlass => 'Verre';
+
+  @override
+  String get clickSoundMetal => 'Métal';
+
+  @override
+  String get clickSoundSnap => 'Claquement de doigts';
+
+  @override
+  String get clickSoundClap => 'Claquement de mains';
+
+  @override
+  String get clickSoundTambourine => 'Tambourin';
+
+  @override
+  String get clickSoundCan => 'Canette';
+
+  @override
+  String get clickSoundClickToy => 'Clicker';
+
+  @override
+  String get clickSoundWoodBlock => 'Bloc de bois';
+
+  @override
+  String get dailyGoal => 'Objectif quotidien';
+
+  @override
+  String get exampleMajorScaleName => 'Gamme majeure montante et descendante';
+
+  @override
+  String get exampleMajorScaleDescription =>
+      'Une gamme occidentale simple, montante puis descendante.';
+
+  @override
+  String get exampleChandrakaunName => 'Cycle du raga Chandrakaun';
+
+  @override
+  String get exampleChandrakaunDescription =>
+      'Un cycle aroha-avaroha compact : Sa, Ga bémol, Ma, Dha bémol, Ni.';
 }

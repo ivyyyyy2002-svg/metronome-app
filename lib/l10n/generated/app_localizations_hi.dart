@@ -24,22 +24,22 @@ class AppLocalizationsHi extends AppLocalizations {
   String get dark => 'डार्क';
 
   @override
-  String get themeColor => 'Theme color';
+  String get themeColor => 'थीम रंग';
 
   @override
-  String get defaultThemeColor => 'Default';
+  String get defaultThemeColor => 'डिफ़ॉल्ट';
 
   @override
-  String get roseThemeColor => 'Rose';
+  String get roseThemeColor => 'गुलाबी';
 
   @override
-  String get purpleThemeColor => 'Purple';
+  String get purpleThemeColor => 'बैंगनी';
 
   @override
-  String get warmThemeColor => 'Yellow';
+  String get warmThemeColor => 'पीला';
 
   @override
-  String get tealThemeColor => 'Teal';
+  String get tealThemeColor => 'टील';
 
   @override
   String get language => 'भाषा';
@@ -66,16 +66,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get appName => 'Metrinote';
 
   @override
-  String get practiceTab => 'Practice';
+  String get practiceTab => 'अभ्यास';
 
   @override
-  String get sequencesTab => 'Sequences';
+  String get sequencesTab => 'सीक्वेंस';
 
   @override
-  String get toolsTab => 'Tools';
+  String get toolsTab => 'टूल्स';
 
   @override
-  String get basicsTab => 'Basics';
+  String get basicsTab => 'मूल बातें';
 
   @override
   String get readyTitle => 'नमस्ते,\nअभ्यास के लिए तैयार हैं?';
@@ -88,22 +88,22 @@ class AppLocalizationsHi extends AppLocalizations {
   String get startMetronome => 'मेट्रोनोम शुरू करें';
 
   @override
-  String get musicBasics => 'Music Basics';
+  String get musicBasics => 'संगीत की मूल बातें';
 
   @override
-  String get practiceHistory => 'Practice History';
+  String get practiceHistory => 'अभ्यास इतिहास';
 
   @override
-  String get todayPractice => 'Today';
+  String get todayPractice => 'आज';
 
   @override
-  String get last7Days => 'Last 7 days';
+  String get last7Days => 'पिछले 7 दिन';
 
   @override
-  String get lastSession => 'Last session';
+  String get lastSession => 'पिछला सत्र';
 
   @override
-  String get mostUsedBpm => 'Most used BPM';
+  String get mostUsedBpm => 'सर्वाधिक प्रयुक्त BPM';
 
   @override
   String get favoriteInstrument => 'पसंदीदा instrument';
@@ -123,136 +123,136 @@ class AppLocalizationsHi extends AppLocalizations {
       'BPM का मतलब beats per minute है। नया pattern सीखते समय slow BPM रखें, फिर timing steady होने पर धीरे-धीरे बढ़ाएँ।';
 
   @override
-  String get timeSignatureBasicsTitle => 'Time Signature';
+  String get timeSignatureBasicsTitle => 'ताल चिह्न';
 
   @override
   String get timeSignatureBasicsBody =>
       'ऊपर वाला नंबर बताता है कि हर bar में कितने beats हैं। 4/4 बहुत common है, और 3/4 में अक्सर waltz जैसा feel आता है।';
 
   @override
-  String get subdivisionBasicsTitle => 'Subdivision';
+  String get subdivisionBasicsTitle => 'उपविभाजन';
 
   @override
   String get subdivisionBasicsBody =>
       'Subdivision बताता है कि beat कैसे split होता है। Quarter simple रहता है; eighth और sixteenth click को ज्यादा detailed बनाते हैं।';
 
   @override
-  String get downbeatBasicsTitle => 'Downbeat';
+  String get downbeatBasicsTitle => 'पहली मात्रा';
 
   @override
   String get downbeatBasicsBody =>
       'Downbeat bar का पहला beat होता है। Strong first click से measure की shape साफ सुनाई देती है।';
 
   @override
-  String get jianpuBasicsTitle => 'Jianpu';
+  String get jianpuBasicsTitle => 'जियानपु';
 
   @override
   String get jianpuBasicsBody =>
       'Jianpu scale degrees के लिए numbers इस्तेमाल करता है, जैसे 1 2 3 5 6। Key चुनकर इसे note names से जोड़ा जा सकता है।';
 
   @override
-  String get westernNotationBasicsTitle => 'Western Notes';
+  String get westernNotationBasicsTitle => 'पश्चिमी स्वर';
 
   @override
   String get westernNotationBasicsBody =>
       'Western note names A-G इस्तेमाल करते हैं। Sharp (#) note को एक semitone ऊपर करता है, और flat (b) note को एक semitone नीचे करता है।';
 
   @override
-  String get easternNotationBasicsTitle => 'Eastern Notes';
+  String get easternNotationBasicsTitle => 'पूर्वी स्वर';
 
   @override
   String get easternNotationBasicsBody =>
       'Eastern notation Sa Re Ga Ma Pa Dha Ni इस्तेमाल करता है, या S R G M P D N. इस app में ये C D E F G A B से map होते हैं।';
 
   @override
-  String get octaveNotationBasicsTitle => 'Octaves';
+  String get octaveNotationBasicsTitle => 'सप्तक';
 
   @override
   String get octaveNotationBasicsBody =>
       'Higher octave के लिए \' और lower octave के लिए comma इस्तेमाल करें। जैसे C\' C से ऊँचा है, और C, C से नीचे है।';
 
   @override
-  String get groupedNotesBasicsTitle => 'Grouped Notes';
+  String get groupedNotesBasicsTitle => 'समूहित स्वर';
 
   @override
   String get groupedNotesBasicsBody =>
       'Space अगले beat पर ले जाता है। बिना space वाले notes एक ही beat में बजते हैं, इसलिए C D E FG में F और G चौथे beat में साथ आते हैं।';
 
   @override
-  String get heldNotesBasicsTitle => 'Held Notes';
+  String get heldNotesBasicsTitle => 'विस्तारित स्वर';
 
   @override
   String get heldNotesBasicsBody =>
       'Dash (-) previous note को अगले beat तक hold करता है। जैसे C - D E में C second beat तक चलता है।';
 
   @override
-  String get scalePatternGenerator => 'Scale Pattern Generator';
+  String get scalePatternGenerator => 'स्केल पैटर्न जनरेटर';
 
   @override
   String get scalePatternDescription =>
       'Scale practice pattern बनाएँ और note sequence में भेजें।';
 
   @override
-  String get notation => 'Notation';
+  String get notation => 'स्वरलिपि';
 
   @override
-  String get westernNotation => 'Western';
+  String get westernNotation => 'पश्चिमी';
 
   @override
-  String get easternNotation => 'Eastern';
+  String get easternNotation => 'पूर्वी';
 
   @override
-  String get rootKey => 'Root key';
+  String get rootKey => 'मूल स्वर';
 
   @override
-  String get scale => 'Scale';
+  String get scale => 'स्केल';
 
   @override
-  String get direction => 'Direction';
+  String get direction => 'दिशा';
 
   @override
-  String get ascending => 'Ascending';
+  String get ascending => 'आरोह';
 
   @override
-  String get descending => 'Descending';
+  String get descending => 'अवरोह';
 
   @override
-  String get upAndDown => 'Up and down';
+  String get upAndDown => 'आरोह-अवरोह';
 
   @override
-  String get majorPentatonic => 'Major pentatonic';
+  String get majorPentatonic => 'मेजर पेंटाटोनिक';
 
   @override
-  String get minorPentatonic => 'Minor pentatonic';
+  String get minorPentatonic => 'माइनर पेंटाटोनिक';
 
   @override
-  String get majorScale => 'Major scale';
+  String get majorScale => 'मेजर स्केल';
 
   @override
-  String get minorScale => 'Minor scale';
+  String get minorScale => 'माइनर स्केल';
 
   @override
-  String get generatedPattern => 'Generated pattern';
+  String get generatedPattern => 'उत्पन्न पैटर्न';
 
   @override
-  String get useAsSequence => 'Use as Sequence';
+  String get useAsSequence => 'सीक्वेंस के रूप में उपयोग करें';
 
   @override
   String get patternAppliedNotice =>
       'Pattern sequence editor में जोड़ दिया गया है।';
 
   @override
-  String get jianpuConverter => 'Jianpu Converter';
+  String get jianpuConverter => 'जियानपु कन्वर्टर';
 
   @override
   String get jianpuConverterDescription =>
       'Key चुनकर numbered notation को playable note names में बदलें।';
 
   @override
-  String get jianpuInput => 'Jianpu input';
+  String get jianpuInput => 'जियानपु इनपुट';
 
   @override
-  String get convertedSequence => 'Converted sequence';
+  String get convertedSequence => 'परिवर्तित सीक्वेंस';
 
   @override
   String get practiceNotePattern => 'नोट पैटर्न';
@@ -336,197 +336,197 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tutorialNext => 'आगे';
 
   @override
-  String get tutorialSkip => 'सब skip करें';
+  String get tutorialSkip => 'सब छोड़ें';
 
   @override
-  String get tutorialDone => 'पूरा';
+  String get tutorialDone => 'हो गया';
 
   @override
-  String get tutorialReplay => 'Tutorial फिर से देखें';
+  String get tutorialReplay => 'ट्यूटोरियल फिर से देखें';
 
   @override
-  String get tutorialTryIt => 'Try करें:';
+  String get tutorialTryIt => 'आज़माएँ:';
 
   @override
-  String get tutorialWellDone => 'बहुत बढ़िया!';
+  String get tutorialWellDone => 'बढ़िया!';
 
   @override
-  String get tutorialTempoTitle => 'Tempo, beat और pendulum';
+  String get tutorialTempoTitle => 'गति, मात्रा और पेंडुलम';
 
   @override
   String get tutorialTempoBody =>
-      'Pendulum हर beat पर एक बार झूलता है, और बड़ा नंबर tempo है — BPM (beats per minute), यानी एक minute में कितने beats। ऊपर के dots बताते हैं कि आप bar में कहां हैं: सबसे चमकीला पहला dot accented downbeat है।';
+      'पेंडुलम हर मात्रा पर एक बार झूलता है। बड़ा नंबर BPM में गति है, यानी प्रति मिनट कितनी मात्राएँ। बिंदुओं की पंक्ति बताती है कि आप ताल में कहाँ हैं, और सबसे चमकीला बिंदु सम है।';
 
   @override
   String get tutorialTempoExample =>
-      '60 BPM = हर second 1 beat\n120 BPM = हर second 2 beats (दुगना तेज़)';
+      '60 BPM = 1 मात्रा प्रति सेकंड\n120 BPM = 2 मात्रा प्रति सेकंड (दोगुनी तेज़)';
 
   @override
-  String get tutorialBpmDragTitle => 'अपना tempo set करें';
+  String get tutorialBpmDragTitle => 'गति सेट करें';
 
   @override
   String get tutorialBpmDragBody =>
-      'धीमी practice ही साफ बजाने का राज़ है: ऐसा tempo चुनें जहां हर note सही बजे, आसान लगने पर ही धीरे-धीरे बढ़ाएं। Slider 30 (बहुत धीमा) से 240 (बहुत तेज़) तक जाता है।';
+      'ऐसी गति चुनें जिस पर हर स्वर सही बजे, और आसान लगने पर ही बढ़ाएँ। स्लाइडर 30 से 240 तक जाता है।';
 
   @override
-  String get tutorialBpmDragAction =>
-      'tempo slider को खींचकर कोई भी value set करें।';
+  String get tutorialBpmDragAction => 'गति स्लाइडर को किसी भी मान पर खींचें।';
 
   @override
-  String get tutorialSequenceTitle => 'आपका note pattern';
+  String get tutorialSequenceTitle => 'आपका स्वर पैटर्न';
 
   @override
   String get tutorialSequenceBody =>
-      'यह metronome सिर्फ click नहीं करता — यह melody भी बजा सकता है: हर beat पर एक note, आपका pattern loop में। यह panel अभी loaded pattern दिखाता है; notes बदलने के लिए कभी भी इस पर tap करें।';
+      'यह मेट्रोनोम सिर्फ़ क्लिक नहीं करता। यह आपके स्वर पैटर्न को धुन की तरह बजाता है, हर मात्रा पर एक स्वर, और आपके साथ लूप में चलता है। यह पैनल अभी लोड किया गया पैटर्न दिखाता है। स्वर बदलने के लिए इसे टैप करें।';
 
   @override
-  String get tutorialToggleTitle => 'Click, notes, या दोनों';
+  String get tutorialToggleTitle => 'क्लिक और साउंड';
 
   @override
   String get tutorialToggleBody =>
-      '\"Click\" classic टिक-टिक है जो time पकड़कर रखती है। \"Sound\" चुने हुए instrument पर आपका note pattern बजाता है। दोनों on रखें तो melody beat के ऊपर सुनाई देती है; focus करना हो तो एक बंद कर दें।';
+      '“क्लिक” वही पारंपरिक टिक है जो समय संभालता है। “साउंड” चुने हुए वाद्य पर आपका स्वर पैटर्न बजाता है। दोनों चालू रखें तो मात्रा के ऊपर धुन सुनाई देगी, या एक बंद करके दूसरे पर ध्यान दें।';
 
   @override
-  String get tutorialToggleAction => 'कोई एक switch off करके फिर on करें।';
+  String get tutorialToggleAction => 'एक स्विच बंद करें, फिर वापस चालू करें।';
 
   @override
-  String get tutorialMeterTitle => 'Meter और subdivision';
+  String get tutorialMeterTitle => 'ताल और उपविभाजन';
 
   @override
   String get tutorialMeterBody =>
-      'Time signature beats को bars में बांटता है: 4/4 में आप 1-2-3-4 गिनकर फिर शुरू करते हैं, और beat 1 पर accent आता है। Beat unit हर beat को छोटे clicks में बांटता है — जब notes beat से तेज़ चलें तब काम आता है।';
+      'ताल चिह्न मात्राओं को ताल में बाँटता है। 4/4 में आप 1-2-3-4 गिनकर फिर से शुरू करते हैं, और पहली मात्रा पर ज़ोर होता है। उपविभाजन हर मात्रा को छोटे क्लिक में बाँटता है, जो तब काम आता है जब स्वर मात्रा से तेज़ चलें।';
 
   @override
   String get tutorialMeterExample =>
-      '4/4 = हर bar में 4 beats (सबसे common)\n3/4 = 3 की गिनती, waltz जैसा\nEighth beat unit = हर beat पर 2 clicks';
+      '4/4 = हर ताल में 4 मात्रा, सबसे आम\n3/4 = 3 की गिनती, वाल्ट्ज़ जैसी\nआठवाँ उपविभाजन = हर मात्रा पर 2 क्लिक';
 
   @override
-  String get tutorialTransportTitle => 'Live सुनें';
+  String get tutorialTransportTitle => 'सुनकर देखें';
 
   @override
   String get tutorialTransportBody =>
-      'सब set है — Start दबाकर सुनें: accented पहला beat, फिर हर beat पर आपके notes। Stop session रोकता है; Reset pattern की शुरुआत पर वापस ले जाता है।';
+      'सब तैयार है। शुरू दबाएँ और सुनें: पहली ज़ोरदार मात्रा, फिर हर मात्रा पर आपके स्वर। रोकें से सत्र रुकता है और रीसेट से पैटर्न शुरुआत पर लौटता है।';
 
   @override
-  String get tutorialTransportAction => 'Start दबाएं और एक-दो bar सुनें।';
+  String get tutorialTransportAction => 'शुरू दबाएँ और एक-दो ताल सुनें।';
 
   @override
-  String get tutorialAdvancedTitle => 'Advanced settings';
+  String get tutorialAdvancedTitle => 'उन्नत सेटिंग्स';
 
   @override
   String get tutorialAdvancedBody =>
-      'Defaults कम पड़ने लगें तो यह panel खोलें: click sound बदलें, notes बजाने वाला instrument चुनें, accents adjust करें, या base octave ऊपर-नीचे करें।';
+      'जब डिफ़ॉल्ट सेटिंग्स कम पड़ें, तो इस पैनल से क्लिक की ध्वनि बदलें, स्वर बजाने वाला वाद्य चुनें, ज़ोर समायोजित करें, या मूल सप्तक ऊपर-नीचे करें।';
 
   @override
-  String get tutorialHomePracticeTitle => 'Welcome! Practice यहां शुरू होती है';
+  String get tutorialHomePracticeTitle =>
+      'स्वागत है। अभ्यास यहीं से शुरू होता है';
 
   @override
   String get tutorialHomePracticeBody =>
-      'Metrinote एक ऐसा metronome है जो आपके practice वाले notes भी बजा सकता है — beat और melody एक साथ सुनाई देती है। यह button practice page खोलता है, आपका current note pattern पहले से loaded होगा।';
+      'Metrinote एक ऐसा मेट्रोनोम है जो आपके अभ्यास के स्वर भी बजाता है, ताकि मात्रा और धुन साथ-साथ सुनाई दें। यह बटन अभ्यास पेज खोलता है, जिसमें आपका मौजूदा स्वर पैटर्न पहले से लोड होता है।';
 
   @override
-  String get tutorialHomeHistoryTitle => 'आपकी practice history';
+  String get tutorialHomeHistoryTitle => 'अभ्यास इतिहास';
 
   @override
   String get tutorialHomeHistoryBody =>
-      'हर session यहां track होता है: पिछले 7 दिनों के practice minutes, सबसे ज्यादा use हुआ tempo, और favorite instrument। Daily goal set करें — progress ring आपको ईमानदार रखेगी।';
+      'हर सत्र यहाँ दर्ज होता है: पिछले 7 दिनों के अभ्यास के मिनट, सबसे ज़्यादा इस्तेमाल की गई गति और वाद्य। दैनिक लक्ष्य तय करें और प्रगति रिंग दिखाएगी कि आप कहाँ तक पहुँचे।';
 
   @override
-  String get tutorialHomeTabsTitle => 'चार tabs, एक workflow';
+  String get tutorialHomeTabsTitle => 'चार टैब';
 
   @override
   String get tutorialHomeTabsBody =>
-      'Practice home base है। Sequences में note patterns बनते और save होते हैं। Tools आपके लिए patterns generate करता है। Basics app के music terms समझाता है। चलिए order में देखते हैं।';
+      '“अभ्यास” मुख्य पेज है। “सीक्वेंस” में आप स्वर पैटर्न बनाते और सहेजते हैं। “टूल्स” आपके लिए पैटर्न बनाता है। “मूल बातें” ऐप में इस्तेमाल हुए संगीत शब्द समझाता है। इन्हें क्रम से देखते हैं।';
 
   @override
-  String get tutorialHomeExamplesTitle => 'Example से शुरू करें';
+  String get tutorialHomeExamplesTitle => 'उदाहरण से शुरू करें';
 
   @override
   String get tutorialHomeExamplesBody =>
-      'समझ नहीं आ रहा क्या practice करें? ये ready-made patterns एक tap में load होते हैं — Western major scale या Eastern raga cycle। एक load करें, फिर अपने हिसाब से बदलें।';
+      'समझ नहीं आ रहा क्या अभ्यास करें? ये तैयार पैटर्न एक टैप में लोड होते हैं, जिनमें एक पश्चिमी मेजर स्केल और एक पूर्वी राग चक्र शामिल है। एक लोड करें, फिर अपने हिसाब से बदलें।';
 
   @override
-  String get tutorialHomeSequencesTitle => 'अपना pattern लिखें';
+  String get tutorialHomeSequencesTitle => 'अपना पैटर्न लिखें';
 
   @override
   String get tutorialHomeSequencesBody =>
-      'Note names spaces से अलग करके type करें, या field के नीचे chips पर tap करें। Western letters (A B C…) और Eastern sargam (S R G M…) दोनों चलते हैं। नाम देकर save करें, कभी भी reuse करें।';
+      'स्वरों के नाम स्पेस से अलग करके लिखें, या नीचे दिए स्वर बटन दबाएँ। पश्चिमी अक्षर (A B C…) और पूर्वी सरगम (S R G M…) दोनों चलते हैं। पैटर्न को नाम देकर सहेजें ताकि बाद में फिर लोड कर सकें।';
 
   @override
   String get tutorialHomeSequencesExample =>
-      'C D E F → चार notes, हर beat पर एक\nG - → \'-\' G को एक beat और रोकता है\nE/F → \'/\' दो notes एक beat में\nC\' ऊंचा octave · C, नीचा octave';
+      'C D E F → चार स्वर, हर मात्रा पर एक\nG - → “-” G को एक मात्रा और खींचता है\nE/F → “/” दो स्वर एक मात्रा में रखता है\nC\' ऊँचा सप्तक · C, नीचा सप्तक';
 
   @override
-  String get tutorialHomeToolsTitle => 'Typing का काम Tools को दें';
+  String get tutorialHomeToolsTitle => 'टूल्स से पैटर्न बनवाएँ';
 
   @override
   String get tutorialHomeToolsBody =>
-      'Tools में दो generators हैं जो आपके लिए patterns लिखते हैं: scale builder और jianpu (numbered notation) converter। दोनों पर एक नज़र डालते हैं।';
+      '“टूल्स” टैब में दो जनरेटर हैं: एक स्केल बिल्डर और एक जियानपु कन्वर्टर। दोनों आपके लिए पैटर्न लिखते हैं। दोनों को देखते हैं।';
 
   @override
-  String get tutorialHomeScaleGenTitle => 'Scale pattern generator';
+  String get tutorialHomeScaleGenTitle => 'स्केल पैटर्न जनरेटर';
 
   @override
   String get tutorialHomeScaleGenBody =>
-      'Root key, scale type, octave range और direction चुनें — पूरा pattern अपने आप लिख जाता है। \"Use pattern\" result को सीधे आपके sequence editor में डाल देता है।';
+      'मूल स्वर, स्केल का प्रकार, सप्तक की सीमा और दिशा चुनें, और यह पूरा पैटर्न लिख देगा। “सीक्वेंस के रूप में उपयोग करें” उसे सीधे आपके एडिटर में डाल देता है।';
 
   @override
-  String get tutorialHomeJianpuTitle => 'Jianpu converter';
+  String get tutorialHomeJianpuTitle => 'जियानपु कन्वर्टर';
 
   @override
   String get tutorialHomeJianpuBody =>
-      'अगर आप numbered notation पढ़ते हैं (1 2 3 = do re mi), तो उसे यहां paste करें — playable pattern बन जाएगा। Octave dots और held notes के dashes भी समझ में आते हैं।';
+      'अगर आप अंकीय स्वरलिपि (1 2 3 = सा रे ग) पढ़ते हैं, तो उसे यहाँ चिपकाएँ और वह बजने योग्य पैटर्न बन जाएगी। सप्तक के बिंदु और खींचे गए स्वरों के डैश भी पहचाने जाते हैं।';
 
   @override
-  String get tutorialHomeBasicsTitle => 'Terms सीखें';
+  String get tutorialHomeBasicsTitle => 'शब्द समझें';
 
   @override
   String get tutorialHomeBasicsBody =>
-      'एक आखिरी पड़ाव: Basics एक आसान glossary है जो app के हर term को समझाती है। चलिए चार सबसे ज़रूरी terms साथ में पढ़ते हैं।';
+      'एक आख़िरी पड़ाव। “मूल बातें” ऐप में इस्तेमाल हर संगीत शब्द की सरल भाषा में शब्दावली है। चार सबसे ज़रूरी शब्द पढ़ते हैं।';
 
   @override
   String get tutorialBasicsBpmBody =>
-      'BPM मतलब beats per minute: 60 BPM यानी हर second ठीक एक beat। यही नंबर practice page के tempo slider से set होता है। Golden rule: जितना comfortable लगे उससे धीमा शुरू करें।';
+      'BPM का मतलब है प्रति मिनट मात्राएँ, यानी 60 BPM पर हर सेकंड ठीक एक मात्रा। यही वह संख्या है जो आप अभ्यास पेज के गति स्लाइडर से तय करते हैं। नियम यह है कि आरामदायक लगने वाली गति से भी धीमे शुरू करें।';
 
   @override
   String get tutorialBasicsMeterBody =>
-      'ऊपर वाला नंबर बताता है हर bar में कितने beats हैं, और beat 1 पर हमेशा accent आता है। Practice page की meter chip से यह चुना जाता है — ज़्यादातर music के लिए 4/4 safe रहता है।';
+      'ऊपर का अंक बताता है कि हर ताल में कितनी मात्राएँ हैं, और पहली मात्रा पर हमेशा ज़ोर रहता है। इसे आप अभ्यास पेज के ताल बटन से चुनते हैं। ज़्यादातर संगीत के लिए 4/4 सुरक्षित विकल्प है।';
 
   @override
   String get tutorialBasicsSubdivisionBody =>
-      'Subdivision हर beat को छोटे बराबर clicks में बांटता है: eighths से हर beat पर 2 clicks, sixteenths से 4। जब notes main beat से तेज़ चलें तब इसे use करें।';
+      'उपविभाजन हर मात्रा को छोटे बराबर क्लिक में बाँटता है: आठवाँ हर मात्रा पर 2 क्लिक देता है, सोलहवाँ 4। जब स्वर मुख्य मात्रा से तेज़ चलें तब इसे चालू करें।';
 
   @override
   String get tutorialBasicsNotationBody =>
-      'App एक ही notes के दो naming systems समझता है: Western letters (C D E F G A B) और Eastern sargam (S R G M P D N)। आस-पास के cards octave marks, held notes और grouping समझाते हैं।';
+      'एक ही स्वर के दो नाम-तंत्र हैं और ऐप दोनों स्वीकार करता है: पश्चिमी अक्षर (C D E F G A B) और पूर्वी सरगम (S R G M P D N)। पास के कार्ड सप्तक चिह्न, खींचे गए स्वर और समूह भी समझाते हैं।';
 
   @override
-  String get tutorialHomeReturnTitle => 'वापस home base पर';
+  String get tutorialHomeReturnTitle => 'मुख्य पेज पर वापस';
 
   @override
   String get tutorialHomeReturnBody =>
-      'Tabs का tour पूरा हुआ। अपने शुरुआती पेज पर लौटना सीखने के लिए खुद Practice चुनें।';
+      'चारों टैब हो गए। अब खुद “अभ्यास” टैप करके मुख्य पेज पर लौटें, ताकि आपको हमेशा वापसी का रास्ता पता रहे।';
 
   @override
-  String get tutorialStartSessionTitle => 'तैयार होने पर शुरू करें';
+  String get tutorialStartSessionTitle => 'तैयार हों तो शुरू करें';
 
   @override
   String get tutorialStartSessionBody =>
-      'अब खुद Start Metronome दबाएं। Practice workspace खुलने के बाद metronome का hands-on tutorial जारी रहेगा।';
+      'अब “मेट्रोनोम शुरू करें” दबाएँ। इससे अभ्यास पेज खुलेगा, जहाँ मेट्रोनोम का व्यावहारिक ट्यूटोरियल जारी रहेगा।';
 
   @override
-  String get tutorialHomeSettingsTitle => 'Settings और tutorial';
+  String get tutorialHomeSettingsTitle => 'सेटिंग्स और दोबारा देखना';
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Theme, colors और language इस gear के पीछे हैं। कभी कुछ भूल जाएं तो Settings खोलकर \"Tutorial फिर से देखें\" tap करें। \"पूरा\" दबाकर फिर Practice पर लौटें।';
+      'थीम, रंग और भाषा इस गियर के पीछे हैं। कभी कुछ भूल जाएँ तो सेटिंग्स खोलकर “ट्यूटोरियल फिर से देखें” दबाएँ। “हो गया” दबाएँ और हम “अभ्यास” पर लौटेंगे।';
 
   @override
-  String get tutorialScoreTitle => 'iPad score practice';
+  String get tutorialScoreTitle => 'लैंडस्केप में शीट संगीत';
 
   @override
   String get tutorialScoreBody =>
-      'बड़ी screen पर landscape में यहां sheet-music image या PDF load करें — metronome बगल में दिखता रहेगा। Zoom, page बदलना और fullscreen सब available है।';
+      'बड़े स्क्रीन पर लैंडस्केप मोड में यहाँ शीट संगीत की तस्वीर या PDF लोड करें और मेट्रोनोम को साथ रखकर अभ्यास करें। ज़ूम, पेज बदलना और फुल स्क्रीन सब कर सकते हैं।';
 
   @override
   String get notesLoaded => 'नोट्स लोड हुए';
@@ -592,31 +592,31 @@ class AppLocalizationsHi extends AppLocalizations {
   String get beatUnit => 'सबडिवीजन';
 
   @override
-  String get subdivisionHalf => 'Half';
+  String get subdivisionHalf => 'आधा';
 
   @override
-  String get subdivisionQuarter => 'Quarter';
+  String get subdivisionQuarter => 'चौथाई';
 
   @override
-  String get subdivisionEighth => 'Eighth';
+  String get subdivisionEighth => 'आठवाँ';
 
   @override
-  String get subdivisionSixteenth => 'Sixteenth';
+  String get subdivisionSixteenth => 'सोलहवाँ';
 
   @override
-  String get subdivisionDottedHalf => 'Dotted Half';
+  String get subdivisionDottedHalf => 'बिंदुयुक्त आधा';
 
   @override
-  String get subdivisionDottedQuarter => 'Dotted Quarter';
+  String get subdivisionDottedQuarter => 'बिंदुयुक्त चौथाई';
 
   @override
-  String get subdivisionDottedEighth => 'Dotted Eighth';
+  String get subdivisionDottedEighth => 'बिंदुयुक्त आठवाँ';
 
   @override
   String get missingInstrument => 'नहीं मिला';
 
   @override
-  String get scorePreview => 'Score';
+  String get scorePreview => 'शीट संगीत';
 
   @override
   String get addScore => 'Score जोड़ें';
@@ -647,7 +647,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String tutorialTapTabAction(String tabName) {
-    return 'नीचे की bar में \"$tabName\" पर tap करें।';
+    return 'नीचे की बार में “$tabName” टैप करें।';
   }
 
   @override
@@ -702,4 +702,150 @@ class AppLocalizationsHi extends AppLocalizations {
   String noPlayableAssets(String instrument) {
     return '$instrument के लिए कोई playable asset नहीं मिला';
   }
+
+  @override
+  String get instrumentPiano => 'पियानो A';
+
+  @override
+  String get instrumentUprightPiano => 'पियानो B';
+
+  @override
+  String get instrumentPipa => 'पीपा';
+
+  @override
+  String get instrumentRuan => 'रुआन';
+
+  @override
+  String get instrumentGuzheng => 'गुझेंग';
+
+  @override
+  String get instrumentErhu => 'एरहू';
+
+  @override
+  String get instrumentFlute => 'बाँसुरी';
+
+  @override
+  String get instrumentShamisen => 'शामिसेन';
+
+  @override
+  String get instrumentHarmonium => 'हारमोनियम';
+
+  @override
+  String get instrumentTabla => 'तबला';
+
+  @override
+  String get instrumentOud => 'ऊद';
+
+  @override
+  String get instrumentQanun => 'क़ानून';
+
+  @override
+  String get instrumentDuduk => 'दुदुक';
+
+  @override
+  String get instrumentNey => 'ने';
+
+  @override
+  String get instrumentTanbur => 'तंबूर';
+
+  @override
+  String get instrumentCelesta => 'सेलेस्टा';
+
+  @override
+  String get instrumentHarp => 'हार्प';
+
+  @override
+  String get instrumentClarinet => 'क्लैरिनेट';
+
+  @override
+  String get instrumentOboe => 'ओबो';
+
+  @override
+  String get instrumentTrumpet => 'ट्रम्पेट';
+
+  @override
+  String get instrumentFrenchHorn => 'फ़्रेंच हॉर्न';
+
+  @override
+  String get instrumentAcousticGuitar => 'ऐकोस्टिक गिटार';
+
+  @override
+  String get instrumentElectricGuitar => 'इलेक्ट्रिक गिटार';
+
+  @override
+  String get instrumentAcousticBass => 'ऐकोस्टिक बास';
+
+  @override
+  String get instrumentBianzhong => 'बियानझोंग';
+
+  @override
+  String get instrumentMarimba => 'मारिम्बा';
+
+  @override
+  String get regionWestern => 'पश्चिमी';
+
+  @override
+  String get regionEastAsian => 'पूर्वी एशियाई';
+
+  @override
+  String get regionMiddleEastern => 'मध्य पूर्वी';
+
+  @override
+  String get regionSouthAsian => 'दक्षिण एशियाई';
+
+  @override
+  String get regionOther => 'अन्य';
+
+  @override
+  String get clickSoundClassic => 'क्लासिक';
+
+  @override
+  String get clickSoundQuartz => 'क्वार्ट्ज़';
+
+  @override
+  String get clickSoundStick => 'स्टिक';
+
+  @override
+  String get clickSoundPracticePad => 'प्रैक्टिस पैड';
+
+  @override
+  String get clickSoundGlass => 'ग्लास';
+
+  @override
+  String get clickSoundMetal => 'मेटल';
+
+  @override
+  String get clickSoundSnap => 'चुटकी';
+
+  @override
+  String get clickSoundClap => 'ताली';
+
+  @override
+  String get clickSoundTambourine => 'डफ़';
+
+  @override
+  String get clickSoundCan => 'कैन';
+
+  @override
+  String get clickSoundClickToy => 'क्लिकर';
+
+  @override
+  String get clickSoundWoodBlock => 'वुड ब्लॉक';
+
+  @override
+  String get dailyGoal => 'दैनिक लक्ष्य';
+
+  @override
+  String get exampleMajorScaleName => 'मेजर स्केल आरोह-अवरोह';
+
+  @override
+  String get exampleMajorScaleDescription =>
+      'एक सरल पश्चिमी स्केल, ऊपर जाकर नीचे आता है।';
+
+  @override
+  String get exampleChandrakaunName => 'चंद्रकौंस राग चक्र';
+
+  @override
+  String get exampleChandrakaunDescription =>
+      'एक संक्षिप्त आरोह-अवरोह चक्र: सा, कोमल ग, म, कोमल ध, नि।';
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
@@ -14,6 +15,22 @@ import 'practice_history_controller.dart';
 import 'widgets/coach_mark_tutorial.dart';
 import 'language/app_language_text.dart';
 import 'language/app_text.dart';
+
+double _homeTabBarHeight(MediaQueryData mediaQuery) {
+  final viewportHeight = mediaQuery.size.height;
+  final baseHeight = viewportHeight < 700
+      ? 60.0
+      : viewportHeight > 900
+      ? 66.0
+      : 64.0;
+  final textScale = mediaQuery.textScaler.scale(1);
+  final accessibilityExtra = ((textScale - 1) * 10).clamp(0.0, 10.0);
+  return baseHeight + accessibilityExtra;
+}
+
+double _homeTabBarMinimumBottomGap(MediaQueryData mediaQuery) {
+  return mediaQuery.size.height < 700 ? 8.0 : 14.0;
+}
 
 // Main home page of the app, with a welcome message and button to start the metronome demo page.
 class MainHomePage extends StatefulWidget {
@@ -671,9 +688,10 @@ class _MainHomePageState extends State<MainHomePage> {
       text: example.sequenceText,
       selection: TextSelection.collapsed(offset: example.sequenceText.length),
     );
+    final exampleName = example.name(text);
     _sequenceNameController.value = TextEditingValue(
-      text: example.name,
-      selection: TextSelection.collapsed(offset: example.name.length),
+      text: exampleName,
+      selection: TextSelection.collapsed(offset: exampleName.length),
     );
 
     ScaffoldMessenger.of(
@@ -1083,7 +1101,15 @@ class _MainHomePageState extends State<MainHomePage> {
     final scheme = Theme.of(context).colorScheme;
     final text = appTextFor(widget.appSettingsController.language);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isDesktopWeb = kIsWeb && MediaQuery.sizeOf(context).width >= 900;
+    final mediaQuery = MediaQuery.of(context);
+    final isDesktopWeb = kIsWeb && mediaQuery.size.width >= 900;
+    final mobileTabBarClearance =
+        _homeTabBarHeight(mediaQuery) +
+        math.max(
+          mediaQuery.padding.bottom,
+          _homeTabBarMinimumBottomGap(mediaQuery),
+        ) +
+        20;
     final pageTitles = [
       text.homeTitle,
       text.editNoteSequence,
@@ -1157,7 +1183,7 @@ class _MainHomePageState extends State<MainHomePage> {
                             isDesktopWeb ? 40 : 20,
                             isDesktopWeb ? 34 : 20,
                             isDesktopWeb ? 40 : 20,
-                            isDesktopWeb ? 48 : 112,
+                            isDesktopWeb ? 48 : mobileTabBarClearance,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1299,6 +1325,7 @@ class _MainHomePageState extends State<MainHomePage> {
                                 KeyedSubtree(
                                   key: _tutorialHistoryCardKey,
                                   child: _PracticeHistoryCard(
+                                    text: text,
                                     title: text.practiceHistory,
                                     favoriteInstrumentLabel:
                                         text.favoriteInstrument,
@@ -1742,29 +1769,34 @@ const List<String> _flatNoteNames = [
 
 class _ExampleSequence {
   const _ExampleSequence({
-    required this.name,
-    required this.description,
+    required this.id,
     required this.sequenceText,
     required this.notation,
   });
 
-  final String name;
-  final String description;
+  final String id;
   final String sequenceText;
   final NoteNotation notation;
+
+  String name(AppLanguageText text) => switch (id) {
+    'chandrakaun' => text.exampleChandrakaunName,
+    _ => text.exampleMajorScaleName,
+  };
+
+  String description(AppLanguageText text) => switch (id) {
+    'chandrakaun' => text.exampleChandrakaunDescription,
+    _ => text.exampleMajorScaleDescription,
+  };
 }
 
 const List<_ExampleSequence> _exampleSequences = [
   _ExampleSequence(
-    name: 'Major Scale Up and Down',
-    description: 'A simple ascending and descending Western scale.',
+    id: 'majorScale',
     sequenceText: "C D E F G A B C' B A G F E D C",
     notation: NoteNotation.western,
   ),
   _ExampleSequence(
-    name: 'Chandrakaun Raga Cycle',
-    description:
-        'A compact aroha-avaroha loop: Sa, komal Ga, Ma, komal Dha, Ni.',
+    id: 'chandrakaun',
     sequenceText: "S Gb M Db N S' N Db M Gb S -",
     notation: NoteNotation.eastern,
   ),
@@ -1885,7 +1917,7 @@ class _ExampleSequenceTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  example.name,
+                  example.name(text),
                   style: Theme.of(
                     context,
                   ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -1901,7 +1933,7 @@ class _ExampleSequenceTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            example.description,
+            example.description(text),
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
@@ -2606,13 +2638,21 @@ class _HomeTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mediaQuery = MediaQuery.of(context);
+    final horizontalMargin = mediaQuery.size.width < 360 ? 12.0 : 20.0;
+    final barHeight = _homeTabBarHeight(mediaQuery);
 
     // Liquid glass via liquid_glass_renderer's FakeGlass: backdrop-filter
     // based and clipped strictly to the pill shape. The full LiquidGlass
     // shader layer rendered a visible rectangular texture around the pill,
     // so we use the artifact-free variant.
     return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      minimum: EdgeInsets.fromLTRB(
+        horizontalMargin,
+        0,
+        horizontalMargin,
+        _homeTabBarMinimumBottomGap(mediaQuery),
+      ),
       child: FakeGlass(
         settings: LiquidGlassSettings(
           blur: 8,
@@ -2622,9 +2662,9 @@ class _HomeTabBar extends StatelessWidget {
           saturation: 1.35,
           lightIntensity: 1.2,
         ),
-        shape: LiquidRoundedSuperellipse(borderRadius: 32),
+        shape: LiquidRoundedSuperellipse(borderRadius: barHeight / 2),
         child: SizedBox(
-          height: 64,
+          height: barHeight,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final segmentWidth = constraints.maxWidth / labels.length;
@@ -2724,7 +2764,7 @@ class _HomeTabButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          height: 52,
+          height: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           alignment: Alignment.center,
           child: Column(
@@ -2762,6 +2802,7 @@ class _HomeTabButton extends StatelessWidget {
 // and a chart of practice time over the last 7 days.
 class _PracticeHistoryCard extends StatelessWidget {
   const _PracticeHistoryCard({
+    required this.text,
     required this.title,
     required this.favoriteInstrumentLabel,
     required this.last7DaysLabel,
@@ -2774,6 +2815,7 @@ class _PracticeHistoryCard extends StatelessWidget {
     required this.onGoalChanged,
   });
 
+  final AppLanguageText text;
   final String title;
   final String favoriteInstrumentLabel;
   final String last7DaysLabel;
@@ -2847,7 +2889,7 @@ class _PracticeHistoryCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Daily Goal',
+                        text.dailyGoal,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -2901,7 +2943,7 @@ class _PracticeHistoryCard extends StatelessWidget {
                 label: favoriteInstrumentLabel,
                 value: mostUsedInstrument == null
                     ? '--'
-                    : instrumentDisplayName(mostUsedInstrument),
+                    : instrumentDisplayName(text, mostUsedInstrument),
               ),
               _PracticeStatPill(
                 label: mostUsedBpmLabel,

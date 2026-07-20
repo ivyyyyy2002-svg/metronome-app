@@ -340,7 +340,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialDone => 'Done';
 
   @override
-  String get tutorialReplay => 'Watch tutorial again';
+  String get tutorialReplay => 'Replay tutorial';
 
   @override
   String get tutorialTryIt => 'Try it:';
@@ -353,18 +353,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialTempoBody =>
-      'The pendulum swings once per beat, and the big number is the tempo in BPM (beats per minute) — how many beats fit into one minute. The row of dots shows where you are inside the bar: the brighter first dot is the accented downbeat.';
+      'The pendulum swings once per beat. The big number is the tempo in BPM, or beats per minute. The row of dots shows where you are in the bar, and the brightest dot is the accented downbeat.';
 
   @override
   String get tutorialTempoExample =>
       '60 BPM = 1 beat per second\n120 BPM = 2 beats per second (twice as fast)';
 
   @override
-  String get tutorialBpmDragTitle => 'Set your own tempo';
+  String get tutorialBpmDragTitle => 'Set the tempo';
 
   @override
   String get tutorialBpmDragBody =>
-      'Slow practice is the secret to clean playing: pick a tempo where you can play every note correctly, and only raise it once it feels easy. The slider goes from 30 (very slow) to 240 (very fast).';
+      'Pick a tempo where you can play every note correctly, then raise it once that feels easy. The slider runs from 30 to 240.';
 
   @override
   String get tutorialBpmDragAction => 'drag the tempo slider to any value.';
@@ -374,36 +374,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialSequenceBody =>
-      'This metronome does more than click — it can play a melody, one note per beat, looping your pattern while you play along. This panel shows the pattern loaded right now. Tap it any time to edit the notes without leaving this page.';
+      'This metronome does more than click. It plays your note pattern as a melody, one note per beat, looping while you play along. This panel shows the pattern loaded right now. Tap it to edit the notes.';
 
   @override
-  String get tutorialToggleTitle => 'Click, notes, or both';
+  String get tutorialToggleTitle => 'Click and Sound';
 
   @override
   String get tutorialToggleBody =>
-      '\"Click\" is the classic tick that keeps time. \"Sound\" plays your note pattern on the selected instrument. Keep both on to hear the melody riding on top of the beat, or turn one off to focus.';
+      '\"Click\" is the classic tick that keeps time. \"Sound\" plays your note pattern on the selected instrument. Keep both on to hear the melody over the beat, or turn one off to focus on the other.';
 
   @override
-  String get tutorialToggleAction =>
-      'tap one of the switches off, then on again.';
+  String get tutorialToggleAction => 'turn one switch off, then on again.';
 
   @override
   String get tutorialMeterTitle => 'Meter and subdivision';
 
   @override
   String get tutorialMeterBody =>
-      'The time signature groups beats into bars: in 4/4 you count 1-2-3-4 and start over, and beat 1 gets the accent. The beat unit subdivides each beat into smaller clicks, which helps when your notes move faster than the beat.';
+      'The time signature groups beats into bars. In 4/4 you count 1-2-3-4 and start over, and beat 1 gets the accent. Subdivision splits each beat into smaller clicks, which helps when your notes move faster than the beat.';
 
   @override
   String get tutorialMeterExample =>
-      '4/4 = 4 beats per bar (most common)\n3/4 = counts in 3, like a waltz\nEighth beat unit = 2 clicks per beat';
+      '4/4 = 4 beats per bar, the most common\n3/4 = counts in 3, like a waltz\nEighth subdivision = 2 clicks per beat';
 
   @override
-  String get tutorialTransportTitle => 'Hear it live';
+  String get tutorialTransportTitle => 'Hear it';
 
   @override
   String get tutorialTransportBody =>
-      'Everything is set — press Start and listen: the accented first beat, then your notes landing on each beat. Stop pauses the session; Reset jumps back to the beginning of your pattern.';
+      'Everything is set. Press Start and listen: the accented first beat, then your notes landing on each beat. Stop pauses the session, and Reset returns to the beginning of your pattern.';
 
   @override
   String get tutorialTransportAction =>
@@ -414,82 +413,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialAdvancedBody =>
-      'When the defaults feel limiting, open this panel to change the click sound, choose the instrument that plays your notes, adjust accents, or shift the base octave up and down.';
+      'When the defaults feel limiting, open this panel to change the click sound, choose the instrument that plays your notes, adjust accents, or shift the base octave.';
 
   @override
-  String get tutorialHomePracticeTitle => 'Welcome! Practice starts here';
+  String get tutorialHomePracticeTitle => 'Welcome. Practice starts here';
 
   @override
   String get tutorialHomePracticeBody =>
-      'Metrinote is a metronome that can also play the notes you want to practice, so you hear the beat and the melody together. This button opens the practice page with your current note pattern already loaded.';
+      'Metrinote is a metronome that also plays the notes you want to practice, so you hear the beat and the melody together. This button opens the practice page with your current note pattern loaded.';
 
   @override
-  String get tutorialHomeHistoryTitle => 'Your practice history';
+  String get tutorialHomeHistoryTitle => 'Practice history';
 
   @override
   String get tutorialHomeHistoryBody =>
-      'Every session is tracked here: minutes practiced over the last 7 days, your most used tempo, and your favorite instrument. Set a daily goal and the progress ring keeps you honest.';
+      'Every session is recorded here: minutes practiced over the last 7 days, your most used tempo, and your most used instrument. Set a daily goal and the progress ring shows how far along you are.';
 
   @override
-  String get tutorialHomeTabsTitle => 'Four tabs, one workflow';
+  String get tutorialHomeTabsTitle => 'Four tabs';
 
   @override
   String get tutorialHomeTabsBody =>
-      'Practice is home base. Sequences is where you build and save note patterns. Tools generates patterns for you. Basics explains the music terms this app uses. Let\'s visit them in order.';
+      'Practice is the main page. Sequences is where you create and save note patterns. Tools generates patterns for you. Basics explains the music terms this app uses. Let\'s go through them in order.';
 
   @override
   String get tutorialHomeExamplesTitle => 'Start from an example';
 
   @override
   String get tutorialHomeExamplesBody =>
-      'Not sure what to practice? These ready-made patterns load with one tap — a Western major scale or an Eastern raga cycle. Load one, then tweak it to make it yours.';
+      'Not sure what to practice? These ready-made patterns load with one tap, including a Western major scale and an Eastern raga cycle. Load one, then change it into your own.';
 
   @override
   String get tutorialHomeSequencesTitle => 'Write your own pattern';
 
   @override
   String get tutorialHomeSequencesBody =>
-      'Type note names separated by spaces, or tap the note chips below the field. Both Western letters (A B C…) and Eastern sargam (S R G M…) work. Give the pattern a name and save it to reuse any time.';
+      'Type note names separated by spaces, or tap the note buttons below the field. Western letters (A B C…) and Eastern sargam (S R G M…) both work. Give the pattern a name and save it to load again later.';
 
   @override
   String get tutorialHomeSequencesExample =>
       'C D E F → four notes, one per beat\nG - → \'-\' holds G for an extra beat\nE/F → \'/\' fits two notes into one beat\nC\' high octave · C, low octave';
 
   @override
-  String get tutorialHomeToolsTitle => 'Let Tools do the typing';
+  String get tutorialHomeToolsTitle => 'Let Tools generate patterns';
 
   @override
   String get tutorialHomeToolsBody =>
-      'Tools has two generators that write patterns for you: a scale builder and a jianpu (numbered notation) converter. Let\'s take a quick look at both.';
+      'The Tools tab has two generators: a scale builder and a jianpu converter. Both write patterns for you. Let\'s look at each.';
 
   @override
   String get tutorialHomeScaleGenTitle => 'Scale pattern generator';
 
   @override
   String get tutorialHomeScaleGenBody =>
-      'Pick a root key, scale type, octave range, and direction — it writes the full pattern for you. \"Use pattern\" drops the result straight into your sequence editor.';
+      'Pick a root key, scale type, octave range, and direction, and it writes the full pattern. \"Use as Sequence\" drops the result into your sequence editor.';
 
   @override
   String get tutorialHomeJianpuTitle => 'Jianpu converter';
 
   @override
   String get tutorialHomeJianpuBody =>
-      'If you read numbered notation (1 2 3 = do re mi), paste it here and it becomes a playable pattern. Octave dots and dashes for held notes are understood too.';
+      'If you read numbered notation (1 2 3 = do re mi), paste it here and it becomes a playable pattern. Octave dots and dashes for held notes are recognized too.';
 
   @override
-  String get tutorialHomeBasicsTitle => 'Learn the words';
+  String get tutorialHomeBasicsTitle => 'Learn the terms';
 
   @override
   String get tutorialHomeBasicsBody =>
-      'One more stop: Basics is a plain-language glossary of every term this app uses. Let\'s read the four most important ones together.';
+      'One more stop. Basics is a plain-language glossary of every music term this app uses. Let\'s read the four most important ones.';
 
   @override
   String get tutorialBasicsBpmBody =>
-      'BPM means beats per minute: 60 BPM is exactly one beat every second. This is the number you set with the tempo slider on the practice page. Golden rule: start slower than feels comfortable.';
+      'BPM means beats per minute, so 60 BPM is exactly one beat every second. This is the number you set with the tempo slider on the practice page. The rule of thumb is to start slower than feels comfortable.';
 
   @override
   String get tutorialBasicsMeterBody =>
-      'The top number says how many beats each bar contains, and beat 1 always gets the accent. You choose this in the meter chip on the practice page — 4/4 is the safe default for most music.';
+      'The top number says how many beats each bar contains, and beat 1 always gets the accent. You choose it with the meter button on the practice page. For most music 4/4 is a safe default.';
 
   @override
   String get tutorialBasicsSubdivisionBody =>
@@ -497,35 +496,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialBasicsNotationBody =>
-      'This app accepts two naming systems for the same notes: Western letters (C D E F G A B) and Eastern sargam (S R G M P D N). The nearby cards explain octave marks, held notes, and grouping.';
+      'The same notes have two naming systems, and this app accepts both: Western letters (C D E F G A B) and Eastern sargam (S R G M P D N). The nearby cards also cover octave marks, held notes, and grouping.';
 
   @override
-  String get tutorialHomeReturnTitle => 'Back to home base';
+  String get tutorialHomeReturnTitle => 'Back to the main page';
 
   @override
   String get tutorialHomeReturnBody =>
-      'That\'s the tour of the tabs. Select Practice yourself so you always know how to get back to your starting point.';
+      'That\'s all four tabs. Tap Practice yourself to return to the main page, so you always know how to get back.';
 
   @override
-  String get tutorialStartSessionTitle => 'Start when you are ready';
+  String get tutorialStartSessionTitle => 'Start when you\'re ready';
 
   @override
   String get tutorialStartSessionBody =>
-      'Now press Start Metronome yourself. That opens the practice workspace, where the hands-on metronome tutorial will continue.';
+      'Now press Start Metronome. That opens the practice page, where the hands-on metronome tutorial continues.';
 
   @override
   String get tutorialHomeSettingsTitle => 'Settings and replay';
 
   @override
   String get tutorialHomeSettingsBody =>
-      'Theme, colors, and language live behind this gear. If you ever forget how something works, open Settings and tap \"Watch tutorial again\". Press Done, then we\'ll return to Practice together.';
+      'Theme, colors, and language live behind this gear. If you ever forget how something works, open Settings and tap \"Replay tutorial\". Press Done and we\'ll return to Practice.';
 
   @override
-  String get tutorialScoreTitle => 'Score practice on iPad';
+  String get tutorialScoreTitle => 'Sheet music in landscape';
 
   @override
   String get tutorialScoreBody =>
-      'On larger screens in landscape, load a sheet-music image or PDF here and practice while the metronome stays visible beside it. You can zoom, flip pages, and go fullscreen.';
+      'On larger screens in landscape, load a sheet-music image or PDF here and practice with the metronome beside it. You can zoom, flip pages, and go fullscreen.';
 
   @override
   String get notesLoaded => 'notes loaded';
@@ -701,4 +700,150 @@ class AppLocalizationsEn extends AppLocalizations {
   String noPlayableAssets(String instrument) {
     return 'No playable assets found for $instrument';
   }
+
+  @override
+  String get instrumentPiano => 'Piano A';
+
+  @override
+  String get instrumentUprightPiano => 'Piano B';
+
+  @override
+  String get instrumentPipa => 'Pipa';
+
+  @override
+  String get instrumentRuan => 'Ruan';
+
+  @override
+  String get instrumentGuzheng => 'Guzheng';
+
+  @override
+  String get instrumentErhu => 'Erhu';
+
+  @override
+  String get instrumentFlute => 'Bamboo Flute';
+
+  @override
+  String get instrumentShamisen => 'Shamisen';
+
+  @override
+  String get instrumentHarmonium => 'Harmonium';
+
+  @override
+  String get instrumentTabla => 'Tabla';
+
+  @override
+  String get instrumentOud => 'Oud';
+
+  @override
+  String get instrumentQanun => 'Qanun';
+
+  @override
+  String get instrumentDuduk => 'Duduk';
+
+  @override
+  String get instrumentNey => 'Ney';
+
+  @override
+  String get instrumentTanbur => 'Tanbur';
+
+  @override
+  String get instrumentCelesta => 'Celesta';
+
+  @override
+  String get instrumentHarp => 'Harp';
+
+  @override
+  String get instrumentClarinet => 'Clarinet';
+
+  @override
+  String get instrumentOboe => 'Oboe';
+
+  @override
+  String get instrumentTrumpet => 'Trumpet';
+
+  @override
+  String get instrumentFrenchHorn => 'French Horn';
+
+  @override
+  String get instrumentAcousticGuitar => 'Acoustic Guitar';
+
+  @override
+  String get instrumentElectricGuitar => 'Electric Guitar';
+
+  @override
+  String get instrumentAcousticBass => 'Acoustic Bass';
+
+  @override
+  String get instrumentBianzhong => 'Bianzhong';
+
+  @override
+  String get instrumentMarimba => 'Marimba';
+
+  @override
+  String get regionWestern => 'Western';
+
+  @override
+  String get regionEastAsian => 'East Asian';
+
+  @override
+  String get regionMiddleEastern => 'Middle Eastern';
+
+  @override
+  String get regionSouthAsian => 'South Asian';
+
+  @override
+  String get regionOther => 'Other';
+
+  @override
+  String get clickSoundClassic => 'Classic';
+
+  @override
+  String get clickSoundQuartz => 'Quartz';
+
+  @override
+  String get clickSoundStick => 'Stick';
+
+  @override
+  String get clickSoundPracticePad => 'Practice Pad';
+
+  @override
+  String get clickSoundGlass => 'Glass';
+
+  @override
+  String get clickSoundMetal => 'Metal';
+
+  @override
+  String get clickSoundSnap => 'Snap';
+
+  @override
+  String get clickSoundClap => 'Clap';
+
+  @override
+  String get clickSoundTambourine => 'Tambourine';
+
+  @override
+  String get clickSoundCan => 'Can';
+
+  @override
+  String get clickSoundClickToy => 'Click Toy';
+
+  @override
+  String get clickSoundWoodBlock => 'Wood Block';
+
+  @override
+  String get dailyGoal => 'Daily Goal';
+
+  @override
+  String get exampleMajorScaleName => 'Major Scale Up and Down';
+
+  @override
+  String get exampleMajorScaleDescription =>
+      'A simple ascending and descending Western scale.';
+
+  @override
+  String get exampleChandrakaunName => 'Chandrakaun Raga Cycle';
+
+  @override
+  String get exampleChandrakaunDescription =>
+      'A compact aroha-avaroha loop: Sa, komal Ga, Ma, komal Dha, Ni.';
 }

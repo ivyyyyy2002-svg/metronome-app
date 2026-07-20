@@ -1,37 +1,65 @@
-/// Shared display names for instrument keys, used by the instrument picker
-/// and the practice-history "favorite instrument" stat.
-const Map<String, String> instrumentDisplayNames = {
-  'piano': 'Piano A',
-  'uprightPiano': 'Piano B',
-  'pipa': 'Pipa',
-  'ruan': 'Ruan',
-  'guzheng': 'Guzheng',
-  'erhu': 'Erhu',
-  'flute': 'Bamboo Flute',
-  'shamisen': 'Shamisen',
-  'harmonium': 'Harmonium',
-  'tabla': 'Tabla',
-  'oud': 'Oud',
-  'qanun': 'Qanun',
-  'duduk': 'Duduk',
-  'ney': 'Ney',
-  'tanbur': 'Tanbur',
-  'celesta': 'Celesta',
-  'harp': 'Harp',
-  'clarinet': 'Clarinet',
-  'oboe': 'Oboe',
-  'trumpet': 'Trumpet',
-  'frenchHorn': 'French Horn',
-  'acousticGuitar': 'Acoustic Guitar',
-  'electricGuitar': 'Electric Guitar',
-  'acousticBass': 'Acoustic Bass',
-  'bianzhong': 'Bianzhong',
-  'marimba': 'Marimba',
-};
+import '../language/app_language_text.dart';
 
-String instrumentDisplayName(String instrument) {
-  final displayName = instrumentDisplayNames[instrument];
-  if (displayName != null) return displayName;
+/// Localized display names for instrument keys, used by the instrument picker
+/// and the practice-history "favorite instrument" stat.
+///
+/// Keys must match the identifiers used by the SF2 controller and the
+/// instrument region lists in the advanced settings drawer.
+String instrumentDisplayName(AppLanguageText text, String instrument) {
+  switch (instrument) {
+    case 'piano':
+      return text.instrumentPiano;
+    case 'uprightPiano':
+      return text.instrumentUprightPiano;
+    case 'pipa':
+      return text.instrumentPipa;
+    case 'ruan':
+      return text.instrumentRuan;
+    case 'guzheng':
+      return text.instrumentGuzheng;
+    case 'erhu':
+      return text.instrumentErhu;
+    case 'flute':
+      return text.instrumentFlute;
+    case 'shamisen':
+      return text.instrumentShamisen;
+    case 'harmonium':
+      return text.instrumentHarmonium;
+    case 'tabla':
+      return text.instrumentTabla;
+    case 'oud':
+      return text.instrumentOud;
+    case 'qanun':
+      return text.instrumentQanun;
+    case 'duduk':
+      return text.instrumentDuduk;
+    case 'ney':
+      return text.instrumentNey;
+    case 'tanbur':
+      return text.instrumentTanbur;
+    case 'celesta':
+      return text.instrumentCelesta;
+    case 'harp':
+      return text.instrumentHarp;
+    case 'clarinet':
+      return text.instrumentClarinet;
+    case 'oboe':
+      return text.instrumentOboe;
+    case 'trumpet':
+      return text.instrumentTrumpet;
+    case 'frenchHorn':
+      return text.instrumentFrenchHorn;
+    case 'acousticGuitar':
+      return text.instrumentAcousticGuitar;
+    case 'electricGuitar':
+      return text.instrumentElectricGuitar;
+    case 'acousticBass':
+      return text.instrumentAcousticBass;
+    case 'bianzhong':
+      return text.instrumentBianzhong;
+    case 'marimba':
+      return text.instrumentMarimba;
+  }
   if (instrument.isEmpty) return instrument;
   return '${instrument[0].toUpperCase()}${instrument.substring(1)}';
 }

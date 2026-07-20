@@ -33,15 +33,44 @@ enum ClickAccent { strong, secondary, weak }
 class ClickSoundOption {
   const ClickSoundOption({
     required this.id,
-    required this.label,
     required this.strongAsset,
     required this.weakAsset,
   });
 
   final String id;
-  final String label;
   final String strongAsset;
   final String weakAsset;
+}
+
+/// Localized display name for a click sound id.
+String clickSoundLabel(AppLanguageText text, String id) {
+  switch (id) {
+    case 'quartz':
+      return text.clickSoundQuartz;
+    case 'stick':
+      return text.clickSoundStick;
+    case 'practicePad':
+      return text.clickSoundPracticePad;
+    case 'glass':
+      return text.clickSoundGlass;
+    case 'metal':
+      return text.clickSoundMetal;
+    case 'snap':
+      return text.clickSoundSnap;
+    case 'clap':
+      return text.clickSoundClap;
+    case 'tambourine':
+      return text.clickSoundTambourine;
+    case 'can':
+      return text.clickSoundCan;
+    case 'clickToy':
+      return text.clickSoundClickToy;
+    case 'woodBlock':
+      return text.clickSoundWoodBlock;
+    case 'default':
+    default:
+      return text.clickSoundClassic;
+  }
 }
 
 enum _NoteSequenceEditorAction { applyText, saveText, importSaved }
@@ -115,73 +144,61 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   static const List<ClickSoundOption> _clickSoundOptions = [
     ClickSoundOption(
       id: 'default',
-      label: 'Classic',
       strongAsset: _defaultStrongClickAsset,
       weakAsset: _defaultWeakClickAsset,
     ),
     ClickSoundOption(
       id: 'quartz',
-      label: 'Quartz',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_MetronomeQuartz_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_MetronomeQuartz_lo.wav',
     ),
     ClickSoundOption(
       id: 'stick',
-      label: 'Stick',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_Stick_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_Stick_lo.wav',
     ),
     ClickSoundOption(
       id: 'practicePad',
-      label: 'Practice Pad',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_PracticePad_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_PracticePad_lo.wav',
     ),
     ClickSoundOption(
       id: 'glass',
-      label: 'Glass',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_Glass_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_Glass_lo.wav',
     ),
     ClickSoundOption(
       id: 'metal',
-      label: 'Metal',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_Metal_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_Metal_lo.wav',
     ),
     ClickSoundOption(
       id: 'snap',
-      label: 'Snap',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_Snap_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_Snap_lo.wav',
     ),
     ClickSoundOption(
       id: 'clap',
-      label: 'Clap',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_Clap_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_Clap_lo.wav',
     ),
     ClickSoundOption(
       id: 'tambourine',
-      label: 'Tambourine',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_Tamb_A_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_Tamb_A_lo.wav',
     ),
     ClickSoundOption(
       id: 'can',
-      label: 'Can',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_Can_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_Can_lo.wav',
     ),
     ClickSoundOption(
       id: 'clickToy',
-      label: 'Click Toy',
       strongAsset: 'assets/sounds/metronome_clicks/Perc_ClickToy_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Perc_ClickToy_lo.wav',
     ),
     ClickSoundOption(
       id: 'woodBlock',
-      label: 'Wood Block',
       strongAsset: 'assets/sounds/metronome_clicks/Synth_Block_A_hi.wav',
       weakAsset: 'assets/sounds/metronome_clicks/Synth_Block_A_lo.wav',
     ),
@@ -633,6 +650,28 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   // --- timing state for stable ticks (avoid Timer.periodic jitter) ---
   int _tickGen = 0;
   int _intervalMs = 1000;
+  bool _isDisposing = false;
+  bool _isStoppingForPop = false;
+  final Set<Timer> _playbackTimers = <Timer>{};
+
+  void _schedulePlaybackTimer(Duration delay, void Function() callback) {
+    if (_isDisposing) return;
+
+    late final Timer scheduledTimer;
+    scheduledTimer = Timer(delay, () {
+      _playbackTimers.remove(scheduledTimer);
+      if (_isDisposing) return;
+      callback();
+    });
+    _playbackTimers.add(scheduledTimer);
+  }
+
+  void _cancelPlaybackTimers() {
+    for (final scheduledTimer in _playbackTimers) {
+      scheduledTimer.cancel();
+    }
+    _playbackTimers.clear();
+  }
 
   // --- Per-note preloaded players to avoid setAudioSource on every beat ---
   final Map<String, AudioPlayer> _perNotePlayers = {};
@@ -1352,7 +1391,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                       ? Icons.radio_button_checked_rounded
                       : Icons.radio_button_unchecked_rounded,
                 ),
-                title: Text(option.label),
+                title: Text(clickSoundLabel(_text, option.id)),
                 trailing: IconButton(
                   tooltip: _text.preview,
                   icon: const Icon(Icons.play_arrow_rounded),
@@ -1692,6 +1731,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     int octave, {
     double durationBeats = 1.0,
   }) async {
+    if (_isDisposing) return;
     if (_useSf2ForCurrentInstrument()) {
       final midiNote = instrumentSf2Controller.midiNoteFor(
         note,
@@ -1719,14 +1759,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
         // Delay SF2 trigger to align with the slower just_audio click path.
         Future<void> firePlayNote() async {
-          if (playerTokens[channel] != token) return;
+          if (_isDisposing || playerTokens[channel] != token) return;
           await instrumentSf2Controller.playNote(
             midiNote: midiNote,
             channel: channel,
           );
           activeSf2MidiNote = midiNote;
           if (previousMidiNote != null && previousMidiNote != midiNote) {
-            Timer(Duration(milliseconds: overlapMs), () async {
+            _schedulePlaybackTimer(Duration(milliseconds: overlapMs), () async {
               try {
                 await instrumentSf2Controller.stopNote(
                   midiNote: previousMidiNote,
@@ -1738,7 +1778,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         }
 
         if (latencyOffsetMs > 0) {
-          Timer(Duration(milliseconds: latencyOffsetMs), firePlayNote);
+          _schedulePlaybackTimer(
+            Duration(milliseconds: latencyOffsetMs),
+            firePlayNote,
+          );
         } else {
           await firePlayNote();
         }
@@ -1760,8 +1803,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         );
         final int totalGateMs = gateMs + latencyOffsetMs;
 
-        Timer(Duration(milliseconds: totalGateMs), () async {
-          if (playerTokens[channel] != token) return;
+        _schedulePlaybackTimer(Duration(milliseconds: totalGateMs), () async {
+          if (_isDisposing || playerTokens[channel] != token) return;
           try {
             await instrumentSf2Controller.stopNote(
               midiNote: midiNote,
@@ -1783,6 +1826,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     if (_usePerNotePlayers) {
       final fullNoteName = '$note$octave';
       await _ensurePerNotePlayerReady(fullNoteName);
+      if (_isDisposing) return;
       final player = _perNotePlayers[fullNoteName];
       if (player == null) return;
 
@@ -1804,7 +1848,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           math.min(maxGateMs, (beatMs * durationBeats * noteGate).round()),
         );
 
-        Timer(Duration(milliseconds: gateMs), () {
+        _schedulePlaybackTimer(Duration(milliseconds: gateMs), () {
           if ((_perNoteTokens[fullNoteName] ?? 0) != token) return;
           _fadeOutAndPause(player);
         });
@@ -1842,7 +1886,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         math.min(maxGateMs, (beatMs * durationBeats * noteGate).round()),
       );
 
-      Timer(Duration(milliseconds: gateMs), () {
+      _schedulePlaybackTimer(Duration(milliseconds: gateMs), () {
         // Only stop if this player is still playing the same note (token matches)
         if (playerTokens[playerIndex] != token) return;
         _fadeOutAndPause(player);
@@ -1890,7 +1934,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       if (i == 0) {
         playAtom();
       } else {
-        Timer(Duration(milliseconds: stepMs * i), playAtom);
+        _schedulePlaybackTimer(Duration(milliseconds: stepMs * i), playAtom);
       }
     }
   }
@@ -2020,7 +2064,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   void _onTick() {
-    if (noteSequence.isEmpty) return;
+    if (_isDisposing || noteSequence.isEmpty) return;
 
     final token = noteSequence[noteIndex];
     final heldBeats = _heldBeatsAfterIndex(noteIndex);
@@ -2051,6 +2095,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Start the metronome
   void start() {
+    if (_isDisposing || !mounted) return;
     if (timer != null) return;
     if (!configLoaded) return;
     if (noteSequence.isEmpty) return;
@@ -2120,6 +2165,31 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
+  Future<void> _stopBeforePop(bool didPop) async {
+    if (didPop || _isStoppingForPop) return;
+
+    if (timer == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    _isStoppingForPop = true;
+    try {
+      // Follow the exact same shutdown path as the Stop button before the
+      // route is disposed. Native audio plugins must not be torn down while
+      // notes are still playing.
+      await stop();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to stop metronome before leaving: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      if (mounted) {
+        _isStoppingForPop = false;
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
   // Reset to initial state
   Future<void> reset() async {
     await stop();
@@ -2165,12 +2235,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           : colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       child: AdvancedSettingsDrawer(
+        text: _text,
         baseOctave: baseOctave,
         minBaseOctave: _instrumentMinOctave,
         maxBaseOctave: _instrumentMaxOctave,
         titleLabel: _text.advancedSettings,
         clickSoundLabel: _text.clickSound,
-        currentClickSoundName: _selectedClickSoundOption.label,
+        currentClickSoundName: clickSoundLabel(
+          _text,
+          _selectedClickSoundOption.id,
+        ),
         onClickSoundTap: _openClickSoundPickerFromAdvancedSettings,
         volumeBalanceLabel: _text.volumeBalance,
         clickVolumeLabel: _text.clickVolume,
@@ -2201,12 +2275,16 @@ class _MetronomeDemoState extends State<MetronomeDemo>
           ? Colors.white
           : colorScheme.surface,
       child: AdvancedSettingsDrawer(
+        text: _text,
         baseOctave: baseOctave,
         minBaseOctave: _instrumentMinOctave,
         maxBaseOctave: _instrumentMaxOctave,
         titleLabel: _text.advancedSettings,
         clickSoundLabel: _text.clickSound,
-        currentClickSoundName: _selectedClickSoundOption.label,
+        currentClickSoundName: clickSoundLabel(
+          _text,
+          _selectedClickSoundOption.id,
+        ),
         onClickSoundTap: _openClickSoundPickerFromAdvancedSettings,
         volumeBalanceLabel: _text.volumeBalance,
         clickVolumeLabel: _text.clickVolume,
@@ -4154,74 +4232,82 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         idleColor: idleColor,
       );
     });
-    return Scaffold(
-      key: _scaffoldKey,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        toolbarHeight: kIsWeb ? 72 : null,
-        backgroundColor: kIsWeb
-            ? pageScheme.surface.withValues(alpha: 0.34)
-            : Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        shape: kIsWeb
-            ? Border(
-                bottom: BorderSide(
-                  color: pageScheme.outlineVariant.withValues(alpha: 0.5),
-                ),
-              )
-            : null,
-        title: Text(text.metronomeTitle),
-        actions: [
-          IconButton(
-            tooltip: text.tutorialReplay,
-            onPressed: () {
-              if (_tutorialDialogOpen) return;
-              unawaited(_showMetronomeTutorial());
-            },
-            style: kIsWeb
-                ? IconButton.styleFrom(
-                    backgroundColor: pageScheme.surface.withValues(alpha: 0.5),
-                  )
-                : null,
-            icon: const Icon(Icons.help_outline_rounded),
-          ),
-          IconButton(
-            key: _tutorialAdvancedKey,
-            tooltip: text.advanced,
-            onPressed: () => _openAdvancedSettingsPanel(
-              theme: inheritedTheme,
-              colorScheme: pageScheme,
-              useDialog: isLandscapeTablet,
+    return PopScope<Object?>(
+      canPop: timer == null && !_isStoppingForPop,
+      onPopInvokedWithResult: (didPop, _) => _stopBeforePop(didPop),
+      child: Scaffold(
+        key: _scaffoldKey,
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          toolbarHeight: kIsWeb ? 72 : null,
+          backgroundColor: kIsWeb
+              ? pageScheme.surface.withValues(alpha: 0.34)
+              : Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          shape: kIsWeb
+              ? Border(
+                  bottom: BorderSide(
+                    color: pageScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                )
+              : null,
+          title: Text(text.metronomeTitle),
+          actions: [
+            IconButton(
+              tooltip: text.tutorialReplay,
+              onPressed: () {
+                if (_tutorialDialogOpen) return;
+                unawaited(_showMetronomeTutorial());
+              },
+              style: kIsWeb
+                  ? IconButton.styleFrom(
+                      backgroundColor: pageScheme.surface.withValues(
+                        alpha: 0.5,
+                      ),
+                    )
+                  : null,
+              icon: const Icon(Icons.help_outline_rounded),
             ),
-            style: kIsWeb
-                ? IconButton.styleFrom(
-                    backgroundColor: pageScheme.surface.withValues(alpha: 0.5),
-                  )
-                : null,
-            icon: const Icon(Icons.tune_rounded),
-          ),
-        ],
-      ),
-      endDrawer: _buildAdvancedSettingsDrawer(
-        theme: inheritedTheme,
-        colorScheme: pageScheme,
-      ),
-      body: GlassBackground(
-        // Keep this page near-plain (a whisper of theme color): controls and
-        // the pendulum need to stand out clearly against the background.
-        tint: kIsWeb
-            ? null
-            : inheritedTheme.brightness == Brightness.dark
-            ? 0.14
-            : 0.03,
-        child: SafeArea(
-          child: _buildMetronomeBody(
-            text: text,
-            isRunning: isRunning,
-            beatNumerator: beatNumerator,
-            beatDenominator: beatDenominator,
-            beatIndicators: beatIndicators,
-            colorScheme: pageScheme,
+            IconButton(
+              key: _tutorialAdvancedKey,
+              tooltip: text.advanced,
+              onPressed: () => _openAdvancedSettingsPanel(
+                theme: inheritedTheme,
+                colorScheme: pageScheme,
+                useDialog: isLandscapeTablet,
+              ),
+              style: kIsWeb
+                  ? IconButton.styleFrom(
+                      backgroundColor: pageScheme.surface.withValues(
+                        alpha: 0.5,
+                      ),
+                    )
+                  : null,
+              icon: const Icon(Icons.tune_rounded),
+            ),
+          ],
+        ),
+        endDrawer: _buildAdvancedSettingsDrawer(
+          theme: inheritedTheme,
+          colorScheme: pageScheme,
+        ),
+        body: GlassBackground(
+          // Keep this page near-plain (a whisper of theme color): controls and
+          // the pendulum need to stand out clearly against the background.
+          tint: kIsWeb
+              ? null
+              : inheritedTheme.brightness == Brightness.dark
+              ? 0.14
+              : 0.03,
+          child: SafeArea(
+            child: _buildMetronomeBody(
+              text: text,
+              isRunning: isRunning,
+              beatNumerator: beatNumerator,
+              beatDenominator: beatDenominator,
+              beatIndicators: beatIndicators,
+              colorScheme: pageScheme,
+            ),
           ),
         ),
       ),
@@ -4230,7 +4316,18 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   @override
   void dispose() {
+    _isDisposing = true;
+    _tickGen++;
     timer?.cancel();
+    timer = null;
+    _cancelPlaybackTimers();
+    for (int i = 0; i < playerTokens.length; i++) {
+      playerTokens[i]++;
+    }
+    for (final key in _perNoteTokens.keys) {
+      _perNoteTokens[key] = (_perNoteTokens[key] ?? 0) + 1;
+    }
+    swingController.stop();
     clickStrongPlayer.dispose();
     clickWeakPlayer.dispose();
     _webClickPlayer.dispose();
