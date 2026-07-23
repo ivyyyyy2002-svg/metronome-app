@@ -9,6 +9,11 @@ assets
 # Generated files
 generated_*
 *.g.dart
+branding/
+lib/l10n/generated/
+
+# Local portfolio exports and UI screenshots
+portfolio/
 
 # Flutter plugin files
 .flutter-plugins
