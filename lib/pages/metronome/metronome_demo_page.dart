@@ -110,13 +110,26 @@ class MetronomeDemo extends StatefulWidget {
     required this.noteSequenceController,
     required this.appSettingsController,
     required this.practiceHistoryController,
+    required this.instrumentSf2Controller,
     this.showTutorialOnOpen = false,
   });
 
   final NoteSequenceController noteSequenceController;
   final AppSettingsController appSettingsController;
   final PracticeHistoryController practiceHistoryController;
+  // Owned by the app (created and preloaded at startup), not by this page.
+  final InstrumentSf2Controller instrumentSf2Controller;
   final bool showTutorialOnOpen;
+
+  // Builds the metronome's SoundFont controller. Called once by the app at
+  // startup so the SF2 can be decoded in the background before the user opens
+  // this page, making the page open without a load hitch.
+  static InstrumentSf2Controller createSf2Controller() {
+    return InstrumentSf2Controller(
+      channelCount: _MetronomeDemoState.notePoolSize,
+      assetSpecs: _MetronomeDemoState._metronomeAssetSpecs,
+    );
+  }
 
   @override
   State<MetronomeDemo> createState() => _MetronomeDemoState();
@@ -237,10 +250,9 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   final AudioPlayer clickStrongPlayer = AudioPlayer();
   final AudioPlayer clickWeakPlayer = AudioPlayer();
   final WebClickPlayer _webClickPlayer = WebClickPlayer();
-  final InstrumentSf2Controller instrumentSf2Controller =
-      InstrumentSf2Controller(
-        channelCount: notePoolSize,
-        assetSpecs: const {
+  // The full SoundFont spec table. Static so the app can build and preload the
+  // shared controller at startup (see MetronomeDemo.createSf2Controller).
+  static const Map<String, Sf2Spec> _metronomeAssetSpecs = {
           // Per-instrument min/max octave reflects the SF2's actual sampled
           // range. pipa caps at E6 (no full octave 6) so max=5; oud caps at
           // C#5 so max=4. Others have ~A1..A6 covered.
@@ -566,8 +578,14 @@ class _MetronomeDemoState extends State<MetronomeDemo>
             minOctave: 1,
             maxOctave: 6,
           ),
-        },
-      );
+  };
+
+  // The metronome's SoundFont controller now lives at the app level so it can
+  // be created and preloaded in the background at startup; the page just uses
+  // whatever instance was passed in.
+  InstrumentSf2Controller get instrumentSf2Controller =>
+      widget.instrumentSf2Controller;
+
   String clickStrongAsset = _defaultStrongClickAsset;
   String clickWeakAsset = _defaultWeakClickAsset;
   String selectedClickSoundId = 'default';
@@ -576,7 +594,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // Note player pool to allow overlapping notes without cutting off
   static const int notePoolSize = 12;
-  late final List<AudioPlayer> notePlayers;
+  // Created lazily after the page-open transition finishes (see
+  // _createNotePlayerPool). Building 12 just_audio players synchronously in
+  // initState stalled the route-push animation, which caused the visible hitch
+  // when sliding from the home page into the metronome page. Starts empty and
+  // is populated once the transition completes; the pool is dormant until then.
+  List<AudioPlayer> notePlayers = <AudioPlayer>[];
   int notePoolIndex = 0;
   double noteGate = 0.9; // how long the note plays before cutting off
   final List<int> playerTokens = List.filled(
@@ -593,6 +616,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   String currentSound = '';
   bool configLoaded = false;
+
+  // False until the (heavy) startup load finishes. While false the page shows a
+  // lightweight branded placeholder, so the slide-in transition stays smooth and
+  // the expensive work happens behind the placeholder instead of during it.
+  bool _ready = false;
 
   // preload flags
   bool clickReady = false;
@@ -683,8 +711,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   final bool _usePerNotePlayers = true;
   int? activeSf2MidiNote;
 
-  int uiUpdateEvery = 4;
-
   // Time signature (meter): beats per bar / beat unit
   int timeSignatureBeats = 4;
   int timeSignatureNote = 4;
@@ -692,6 +718,12 @@ class _MetronomeDemoState extends State<MetronomeDemo>
 
   // --- UI-only notifier to refresh the current note every tick without rebuilding the whole widget tree ---
   final ValueNotifier<String> currentSoundVN = ValueNotifier<String>('');
+
+  // --- UI-only notifier for the current beat. Lets the beat counter/indicators
+  // repaint each tick without a full-page setState (which rebuilt the glass
+  // background, score viewer and every panel every beat, causing visible jank
+  // and delayed timer callbacks). Kept in sync with `beat` on ticks and resets.
+  final ValueNotifier<int> beatVN = ValueNotifier<int>(0);
 
   // ---------- Initialization ----------
   @override
@@ -707,26 +739,64 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       CurvedAnimation(parent: swingController, curve: Curves.easeInOut),
     );
 
-    // Initialize the note players pool
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // All of the startup work below is heavy: audio-session setup, reading
+      // config + SharedPreferences, decoding the SF2 soundfont, preloading note
+      // players, and several setState() rebuilds of the (large) page tree.
+      // Running any of it while the page is still sliding in caused the visible
+      // transition hitch, so it is gated on the entry animation finishing.
+      _runAfterEntryTransition(() {
+        _initAudio(); // session setup
+        _loadStartupData();
+        _createNotePlayerPool();
+      });
+    });
+  }
+
+  // Runs [action] once the incoming route's push transition has finished, so
+  // heavy work doesn't compete with the slide-in animation. Runs immediately if
+  // there is no route animation (e.g. the page is already the current route).
+  void _runAfterEntryTransition(void Function() action) {
+    if (!mounted) return;
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == null || animation.status == AnimationStatus.completed) {
+      action();
+      return;
+    }
+    void statusListener(AnimationStatus status) {
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
+        animation.removeStatusListener(statusListener);
+        if (mounted && status == AnimationStatus.completed) action();
+      }
+    }
+
+    animation.addStatusListener(statusListener);
+  }
+
+  void _createNotePlayerPool() {
+    if (_isDisposing || !mounted || notePlayers.isNotEmpty) return;
     notePlayers = List.generate(notePoolSize, (_) => AudioPlayer());
-    for (int i = 0; i < notePoolSize; i++) {
-      notePlayers[i].playerStateStream.listen((state) {
+    for (final player in notePlayers) {
+      // Match whatever instrument volume is active by the time the pool exists.
+      player.setVolume(instrumentVolume);
+      player.playerStateStream.listen((state) {
         // (kept) listener exists, but we don't reset tokens here;
         // tokens are used to cancel scheduled gates safely.
       });
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _initAudio(); // session setup
-      _loadStartupData();
-    });
   }
 
   Future<void> _loadStartupData() async {
     await loadConfig();
     await _loadSavedMetronomeSettings();
     await loadNoteSequence();
+    // Everything the first screen needs is ready: reveal the real UI (which
+    // fades in over the placeholder).
+    if (mounted && !_ready) {
+      setState(() => _ready = true);
+    }
     if (widget.showTutorialOnOpen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _tutorialDialogOpen) return;
@@ -978,7 +1048,6 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         beatUnit = loadedBeatUnit;
         clickStrongAsset = loadedClickAssets.$1;
         clickWeakAsset = loadedClickAssets.$2;
-        uiUpdateEvery = 1;
 
         if (loadedBaseFrequencyHz != null) {
           baseFrequencyHz = loadedBaseFrequencyHz;
@@ -1122,6 +1191,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       baseOctave = newBaseOctave.clamp(minOctave, maxOctave).toInt();
       octaveShift = 0;
       beat = 0;
+      beatVN.value = 0;
       noteIndex = 0;
       _syncBaseFrequencyFromAnchor();
       _refreshCurrentSoundPreview();
@@ -1285,6 +1355,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       timeSignatureNote = parsedNote;
       beatUnit = BeatUnit.values[unitIndex];
       beat = 0;
+      beatVN.value = 0;
     });
     unawaited(_saveMetronomeSettings());
     _restartIfRunning();
@@ -1527,6 +1598,41 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
 
     return ClickAccent.weak;
+  }
+
+  // The 1-based beat position within the current bar for a raw beat count.
+  // Extracted so the beat counter/indicators can be rebuilt from beatVN alone.
+  int _beatInBarForBeat(int beatValue) {
+    return (beatValue == 0) ? 1 : ((beatValue - 1) % timeSignatureBeats) + 1;
+  }
+
+  // Build the row of beat-position dots for a given beat count and scheme.
+  // Identical output to the previous inline version in build(); only the input
+  // (a plain beat value) changed so it can run inside a ValueListenableBuilder.
+  List<BeatIndicatorItem> _buildBeatIndicators(
+    ColorScheme scheme,
+    int beatValue,
+  ) {
+    final int beatInBar = _beatInBarForBeat(beatValue);
+    return List.generate(timeSignatureBeats, (i) {
+      final accent = _accentForBeatPosition(i + 1);
+      final isActive = (i + 1) == beatInBar;
+      final Color activeColor = switch (accent) {
+        ClickAccent.strong => scheme.primary,
+        ClickAccent.secondary => scheme.secondary,
+        ClickAccent.weak => scheme.tertiary,
+      };
+      final Color idleColor = switch (accent) {
+        ClickAccent.strong => scheme.primary.withValues(alpha: 0.35),
+        ClickAccent.secondary => scheme.secondary.withValues(alpha: 0.28),
+        ClickAccent.weak => scheme.outlineVariant,
+      };
+      return BeatIndicatorItem(
+        isActive: isActive,
+        activeColor: activeColor,
+        idleColor: idleColor,
+      );
+    });
   }
 
   Future<void> _pauseClickPlayers() async {
@@ -2101,9 +2207,11 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       ),
     );
 
-    if (beat % uiUpdateEvery == 0) {
-      setState(() {});
-    }
+    // Push the new beat to the lightweight notifier instead of calling
+    // setState. Only the beat counter/indicators listen to it, so the pendulum
+    // (driven by swingAnim), the glass background, the score viewer and the
+    // control panels are no longer rebuilt every tick.
+    beatVN.value = beat;
   }
 
   // Start the metronome
@@ -2148,6 +2256,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
 
     scheduleNext();
+
+    // One-time rebuild so the transport button switches to its running state.
+    // (Previously this refresh piggy-backed on the per-tick setState.)
+    if (mounted) setState(() {});
   }
 
   // Stop the metronome
@@ -2210,6 +2322,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     setState(() {
       bpm = _initialBpm;
       beat = 0;
+      beatVN.value = 0;
       noteIndex = 0;
       _refreshCurrentSoundPreview();
     });
@@ -2405,6 +2518,7 @@ class _MetronomeDemoState extends State<MetronomeDemo>
       noteSequence = widget.noteSequenceController.sequence;
       noteIndex = 0;
       beat = 0;
+      beatVN.value = 0;
       octaveShift = 0;
       _syncBaseFrequencyFromAnchor();
       _refreshCurrentSoundPreview();
@@ -3560,12 +3674,38 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     }
   }
 
+  // Wraps PlaybackStatusPanel in a ValueListenableBuilder on beatVN so the beat
+  // counter and indicator dots repaint each tick on their own, instead of via a
+  // full-page setState. The pendulum (anim: swingAnim) already animates
+  // independently; bpm/labels only change on real setState.
+  Widget _buildPlaybackStatusPanel({
+    required AppLanguageText text,
+    required bool isRunning,
+    required int beatDenominator,
+    required ColorScheme colorScheme,
+  }) {
+    return ValueListenableBuilder<int>(
+      valueListenable: beatVN,
+      builder: (context, beatValue, _) {
+        return PlaybackStatusPanel(
+          key: _tutorialTempoKey,
+          anim: swingAnim,
+          isRunning: isRunning,
+          beatNumerator: _beatInBarForBeat(beatValue),
+          beatDenominator: beatDenominator,
+          bpm: bpm,
+          bpmLabel: text.bpm,
+          beatIndicators: _buildBeatIndicators(colorScheme, beatValue),
+        );
+      },
+    );
+  }
+
   Widget _buildMetronomeCore({
     required AppLanguageText text,
     required bool isRunning,
-    required int beatNumerator,
     required int beatDenominator,
-    required List<BeatIndicatorItem> beatIndicators,
+    required ColorScheme colorScheme,
     bool compact = false,
     EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
       horizontal: 18,
@@ -3586,29 +3726,21 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                   fit: BoxFit.scaleDown,
                   child: SizedBox(
                     width: 360,
-                    child: PlaybackStatusPanel(
-                      key: _tutorialTempoKey,
-                      anim: swingAnim,
+                    child: _buildPlaybackStatusPanel(
+                      text: text,
                       isRunning: isRunning,
-                      beatNumerator: beatNumerator,
                       beatDenominator: beatDenominator,
-                      bpm: bpm,
-                      bpmLabel: text.bpm,
-                      beatIndicators: beatIndicators,
+                      colorScheme: colorScheme,
                     ),
                   ),
                 ),
               )
             else
-              PlaybackStatusPanel(
-                key: _tutorialTempoKey,
-                anim: swingAnim,
+              _buildPlaybackStatusPanel(
+                text: text,
                 isRunning: isRunning,
-                beatNumerator: beatNumerator,
                 beatDenominator: beatDenominator,
-                bpm: bpm,
-                bpmLabel: text.bpm,
-                beatIndicators: beatIndicators,
+                colorScheme: colorScheme,
               ),
             SizedBox(height: compact ? 8 : 14),
 
@@ -4063,12 +4195,58 @@ class _MetronomeDemoState extends State<MetronomeDemo>
   }
 
   // Build the main body of the metronome page, including the metronome core
+  // Lightweight branded placeholder shown while the page loads. Deliberately
+  // cheap to build so it doesn't compete with the page-open slide animation.
+  Widget _buildLoadingPlaceholder({
+    required Key key,
+    required AppLanguageText text,
+    required ColorScheme colorScheme,
+  }) {
+    return Center(
+      key: key,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: CustomPaint(
+                size: const Size(46, 46),
+                painter: _MetronomeIconPainter(color: colorScheme.primary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            text.metronomeTitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.6,
+              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMetronomeBody({
     required AppLanguageText text,
     required bool isRunning,
-    required int beatNumerator,
     required int beatDenominator,
-    required List<BeatIndicatorItem> beatIndicators,
     required ColorScheme colorScheme,
   }) {
     return LayoutBuilder(
@@ -4085,9 +4263,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                 child: _buildMetronomeCore(
                   text: text,
                   isRunning: isRunning,
-                  beatNumerator: beatNumerator,
                   beatDenominator: beatDenominator,
-                  beatIndicators: beatIndicators,
+                  colorScheme: colorScheme,
                 ),
               ),
               TransportBar(
@@ -4126,9 +4303,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                               child: _buildMetronomeCore(
                                 text: text,
                                 isRunning: isRunning,
-                                beatNumerator: beatNumerator,
                                 beatDenominator: beatDenominator,
-                                beatIndicators: beatIndicators,
+                                colorScheme: colorScheme,
                                 compact: true,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
@@ -4139,9 +4315,8 @@ class _MetronomeDemoState extends State<MetronomeDemo>
                           : _buildMetronomeCore(
                               text: text,
                               isRunning: isRunning,
-                              beatNumerator: beatNumerator,
                               beatDenominator: beatDenominator,
-                              beatIndicators: beatIndicators,
+                              colorScheme: colorScheme,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 4,
                                 vertical: 8,
@@ -4222,29 +4397,10 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     final mediaSize = MediaQuery.sizeOf(context);
     final isLandscapeTablet =
         mediaSize.width >= 840 && mediaSize.width > mediaSize.height;
-    final int beatsForDisplay = timeSignatureBeats;
-    final int beatInBar = (beat == 0) ? 1 : ((beat - 1) % beatsForDisplay) + 1;
-    final int beatNumerator = beatInBar;
+    // The per-beat counter/indicators are driven by beatVN inside
+    // _buildPlaybackStatusPanel, so build() no longer recomputes them here and
+    // is no longer rerun on every tick.
     final int beatDenominator = timeSignatureNote;
-    final beatIndicators = List.generate(beatsForDisplay, (i) {
-      final accent = _accentForBeatPosition(i + 1);
-      final isActive = (i + 1) == beatInBar;
-      final Color activeColor = switch (accent) {
-        ClickAccent.strong => pageScheme.primary,
-        ClickAccent.secondary => pageScheme.secondary,
-        ClickAccent.weak => pageScheme.tertiary,
-      };
-      final Color idleColor = switch (accent) {
-        ClickAccent.strong => pageScheme.primary.withValues(alpha: 0.35),
-        ClickAccent.secondary => pageScheme.secondary.withValues(alpha: 0.28),
-        ClickAccent.weak => pageScheme.outlineVariant,
-      };
-      return BeatIndicatorItem(
-        isActive: isActive,
-        activeColor: activeColor,
-        idleColor: idleColor,
-      );
-    });
     return PopScope<Object?>(
       canPop: timer == null && !_isStoppingForPop,
       onPopInvokedWithResult: (didPop, _) => _stopBeforePop(didPop),
@@ -4313,13 +4469,26 @@ class _MetronomeDemoState extends State<MetronomeDemo>
               ? 0.14
               : 0.03,
           child: SafeArea(
-            child: _buildMetronomeBody(
-              text: text,
-              isRunning: isRunning,
-              beatNumerator: beatNumerator,
-              beatDenominator: beatDenominator,
-              beatIndicators: beatIndicators,
-              colorScheme: pageScheme,
+            // Show a cheap placeholder until the heavy startup work finishes,
+            // then cross-fade to the real UI. This keeps the page-open slide
+            // smooth (only the placeholder is built during the transition).
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              child: _ready
+                  ? KeyedSubtree(
+                      key: const ValueKey('metronome-body'),
+                      child: _buildMetronomeBody(
+                        text: text,
+                        isRunning: isRunning,
+                        beatDenominator: beatDenominator,
+                        colorScheme: pageScheme,
+                      ),
+                    )
+                  : _buildLoadingPlaceholder(
+                      key: const ValueKey('metronome-loading'),
+                      text: text,
+                      colorScheme: pageScheme,
+                    ),
             ),
           ),
         ),
@@ -4344,12 +4513,15 @@ class _MetronomeDemoState extends State<MetronomeDemo>
     clickStrongPlayer.dispose();
     clickWeakPlayer.dispose();
     _webClickPlayer.dispose();
-    instrumentSf2Controller.dispose();
+    // The SF2 controller is owned by the app (shared + preloaded), so only
+    // silence it here — do not dispose it, or the next open would reload it.
+    unawaited(instrumentSf2Controller.stopAllNotes());
     for (final p in notePlayers) {
       p.dispose();
     }
     _disposePerNotePlayers();
     currentSoundVN.dispose();
+    beatVN.dispose();
     unawaited(scorePdfDocument?.close());
     _scoreTransformationController.dispose();
     swingController.dispose();
@@ -4423,5 +4595,73 @@ class _MetronomeNotationBadge extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// A simple line-art metronome (tapering case, base, angled pendulum arm and
+// weight) used for the loading placeholder. Drawn instead of a Material icon
+// because Material has no true metronome glyph.
+class _MetronomeIconPainter extends CustomPainter {
+  const _MetronomeIconPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final double cx = w / 2;
+
+    final Paint stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.06
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final Paint fill = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final double topY = h * 0.14;
+    final double bottomY = h * 0.82;
+    final double topHalf = w * 0.15;
+    final double bottomHalf = w * 0.30;
+
+    // Tapering case (trapezoid).
+    final Path body = Path()
+      ..moveTo(cx - topHalf, topY)
+      ..lineTo(cx + topHalf, topY)
+      ..lineTo(cx + bottomHalf, bottomY)
+      ..lineTo(cx - bottomHalf, bottomY)
+      ..close();
+    canvas.drawPath(body, stroke);
+
+    // Base.
+    canvas.drawLine(
+      Offset(cx - bottomHalf * 1.12, bottomY),
+      Offset(cx + bottomHalf * 1.12, bottomY),
+      stroke,
+    );
+
+    // Angled pendulum arm.
+    final Offset pivot = Offset(cx, bottomY - (bottomY - topY) * 0.10);
+    final Offset tip = Offset(cx + w * 0.11, topY + h * 0.05);
+    canvas.drawLine(pivot, tip, stroke);
+
+    // Weight on the arm.
+    final Offset weight = Offset(
+      pivot.dx + (tip.dx - pivot.dx) * 0.46,
+      pivot.dy + (tip.dy - pivot.dy) * 0.46,
+    );
+    final RRect weightRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: weight, width: w * 0.16, height: h * 0.09),
+      Radius.circular(w * 0.02),
+    );
+    canvas.drawRRect(weightRect, fill);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MetronomeIconPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }

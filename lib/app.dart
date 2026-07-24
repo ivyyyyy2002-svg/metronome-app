@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:metronome_app/l10n/generated/app_localizations.dart';
 
 import 'pages/app_settings_controller.dart';
+import 'pages/metronome/instrument_sf2_controller.dart';
 import 'pages/metronome/note_sequence_controller.dart';
 import 'pages/practice_history_controller.dart';
 import 'pages/main_home_page.dart';
@@ -34,6 +35,12 @@ class _MyAppState extends State<MyApp> {
   final AppSettingsController appSettingsController = AppSettingsController();
   final PracticeHistoryController practiceHistoryController =
       PracticeHistoryController();
+
+  // Created once at app level and preloaded in the background at startup, so the
+  // metronome page opens without decoding its SoundFont on the way in. Shared by
+  // the (single) metronome route and disposed with the app.
+  final InstrumentSf2Controller instrumentSf2Controller =
+      MetronomeDemo.createSf2Controller();
 
   static const Color _defaultThemeSeed = Color(0xFFC18A2B);
   static const Color _defaultDarkBackground = Color(0xFF111111);
@@ -320,6 +327,24 @@ class _MyAppState extends State<MyApp> {
     _loadSavedNoteSequence();
     appSettingsController.load();
     practiceHistoryController.load();
+    // Warm the metronome SoundFont in the background once the home page is on
+    // screen, so opening the metronome page is smooth and near-instant.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _preloadMetronomeInstrument();
+    });
+  }
+
+  Future<void> _preloadMetronomeInstrument() async {
+    // Small delay so the home page's own first frames aren't competing with the
+    // SoundFont decode. 'piano' is the default instrument; if the user's saved
+    // instrument differs, that one still loads lazily on first open.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    try {
+      await instrumentSf2Controller.prepareForInstrument('piano');
+    } catch (_) {
+      // Preload is best-effort; the page will prepare the instrument itself if
+      // this didn't complete.
+    }
   }
 
   Future<void> _loadSavedNoteSequence() async {
@@ -370,6 +395,7 @@ class _MyAppState extends State<MyApp> {
                 noteSequenceController: noteSequenceController,
                 appSettingsController: appSettingsController,
                 practiceHistoryController: practiceHistoryController,
+                instrumentSf2Controller: instrumentSf2Controller,
                 showTutorialOnOpen: showTutorial,
               );
             },
@@ -386,6 +412,7 @@ class _MyAppState extends State<MyApp> {
     noteSequenceController.dispose();
     appSettingsController.dispose();
     practiceHistoryController.dispose();
+    instrumentSf2Controller.dispose();
     super.dispose();
   }
 }
