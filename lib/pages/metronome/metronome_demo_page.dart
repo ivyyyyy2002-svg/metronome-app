@@ -921,6 +921,19 @@ class _MetronomeDemoState extends State<MetronomeDemo>
         androidWillPauseWhenDucked: false,
       ),
     );
+
+    // Activate the session up front and keep it active while the metronome
+    // screen is open. Without this, iOS activates the session lazily the first
+    // time a player produces sound after silence, which added a noticeable
+    // hitch every time Start was pressed. Activating once here warms the audio
+    // pipeline so that Start is immediate. mixWithOthers keeps this polite
+    // towards any audio already playing in other apps.
+    try {
+      await session.setActive(true);
+    } catch (e, st) {
+      debugPrint('Audio session activation failed: $e');
+      debugPrintStack(stackTrace: st);
+    }
   }
 
   // ---------- Config ----------
